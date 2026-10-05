@@ -67,7 +67,6 @@ export default function NewAssessmentForm({
   const [created, setCreated] = useState<CreatedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const availablePeople = useMemo(
     () => people.filter((person) => person.organization_id === organizationId),
@@ -128,7 +127,6 @@ export default function NewAssessmentForm({
       }
 
       setCreated(payload as CreatedResult);
-      setCopied(false);
     } catch (error) {
       setError(
         error instanceof Error
@@ -140,24 +138,6 @@ export default function NewAssessmentForm({
     }
   }
 
-  const fullUrl =
-    created && typeof window !== "undefined"
-      ? `${window.location.origin}${created.path}`
-      : "";
-
-  async function copyLink() {
-    if (!fullUrl) return;
-    await navigator.clipboard.writeText(fullUrl);
-    setCopied(true);
-  }
-
-  async function copyMessage() {
-    if (!created || !fullUrl) return;
-    const message = `Hola ${created.person_name}. Te comparto tu liga para responder ${created.template_name} de ${created.organization_name}: ${fullUrl}`;
-    await navigator.clipboard.writeText(message);
-    setCopied(true);
-  }
-
   if (created) {
     return (
       <section className="rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm md:p-8">
@@ -165,64 +145,43 @@ export default function NewAssessmentForm({
           Evaluación creada
         </div>
         <h2 className="mt-4 text-2xl font-black text-neutral-900">
-          Liga lista para enviar
+          Evaluación asignada correctamente
         </h2>
         <p className="mt-2 text-neutral-600">
           {created.person_name} · {created.organization_name}
         </p>
 
-        <div className="mt-6 rounded-2xl bg-neutral-50 p-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            Enlace único
+        <div className="mt-6 rounded-2xl bg-neutral-50 p-5">
+          <div className="text-sm font-semibold text-neutral-900">
+            {created.template_name}
           </div>
-          <div className="mt-2 break-all font-medium text-neutral-800">
-            {fullUrl}
-          </div>
+          <p className="mt-2 text-sm text-neutral-600">
+            La liga quedó guardada con este candidato. Desde el panel de
+            Candidatos podrás copiarla, abrirla o enviarla cuando la necesites.
+          </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <button
-            type="button"
-            onClick={() => void copyLink()}
-            className="rounded-xl bg-orange-500 px-5 py-3 font-bold text-white hover:bg-orange-600"
+          <Link
+            href="/protected/candidatos"
+            className="rounded-xl bg-orange-500 px-5 py-3 text-center font-bold text-white hover:bg-orange-600"
           >
-            {copied ? "Copiado" : "Copiar liga"}
-          </button>
+            Ir a Candidatos
+          </Link>
           <button
             type="button"
-            onClick={() => void copyMessage()}
+            onClick={() => {
+              setCreated(null);
+              setExistingPersonId("");
+              setTemplateId("");
+              setProcessName("");
+              setDueDate("");
+            }}
             className="rounded-xl border border-neutral-300 bg-white px-5 py-3 font-bold text-neutral-800 hover:bg-neutral-50"
           >
-            Copiar mensaje
+            Crear otra evaluación
           </button>
-          <Link
-            href={created.path}
-            target="_blank"
-            className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center font-bold text-neutral-800 hover:bg-neutral-50"
-          >
-            Abrir evaluación
-          </Link>
-          <Link
-            href={`/protected/evaluaciones/${created.assignment_id}`}
-            className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center font-bold text-neutral-800 hover:bg-neutral-50"
-          >
-            Ver en panel
-          </Link>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setCreated(null);
-            setExistingPersonId("");
-            setTemplateId("");
-            setProcessName("");
-            setDueDate("");
-          }}
-          className="mt-6 text-sm font-semibold text-orange-600 hover:text-orange-700"
-        >
-          Crear otra evaluación
-        </button>
       </section>
     );
   }
