@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import CopyAssessmentLink from "../copy-assessment-link";
 
 type Person = {
   id: string;
@@ -219,23 +218,9 @@ async function CandidatesContent() {
                             <div className="flex flex-wrap items-center gap-3">
                               {assignment.status !== "completed" &&
                                 assignment.status !== "cancelled" && (
-                                  <>
-                                    <CopyAssessmentLink
-                                      token={assignment.public_token}
-                                      personName={personName}
-                                      templateName={template?.name ?? "Evaluación"}
-                                      organizationName={organization?.name ?? "FactorRH"}
-                                      email={person.email}
-                                      phone={person.phone}
-                                    />
-                                    <Link
-                                      href={`/e/${assignment.public_token}`}
-                                      target="_blank"
-                                      className="text-xs font-semibold text-neutral-600 hover:text-orange-600"
-                                    >
-                                      Abrir liga
-                                    </Link>
-                                  </>
+                                  <span className="text-xs font-semibold text-neutral-500">
+                                    Evaluación asignada
+                                  </span>
                                 )}
 
                               {assignment.status === "completed" && (
