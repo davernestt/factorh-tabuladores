@@ -64,6 +64,7 @@ export default async function ParticipantPortalPage({ params }: RouteContext) {
     return <PortalError />;
   }
 
+  const targetOrganization = organizationResult.data;
   const assignments = (assignmentsResult.data ?? []) as Assignment[];
   const templateIds = assignments.map((assignment) => assignment.template_id);
 
@@ -115,8 +116,8 @@ export default async function ParticipantPortalPage({ params }: RouteContext) {
     const sourceName = template.organization_id
       ? sourceNames.get(template.organization_id)
       : null;
-    if (!sourceName || sourceName === organizationResult.data.name) return value;
-    return value.split(sourceName).join(organizationResult.data.name);
+    if (!sourceName || sourceName === targetOrganization.name) return value;
+    return value.split(sourceName).join(targetOrganization.name);
   }
 
   return (
@@ -133,7 +134,7 @@ export default async function ParticipantPortalPage({ params }: RouteContext) {
               Hola, {personResult.data.first_name.trim()}
             </h1>
             <p className="mt-3 max-w-2xl text-neutral-300">
-              {organizationResult.data.name} te ha asignado{" "}
+              {targetOrganization.name} te ha asignado{" "}
               {assignments.length === 1
                 ? "una evaluación"
                 : `una batería de ${assignments.length} evaluaciones`}.
