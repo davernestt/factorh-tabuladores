@@ -106,7 +106,18 @@ async function CatalogContent() {
     );
   }
 
-  const active = templates.filter((template) => template.active).length;
+  const catalogGroups = Array.from(
+    templates.reduce((groups, template) => {
+      const current = groups.get(template.name) ?? [];
+      current.push(template);
+      groups.set(template.name, current);
+      return groups;
+    }, new Map<string, Template[]>()),
+  ).map(([name, variants]) => ({ name, variants }));
+
+  const active = catalogGroups.filter((group) =>
+    group.variants.some((template) => template.active),
+  ).length;
 
   return (
     <div>
@@ -133,7 +144,7 @@ async function CatalogContent() {
       </div>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-3">
-        <Metric label="Instrumentos" value={String(templates.length)} />
+        <Metric label="Instrumentos" value={String(catalogGroups.length)} />
         <Metric label="Activos" value={String(active)} />
         <Metric
           label="Empresas con pruebas"
@@ -148,55 +159,101 @@ async function CatalogContent() {
       </div>
 
       <div className="mt-7 grid gap-5 lg:grid-cols-2">
-        {templates.map((template) => {
-          const organizationName = template.organization_id
-            ? organizations.get(template.organization_id) ?? "Empresa"
-            : "FactorRH · General";
+        {catalogGroups.map((group) => {
+          const organizationNames = Array.from(
+            new Set(
+              group.variants.map((template) =>
+                template.organization_id
+                  ? organizations.get(template.organization_id) ?? "Empresa"
+                  : "General",
+              ),
+            ),
+          );
+
+          const dimensionValues = new Set(
+            group.variants.map(
+              (template) => dimensionsByTemplate.get(template.id) ?? 0,
+            ),
+          );
+          const questionValues = new Set(
+            group.variants.map(
+              (template) => questionsByTemplate.get(template.id) ?? 0,
+            ),
+          );
+          const versionValues = new Set(
+            group.variants.map((template) => template.version),
+          );
+
+          const representative = group.variants[0];
+          const isActive = group.variants.some((template) => template.active);
+          const canAssign = group.variants.some(
+            (template) => template.assessment_type === "leadership",
+          );
+
+          const description =
+            group.variants.length > 1
+              ? "Herramienta del Programa de Desarrollo y Alineación de Líderes, disponible para las empresas indicadas."
+              : representative.description ?? "Sin descripción registrada.";
 
           return (
             <section
-              key={template.id}
+              key={group.name}
               className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">
-                    {organizationName}
+                    Disponible para: {organizationNames.join(" · ")}
                   </div>
                   <h2 className="mt-2 text-xl font-black text-neutral-900">
-                    {template.name}
+                    {group.name}
                   </h2>
                 </div>
 
                 <span
                   className={
-                    template.active
+                    isActive
                       ? "rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"
                       : "rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-500"
                   }
                 >
-                  {template.active ? "Activa" : "Inactiva"}
+                  {isActive ? "Activa" : "Inactiva"}
                 </span>
               </div>
 
               <p className="mt-4 min-h-12 text-sm leading-relaxed text-neutral-600">
-                {template.description ?? "Sin descripción registrada."}
+                {description}
               </p>
 
               <div className="mt-5 grid grid-cols-3 gap-3">
                 <Stat
                   label="Dimensiones"
-                  value={String(dimensionsByTemplate.get(template.id) ?? 0)}
+                  value={
+                    dimensionValues.size === 1
+                      ? String(Array.from(dimensionValues)[0])
+                      : "Varía"
+                  }
                 />
                 <Stat
                   label="Reactivos"
-                  value={String(questionsByTemplate.get(template.id) ?? 0)}
+                  value={
+                    questionValues.size === 1
+                      ? String(Array.from(questionValues)[0])
+                      : "Varía"
+                  }
                 />
-                <Stat label="Versión" value={String(template.version)} />
+                <Stat
+                  label="Versión"
+                  value={
+                    versionValues.size === 1
+                      ? String(Array.from(versionValues)[0])
+                      : "Varía"
+                  }
+                />
               </div>
 
               <div className="mt-5 border-t border-neutral-100 pt-5">
-                {template.assessment_type === "leadership" ? (
+                {canAssign ? (
                   <Link
                     href="/protected/nueva-evaluacion"
                     className="text-sm font-bold text-orange-600 hover:text-orange-700"
