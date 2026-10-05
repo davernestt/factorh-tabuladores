@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 type Assignment = {
   id: string;
@@ -56,7 +57,22 @@ type ResultRow = {
   score: number | string;
 };
 
-export default async function AdminDashboard() {
+export default function AdminDashboard() {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
+          <p className="text-neutral-600">Cargando panel de evaluaciones...</p>
+        </div>
+      }
+    >
+      <AdminDashboardContent />
+    </Suspense>
+  );
+}
+
+async function AdminDashboardContent() {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
