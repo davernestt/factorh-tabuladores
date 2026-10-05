@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 
 type Assignment = {
   id: string;
@@ -51,7 +52,7 @@ type Result = {
 
 type AssessmentData = {
   assignment: Assignment;
-  process: { name: string };
+  process: { name: string; public_token: string };
   person: {
     first_name: string;
     last_name: string | null;
@@ -290,8 +291,14 @@ export default function AssessmentClient({ token }: { token: string }) {
               correspondiente.
             </p>
             <div className="mx-auto mt-8 max-w-xl rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
-              Ya no necesitas realizar ninguna acción. Puedes cerrar esta ventana.
+              Esta evaluación quedó guardada correctamente.
             </div>
+            <Link
+              href={`/p/${data.process.public_token}`}
+              className="mx-auto mt-5 inline-flex rounded-xl bg-orange-500 px-6 py-3 font-bold text-white hover:bg-orange-600"
+            >
+              Volver a mis evaluaciones
+            </Link>
           </section>
         </div>
       </main>
