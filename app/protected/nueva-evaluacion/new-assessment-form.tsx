@@ -27,36 +27,68 @@ type Template = {
   description: string | null;
 };
 
+type TemplateAccess = {
+  organization_id: string;
+  template_id: string;
+  enabled: boolean;
+  participant_sendable: boolean;
+};
+
+type Battery = {
+  id: string;
+  organization_id: string | null;
+  name: string;
+  description: string | null;
+};
+
+type BatteryItem = {
+  battery_id: string;
+  template_id: string;
+  sort_order: number;
+};
+
 type Props = {
   organizations: Organization[];
   people: Person[];
   templates: Template[];
+  templateAccess: TemplateAccess[];
+  batteries: Battery[];
+  batteryItems: BatteryItem[];
 };
 
 type CreatedResult = {
-  assignment_id: string;
+  process_id: string;
+  assignment_id: string | null;
+  assignment_ids: string[];
   public_token: string;
   path: string;
   person_name: string;
+  person_email: string | null;
+  person_phone: string | null;
   organization_name: string;
   template_name: string;
+  template_names: string[];
 };
 
 export default function NewAssessmentForm({
   organizations,
   people,
   templates,
+  templateAccess,
+  batteries,
+  batteryItems,
 }: Props) {
-  const [organizationId, setOrganizationId] = useState(
-    organizations[0]?.id ?? "",
-  );
+  const initialOrganizationId = organizations[0]?.id ?? "";
+
+  const [organizationId, setOrganizationId] = useState(initialOrganizationId);
   const [personMode, setPersonMode] = useState<"existing" | "new">(
-    people.some((person) => person.organization_id === organizations[0]?.id)
+    people.some((person) => person.organization_id === initialOrganizationId)
       ? "existing"
       : "new",
   );
   const [existingPersonId, setExistingPersonId] = useState("");
-  const [templateId, setTemplateId] = useState("");
+  const [templateIds, setTemplateIds] = useState<string[]>([]);
+  const [selectedBatteryId, setSelectedBatteryId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -74,26 +106,80 @@ export default function NewAssessmentForm({
     [people, organizationId],
   );
 
-  const availableTemplates = useMemo(
+  const allowedTemplateIds = useMemo(
     () =>
-      templates.filter(
-        (template) =>
-          template.organization_id === null ||
-          template.organization_id === organizationId,
+      new Set(
+        templateAccess
+          .filter(
+            (row) =>
+              row.organization_id === organizationId &&
+              row.enabled &&
+              row.participant_sendable,
+          )
+          .map((row) => row.template_id),
       ),
-    [templates, organizationId],
+    [templateAccess, organizationId],
   );
+
+  const availableTemplates = useMemo(
+    () => templates.filter((template) => allowedTemplateIds.has(template.id)),
+    [templates, allowedTemplateIds],
+  );
+
+  const availableBatteries = useMemo(() => {
+    return batteries.filter((battery) => {
+      if (
+        battery.organization_id !== null &&
+        battery.organization_id !== organizationId
+      ) {
+        return false;
+      }
+
+      const items = batteryItems.filter(
+        (item) => item.battery_id === battery.id,
+      );
+
+      return (
+        items.length > 0 &&
+        items.every((item) => allowedTemplateIds.has(item.template_id))
+      );
+    });
+  }, [batteries, batteryItems, organizationId, allowedTemplateIds]);
 
   function changeOrganization(value: string) {
     setOrganizationId(value);
     setExistingPersonId("");
-    setTemplateId("");
+    setTemplateIds([]);
+    setSelectedBatteryId("");
     setCreated(null);
 
     const hasPeople = people.some(
       (person) => person.organization_id === value,
     );
     setPersonMode(hasPeople ? "existing" : "new");
+  }
+
+  function toggleTemplate(templateId: string) {
+    setSelectedBatteryId("");
+    setTemplateIds((current) =>
+      current.includes(templateId)
+        ? current.filter((id) => id !== templateId)
+        : [...current, templateId],
+    );
+  }
+
+  function applyBattery(batteryId: string) {
+    setSelectedBatteryId(batteryId);
+
+    if (!batteryId) return;
+
+    const ids = batteryItems
+      .filter((item) => item.battery_id === batteryId)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((item) => item.template_id)
+      .filter((id) => allowedTemplateIds.has(id));
+
+    setTemplateIds(ids);
   }
 
   async function submit(event: React.FormEvent) {
@@ -108,7 +194,7 @@ export default function NewAssessmentForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           organization_id: organizationId,
-          template_id: templateId,
+          template_ids: templateIds,
           existing_person_id:
             personMode === "existing" ? existingPersonId : null,
           first_name: firstName,
@@ -148,10 +234,10 @@ export default function NewAssessmentForm({
     return (
       <section className="rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm md:p-8">
         <div className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
-          Evaluación creada
+          Liga creada
         </div>
         <h2 className="mt-4 text-2xl font-black text-neutral-900">
-          Evaluación asignada correctamente
+          Evaluaciones asignadas correctamente
         </h2>
         <p className="mt-2 text-neutral-600">
           {created.person_name} · {created.organization_name}
@@ -161,6 +247,20 @@ export default function NewAssessmentForm({
           <div className="text-sm font-semibold text-neutral-900">
             {created.template_name}
           </div>
+
+          {created.template_names.length > 1 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {created.template_names.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-600 ring-1 ring-neutral-200"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
             Liga única para responder
           </div>
@@ -170,17 +270,18 @@ export default function NewAssessmentForm({
 
           <div className="mt-4">
             <CopyAssessmentLink
-              token={created.public_token}
+              path={created.path}
               personName={created.person_name}
               templateName={created.template_name}
               organizationName={created.organization_name}
-              email={email || null}
-              phone={phone || null}
+              email={created.person_email}
+              phone={created.person_phone}
             />
           </div>
 
           <p className="mt-4 text-xs text-neutral-500">
-            WhatsApp y Correo preparan la invitación con la liga; tú confirmas el envío.
+            Esta liga abre el portal del participante. Si tiene varias pruebas,
+            podrá responderlas desde el mismo acceso.
           </p>
         </div>
 
@@ -196,7 +297,8 @@ export default function NewAssessmentForm({
             onClick={() => {
               setCreated(null);
               setExistingPersonId("");
-              setTemplateId("");
+              setTemplateIds([]);
+              setSelectedBatteryId("");
               setProcessName("");
               setDueDate("");
             }}
@@ -342,32 +444,87 @@ export default function NewAssessmentForm({
             Paso 2
           </div>
           <h2 className="mt-2 text-xl font-bold text-neutral-900">
-            Evaluación y fecha
+            Elige las evaluaciones
           </h2>
+          <p className="mt-2 text-sm text-neutral-500">
+            Puedes seleccionar una sola prueba o varias. En ambos casos se genera
+            una sola liga para el participante.
+          </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Evaluación">
-            <select
-              value={templateId}
-              onChange={(event) => setTemplateId(event.target.value)}
-              className="input"
-              required
-            >
-              <option value="">Selecciona evaluación</option>
-              {availableTemplates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
-                </option>
-              ))}
-            </select>
-            {organizationId && availableTemplates.length === 0 && (
-              <p className="mt-2 text-sm text-amber-700">
-                Esta empresa todavía no tiene evaluaciones disponibles.
-              </p>
-            )}
-          </Field>
+        {availableBatteries.length > 0 && (
+          <div className="mb-5">
+            <Field label="Batería predeterminada (opcional)">
+              <select
+                value={selectedBatteryId}
+                onChange={(event) => applyBattery(event.target.value)}
+                className="input"
+              >
+                <option value="">Personalizada: elegir pruebas manualmente</option>
+                {availableBatteries.map((battery) => (
+                  <option key={battery.id} value={battery.id}>
+                    {battery.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        )}
 
+        {availableTemplates.length === 0 ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800">
+            Esta empresa todavía no tiene pruebas habilitadas para enviarse a
+            participantes. Puedes configurarlas desde la sección Empresas.
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {availableTemplates.map((template) => {
+              const selected = templateIds.includes(template.id);
+              return (
+                <label
+                  key={template.id}
+                  className={
+                    selected
+                      ? "cursor-pointer rounded-2xl border border-orange-400 bg-orange-50 p-4"
+                      : "cursor-pointer rounded-2xl border border-neutral-200 bg-neutral-50 p-4 hover:border-neutral-300"
+                  }
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => toggleTemplate(template.id)}
+                      className="mt-1 h-4 w-4 accent-orange-500"
+                    />
+                    <div>
+                      <div className="font-bold text-neutral-900">
+                        {template.name}
+                      </div>
+                      {template.description && (
+                        <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+                          {template.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-5 rounded-2xl bg-neutral-50 p-4 text-sm">
+          <span className="font-bold text-neutral-900">
+            {templateIds.length}
+          </span>{" "}
+          <span className="text-neutral-600">
+            {templateIds.length === 1
+              ? "evaluación seleccionada"
+              : "evaluaciones seleccionadas"}
+          </span>
+        </div>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
           <Field label="Fecha límite (opcional)">
             <input
               type="date"
@@ -377,16 +534,14 @@ export default function NewAssessmentForm({
             />
           </Field>
 
-          <div className="md:col-span-2">
-            <Field label="Nombre del proceso (opcional)">
-              <input
-                value={processName}
-                onChange={(event) => setProcessName(event.target.value)}
-                className="input"
-                placeholder="Ej. Diagnóstico de Liderazgo 2026"
-              />
-            </Field>
-          </div>
+          <Field label="Nombre del proceso o batería (opcional)">
+            <input
+              value={processName}
+              onChange={(event) => setProcessName(event.target.value)}
+              className="input"
+              placeholder="Ej. Batería de ingreso · Ventas"
+            />
+          </Field>
         </div>
       </section>
 
@@ -405,10 +560,14 @@ export default function NewAssessmentForm({
         </Link>
         <button
           type="submit"
-          disabled={saving || !organizationId || !templateId}
+          disabled={saving || !organizationId || templateIds.length === 0}
           className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          {saving ? "Creando..." : "Crear evaluación"}
+          {saving
+            ? "Creando..."
+            : templateIds.length > 1
+              ? "Crear batería y liga"
+              : "Crear evaluación y liga"}
         </button>
       </div>
 
