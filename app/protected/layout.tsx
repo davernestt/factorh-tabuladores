@@ -23,6 +23,20 @@ export default function ProtectedLayout({
           </Link>
 
           <div className="flex items-center gap-4">
+            <div className="hidden items-center gap-1 rounded-xl bg-neutral-100 p-1 md:flex">
+              <Link
+                href="/protected"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
+              >
+                Evaluaciones
+              </Link>
+              <Link
+                href="/protected/candidatos"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
+              >
+                Candidatos
+              </Link>
+            </div>
             <Link
               href="/"
               className="hidden text-sm font-medium text-neutral-500 hover:text-neutral-900 sm:block"
