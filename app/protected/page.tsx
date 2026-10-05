@@ -215,8 +215,16 @@ async function AdminDashboardContent() {
             Seguimiento de participantes, avance y resultados.
           </p>
         </div>
-        <div className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-500 shadow-sm">
-          {total} {total === 1 ? "evaluación" : "evaluaciones"}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-500 shadow-sm">
+            {total} {total === 1 ? "evaluación" : "evaluaciones"}
+          </div>
+          <Link
+            href="/protected/nueva-evaluacion"
+            className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+          >
+            + Nueva evaluación
+          </Link>
         </div>
       </div>
 
