@@ -36,6 +36,12 @@ export default function ProtectedLayout({
               >
                 Candidatos
               </Link>
+              <Link
+                href="/protected/catalogo"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
+              >
+                Catálogo
+              </Link>
             </div>
             <Link
               href="/"
