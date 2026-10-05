@@ -38,12 +38,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     await Promise.all([
       db
         .from("assessment_processes")
-        .select("id,name,person_id,organization_id")
+        .select("id,name,person_id,organization_id,public_token")
         .eq("id", assignment.process_id)
         .single(),
       db
         .from("assessment_templates")
-        .select("id,name,description,version")
+        .select("id,name,description,version,organization_id")
         .eq("id", assignment.template_id)
         .single(),
       db
@@ -95,14 +95,52 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return errorResponse(organizationResult.error.message, 500);
   }
 
+  let sourceOrganizationName: string | null = null;
+  if (templateResult.data.organization_id) {
+    const { data: sourceOrganization } = await db
+      .from("organizations")
+      .select("name")
+      .eq("id", templateResult.data.organization_id)
+      .maybeSingle();
+
+    sourceOrganizationName = sourceOrganization?.name ?? null;
+  }
+
+  const targetOrganizationName = organizationResult.data.name;
+  const adaptText = (value: string | null) => {
+    if (
+      !value ||
+      !sourceOrganizationName ||
+      sourceOrganizationName === targetOrganizationName
+    ) {
+      return value;
+    }
+
+    return value.split(sourceOrganizationName).join(targetOrganizationName);
+  };
+
   return NextResponse.json({
     assignment,
-    process: { name: processData.name },
+    process: {
+      name: processData.name,
+      public_token: processData.public_token,
+    },
     person: personResult.data,
     organization: organizationResult.data,
-    template: templateResult.data,
-    dimensions: dimensionsResult.data ?? [],
-    questions: questionsResult.data ?? [],
+    template: {
+      id: templateResult.data.id,
+      name: templateResult.data.name,
+      description: adaptText(templateResult.data.description),
+      version: templateResult.data.version,
+    },
+    dimensions: (dimensionsResult.data ?? []).map((dimension) => ({
+      ...dimension,
+      description: adaptText(dimension.description),
+    })),
+    questions: (questionsResult.data ?? []).map((question) => ({
+      ...question,
+      prompt: adaptText(question.prompt) ?? question.prompt,
+    })),
     responses: responsesResult.data ?? [],
     results: [],
   });
@@ -115,7 +153,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   const { data: assignment, error: assignmentError } = await db
     .from("assessment_assignments")
-    .select("id,status,started_at,template_id")
+    .select("id,status,started_at,template_id,process_id")
     .eq("public_token", token)
     .maybeSingle();
 
@@ -297,6 +335,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .eq("id", assignment.id);
 
     if (completeError) return errorResponse(completeError.message, 500);
+
+    const { data: siblings, error: siblingsError } = await db
+      .from("assessment_assignments")
+      .select("status")
+      .eq("process_id", assignment.process_id);
+
+    if (!siblingsError && (siblings ?? []).length > 0) {
+      const processFinished = (siblings ?? []).every((item) =>
+        ["completed", "cancelled"].includes(item.status),
+      );
+
+      if (processFinished) {
+        await db
+          .from("assessment_processes")
+          .update({ status: "completed" })
+          .eq("id", assignment.process_id);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   }
