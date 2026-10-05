@@ -54,6 +54,7 @@ async function NewAssessmentContent() {
       .from("assessment_templates")
       .select("id,organization_id,name,description")
       .eq("active", true)
+      .eq("assessment_type", "leadership")
       .order("name"),
   ]);
 
