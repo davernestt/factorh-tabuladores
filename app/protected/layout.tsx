@@ -1,8 +1,4 @@
-import { DeployButton } from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
 import { AuthButton } from "@/components/auth-button";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { hasEnvVars } from "@/lib/utils";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -12,44 +8,35 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen flex flex-col items-center">
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-          <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-            <div className="flex gap-5 items-center font-semibold">
-              <Link href={"/"}>Next.js Supabase Starter</Link>
-              <div className="flex items-center gap-2">
-                <DeployButton />
+    <main className="min-h-screen bg-neutral-100">
+      <nav className="border-b border-neutral-200 bg-white">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
+          <Link href="/protected" className="flex items-center gap-3">
+            <div>
+              <div className="text-xl font-black tracking-tight text-neutral-900">
+                Factor<span className="text-orange-500">RH</span>
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                Administración
               </div>
             </div>
-            {!hasEnvVars ? (
-              <EnvVarWarning />
-            ) : (
-              <Suspense>
-                <AuthButton />
-              </Suspense>
-            )}
-          </div>
-        </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          {children}
-        </div>
+          </Link>
 
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="hidden text-sm font-medium text-neutral-500 hover:text-neutral-900 sm:block"
             >
-              Supabase
-            </a>
-          </p>
-          <ThemeSwitcher />
-        </footer>
-      </div>
+              Sitio público
+            </Link>
+            <Suspense>
+              <AuthButton />
+            </Suspense>
+          </div>
+        </div>
+      </nav>
+
+      <div className="mx-auto max-w-7xl px-5 py-8">{children}</div>
     </main>
   );
 }
