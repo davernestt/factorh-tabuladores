@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import CopyAssessmentLink from "./copy-assessment-link";
 
 type Assignment = {
   id: string;
@@ -354,21 +353,13 @@ async function AdminDashboardContent() {
                           </Link>
                           {assignment.status !== "completed" &&
                             assignment.status !== "cancelled" && (
-                              <>
-                                <CopyAssessmentLink
-                                  token={assignment.public_token}
-                                  personName={personName}
-                                  templateName={template?.name ?? "Evaluación"}
-                                  organizationName={organization?.name ?? "FactorRH"}
-                                />
-                                <Link
-                                  href={`/e/${assignment.public_token}`}
-                                  target="_blank"
-                                  className="text-xs font-medium text-neutral-500 hover:text-neutral-900"
-                                >
-                                  Abrir evaluación
-                                </Link>
-                              </>
+                              <Link
+                                href={`/e/${assignment.public_token}`}
+                                target="_blank"
+                                className="text-xs font-medium text-neutral-500 hover:text-neutral-900"
+                              >
+                                Abrir evaluación
+                              </Link>
                             )}
                         </div>
                       </td>
