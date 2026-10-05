@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   if (assignmentError) return errorResponse(assignmentError.message, 500);
   if (!assignment) return errorResponse("Evaluación no encontrada.", 404);
 
-  const [processResult, templateResult, dimensionsResult, questionsResult, responsesResult, resultsResult] =
+  const [processResult, templateResult, dimensionsResult, questionsResult, responsesResult] =
     await Promise.all([
       db
         .from("assessment_processes")
@@ -64,10 +64,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           "question_id,numeric_value,text_value,evidence_text,is_not_observed,answered_at",
         )
         .eq("assignment_id", assignment.id),
-      db
-        .from("assessment_results")
-        .select("dimension_id,score,percentage,answered_questions")
-        .eq("assignment_id", assignment.id),
     ]);
 
   const firstError =
@@ -75,8 +71,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     templateResult.error ||
     dimensionsResult.error ||
     questionsResult.error ||
-    responsesResult.error ||
-    resultsResult.error;
+    responsesResult.error;
 
   if (firstError) return errorResponse(firstError.message, 500);
 
@@ -109,7 +104,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     dimensions: dimensionsResult.data ?? [],
     questions: questionsResult.data ?? [],
     responses: responsesResult.data ?? [],
-    results: resultsResult.data ?? [],
+    results: [],
   });
 }
 
