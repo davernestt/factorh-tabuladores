@@ -273,64 +273,28 @@ export default function AssessmentClient({ token }: { token: string }) {
   }
 
   if (data.assignment.status === "completed") {
-    const dimensionById = new Map(
-      data.dimensions.map((dimension) => [dimension.id, dimension]),
-    );
-
     return (
       <main className="min-h-screen bg-neutral-100 px-5 py-10">
-        <div className="mx-auto max-w-4xl">
+        <div className="mx-auto max-w-3xl">
           <BrandHeader />
-          <section className="mt-8 rounded-3xl bg-white border border-neutral-200 p-7 md:p-10 shadow-sm">
-            <div className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+          <section className="mt-8 rounded-3xl border border-neutral-200 bg-white p-8 text-center shadow-sm md:p-12">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-3xl text-emerald-700">
+              ✓
+            </div>
+            <div className="mt-5 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
               Evaluación finalizada
             </div>
             <h1 className="mt-5 text-3xl font-bold text-neutral-900">
               Gracias, {data.person.first_name.trim()}.
             </h1>
-            <p className="mt-3 max-w-2xl text-neutral-600">
-              Tus respuestas quedaron registradas. Estos resultados forman parte
-              del proceso de desarrollo de liderazgo.
+            <p className="mx-auto mt-3 max-w-xl text-neutral-600">
+              Tus respuestas quedaron registradas correctamente. El equipo
+              responsable revisará los resultados dentro del proceso
+              correspondiente.
             </p>
-
-            {data.results.length > 0 && (
-              <div className="mt-8 grid gap-4 md:grid-cols-2">
-                {data.results
-                  .slice()
-                  .sort((a, b) => {
-                    const da = dimensionById.get(a.dimension_id)?.sort_order ?? 0;
-                    const db = dimensionById.get(b.dimension_id)?.sort_order ?? 0;
-                    return da - db;
-                  })
-                  .map((result) => {
-                    const dimension = dimensionById.get(result.dimension_id);
-                    return (
-                      <div
-                        key={result.dimension_id}
-                        className="rounded-2xl border border-neutral-200 p-5"
-                      >
-                        <div className="text-sm font-medium text-neutral-500">
-                          {dimension?.name ?? "Dimensión"}
-                        </div>
-                        <div className="mt-2 flex items-end gap-3">
-                          <span className="text-3xl font-bold text-neutral-900">
-                            {Number(result.score).toFixed(2)}
-                          </span>
-                          <span className="pb-1 text-sm text-neutral-500">/ 5</span>
-                        </div>
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-100">
-                          <div
-                            className="h-full rounded-full bg-orange-500"
-                            style={{
-                              width: `${Math.min(100, Number(result.percentage))}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
+            <div className="mx-auto mt-8 max-w-xl rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
+              Ya no necesitas realizar ninguna acción. Puedes cerrar esta ventana.
+            </div>
           </section>
         </div>
       </main>
