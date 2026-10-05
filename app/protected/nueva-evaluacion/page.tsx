@@ -37,7 +37,14 @@ async function NewAssessmentContent() {
 
   const db = createAdminClient();
 
-  const [organizationsResult, peopleResult, templatesResult] = await Promise.all([
+  const [
+    organizationsResult,
+    peopleResult,
+    templatesResult,
+    accessResult,
+    batteriesResult,
+    batteryItemsResult,
+  ] = await Promise.all([
     db
       .from("organizations")
       .select("id,name")
@@ -54,14 +61,28 @@ async function NewAssessmentContent() {
       .from("assessment_templates")
       .select("id,organization_id,name,description")
       .eq("active", true)
-      .eq("assessment_type", "leadership")
       .order("name"),
+    db
+      .from("organization_assessment_templates")
+      .select("organization_id,template_id,enabled,participant_sendable"),
+    db
+      .from("assessment_batteries")
+      .select("id,organization_id,name,description")
+      .eq("active", true)
+      .order("name"),
+    db
+      .from("assessment_battery_items")
+      .select("battery_id,template_id,sort_order")
+      .order("sort_order"),
   ]);
 
   const firstError =
     organizationsResult.error ||
     peopleResult.error ||
-    templatesResult.error;
+    templatesResult.error ||
+    accessResult.error ||
+    batteriesResult.error ||
+    batteryItemsResult.error;
 
   if (firstError) {
     return (
@@ -101,6 +122,9 @@ async function NewAssessmentContent() {
           organizations={organizationsResult.data ?? []}
           people={peopleResult.data ?? []}
           templates={templatesResult.data ?? []}
+          templateAccess={accessResult.data ?? []}
+          batteries={batteriesResult.data ?? []}
+          batteryItems={batteryItemsResult.data ?? []}
         />
       </div>
     </div>
