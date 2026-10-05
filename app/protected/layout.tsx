@@ -42,6 +42,12 @@ export default function ProtectedLayout({
               >
                 Catálogo
               </Link>
+              <Link
+                href="/protected/empresas"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
+              >
+                Empresas
+              </Link>
             </div>
             <Link
               href="/"
