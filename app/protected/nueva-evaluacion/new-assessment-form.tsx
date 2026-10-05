@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import CopyAssessmentLink from "../copy-assessment-link";
 
 type Organization = {
   id: string;
@@ -138,6 +139,11 @@ export default function NewAssessmentForm({
     }
   }
 
+  const fullUrl =
+    created && typeof window !== "undefined"
+      ? `${window.location.origin}${created.path}`
+      : "";
+
   if (created) {
     return (
       <section className="rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm md:p-8">
@@ -155,18 +161,35 @@ export default function NewAssessmentForm({
           <div className="text-sm font-semibold text-neutral-900">
             {created.template_name}
           </div>
-          <p className="mt-2 text-sm text-neutral-600">
-            La liga quedó guardada con este candidato. Desde el panel de
-            Candidatos podrás copiarla, abrirla o enviarla cuando la necesites.
+          <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
+            Liga única para responder
+          </div>
+          <div className="mt-2 break-all rounded-xl border border-neutral-200 bg-white p-3 text-sm font-medium text-neutral-800">
+            {fullUrl}
+          </div>
+
+          <div className="mt-4">
+            <CopyAssessmentLink
+              token={created.public_token}
+              personName={created.person_name}
+              templateName={created.template_name}
+              organizationName={created.organization_name}
+              email={email || null}
+              phone={phone || null}
+            />
+          </div>
+
+          <p className="mt-4 text-xs text-neutral-500">
+            WhatsApp y Correo preparan la invitación con la liga; tú confirmas el envío.
           </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link
-            href="/protected/candidatos"
+            href="/protected"
             className="rounded-xl bg-orange-500 px-5 py-3 text-center font-bold text-white hover:bg-orange-600"
           >
-            Ir a Candidatos
+            Volver al panel
           </Link>
           <button
             type="button"
