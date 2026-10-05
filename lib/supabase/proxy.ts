@@ -9,7 +9,9 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const isPublicAssessment =
-    pathname.startsWith("/e/") || pathname.startsWith("/api/evaluacion/");
+    pathname.startsWith("/e/") ||
+    pathname.startsWith("/p/") ||
+    pathname.startsWith("/api/evaluacion/");
 
   if (isPublicAssessment) {
     return supabaseResponse;
