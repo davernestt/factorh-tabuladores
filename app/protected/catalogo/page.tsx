@@ -196,12 +196,23 @@ async function CatalogContent() {
               </div>
 
               <div className="mt-5 border-t border-neutral-100 pt-5">
-                <Link
-                  href="/protected/nueva-evaluacion"
-                  className="text-sm font-bold text-orange-600 hover:text-orange-700"
-                >
-                  Asignar esta evaluación →
-                </Link>
+                {template.assessment_type === "leadership" ? (
+                  <Link
+                    href="/protected/nueva-evaluacion"
+                    className="text-sm font-bold text-orange-600 hover:text-orange-700"
+                  >
+                    Asignar esta evaluación →
+                  </Link>
+                ) : (
+                  <div>
+                    <div className="text-sm font-bold text-neutral-700">
+                      Aplicación interna
+                    </div>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      El instrumento ya está cargado. En la siguiente fase habilitaremos su flujo específico de aplicación.
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
           );
