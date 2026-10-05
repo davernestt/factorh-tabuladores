@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
+import DeleteAssessmentButton from "./delete-assessment-button";
 
 type Assignment = {
   id: string;
@@ -361,6 +362,11 @@ async function AdminDashboardContent() {
                                 Abrir evaluación
                               </Link>
                             )}
+                          <DeleteAssessmentButton
+                            assignmentId={assignment.id}
+                            participantName={personName}
+                            templateName={template?.name ?? "Evaluación"}
+                          />
                         </div>
                       </td>
                     </tr>
