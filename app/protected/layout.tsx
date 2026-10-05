@@ -48,6 +48,12 @@ export default function ProtectedLayout({
               >
                 Empresas
               </Link>
+              <Link
+                href="/protected/baterias"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
+              >
+                Baterías
+              </Link>
             </div>
             <Link
               href="/"
