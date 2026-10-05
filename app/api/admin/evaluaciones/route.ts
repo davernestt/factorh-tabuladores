@@ -7,6 +7,7 @@ const ADMIN_EMAILS = ["david@factorh.com.mx"];
 type CreateBody = {
   organization_id?: string;
   template_id?: string;
+  template_ids?: string[];
   existing_person_id?: string | null;
   first_name?: string;
   last_name?: string;
@@ -33,19 +34,38 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json()) as CreateBody;
   const organizationId = clean(body.organization_id);
-  const templateId = clean(body.template_id);
   const existingPersonId = clean(body.existing_person_id);
+  const requestedIds = Array.isArray(body.template_ids)
+    ? body.template_ids.map(clean).filter(Boolean)
+    : [];
+  const legacyTemplateId = clean(body.template_id);
+  const templateIds = Array.from(
+    new Set(
+      requestedIds.length > 0
+        ? requestedIds
+        : legacyTemplateId
+          ? [legacyTemplateId]
+          : [],
+    ),
+  );
 
-  if (!organizationId || !templateId) {
+  if (!organizationId || templateIds.length === 0) {
     return NextResponse.json(
-      { error: "Selecciona empresa y evaluación." },
+      { error: "Selecciona empresa y al menos una evaluación." },
+      { status: 400 },
+    );
+  }
+
+  if (templateIds.length > 20) {
+    return NextResponse.json(
+      { error: "La batería no puede contener más de 20 evaluaciones." },
       { status: 400 },
     );
   }
 
   const db = createAdminClient();
 
-  const [organizationResult, templateResult] = await Promise.all([
+  const [organizationResult, templatesResult, accessResult] = await Promise.all([
     db
       .from("organizations")
       .select("id,name,active")
@@ -55,14 +75,21 @@ export async function POST(request: NextRequest) {
     db
       .from("assessment_templates")
       .select("id,name,organization_id,active")
-      .eq("id", templateId)
-      .eq("active", true)
-      .maybeSingle(),
+      .in("id", templateIds)
+      .eq("active", true),
+    db
+      .from("organization_assessment_templates")
+      .select("template_id,enabled,participant_sendable")
+      .eq("organization_id", organizationId)
+      .in("template_id", templateIds),
   ]);
 
-  if (organizationResult.error) {
+  const firstValidationError =
+    organizationResult.error || templatesResult.error || accessResult.error;
+
+  if (firstValidationError) {
     return NextResponse.json(
-      { error: organizationResult.error.message },
+      { error: firstValidationError.message },
       { status: 500 },
     );
   }
@@ -74,40 +101,48 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (templateResult.error) {
-    return NextResponse.json(
-      { error: templateResult.error.message },
-      { status: 500 },
-    );
-  }
+  const templates = templatesResult.data ?? [];
+  const access = accessResult.data ?? [];
 
-  const template = templateResult.data;
-  if (!template) {
+  if (templates.length !== templateIds.length) {
     return NextResponse.json(
-      { error: "La evaluación seleccionada no está disponible." },
+      { error: "Una o más evaluaciones ya no están disponibles." },
       { status: 400 },
     );
   }
 
-  if (
-    template.organization_id &&
-    template.organization_id !== organizationId
-  ) {
+  const allowedIds = new Set(
+    access
+      .filter((row) => row.enabled && row.participant_sendable)
+      .map((row) => row.template_id),
+  );
+
+  const unauthorized = templateIds.filter((id) => !allowedIds.has(id));
+  if (unauthorized.length > 0) {
     return NextResponse.json(
-      { error: "Esta evaluación no pertenece a la empresa seleccionada." },
+      {
+        error:
+          "Una o más evaluaciones no están habilitadas para enviarse a participantes de esta empresa.",
+      },
       { status: 400 },
     );
   }
+
+  const templateById = new Map(templates.map((template) => [template.id, template]));
+  const orderedTemplates = templateIds
+    .map((id) => templateById.get(id))
+    .filter((template): template is NonNullable<typeof template> => Boolean(template));
 
   let personId = existingPersonId;
   let createdPersonId: string | null = null;
   let personName = "";
   let personEmail: string | null = null;
+  let personPhone: string | null = null;
 
   if (personId) {
     const { data: person, error: personError } = await db
       .from("people")
-      .select("id,first_name,last_name,email,organization_id,active")
+      .select("id,first_name,last_name,email,phone,organization_id,active")
       .eq("id", personId)
       .eq("organization_id", organizationId)
       .eq("active", true)
@@ -129,6 +164,7 @@ export async function POST(request: NextRequest) {
 
     personName = `${person.first_name.trim()} ${person.last_name ?? ""}`.trim();
     personEmail = person.email;
+    personPhone = person.phone;
   } else {
     const firstName = clean(body.first_name);
     if (!firstName) {
@@ -150,7 +186,7 @@ export async function POST(request: NextRequest) {
         area: clean(body.area) || null,
         active: true,
       })
-      .select("id,first_name,last_name,email")
+      .select("id,first_name,last_name,email,phone")
       .single();
 
     if (newPersonError) {
@@ -164,11 +200,15 @@ export async function POST(request: NextRequest) {
     createdPersonId = newPerson.id;
     personName = `${newPerson.first_name.trim()} ${newPerson.last_name ?? ""}`.trim();
     personEmail = newPerson.email;
+    personPhone = newPerson.phone;
   }
 
-  const processName =
-    clean(body.process_name) ||
-    `${template.name} - ${personName}`;
+  const defaultProcessName =
+    orderedTemplates.length === 1
+      ? `${orderedTemplates[0].name} - ${personName}`
+      : `Batería de ${orderedTemplates.length} evaluaciones - ${personName}`;
+
+  const processName = clean(body.process_name) || defaultProcessName;
 
   const { data: processData, error: processError } = await db
     .from("assessment_processes")
@@ -180,7 +220,7 @@ export async function POST(request: NextRequest) {
       start_date: new Date().toISOString().slice(0, 10),
       target_date: clean(body.due_date) || null,
     })
-    .select("id")
+    .select("id,public_token")
     .single();
 
   if (processError) {
@@ -198,19 +238,20 @@ export async function POST(request: NextRequest) {
     ? `${clean(body.due_date)}T23:59:59`
     : null;
 
-  const { data: assignment, error: assignmentError } = await db
+  const assignmentRows = orderedTemplates.map((template) => ({
+    process_id: processData.id,
+    template_id: template.id,
+    relationship_type: "self",
+    evaluator_name: personName,
+    evaluator_email: personEmail,
+    due_date: dueDate,
+    status: "pending",
+  }));
+
+  const { data: assignments, error: assignmentError } = await db
     .from("assessment_assignments")
-    .insert({
-      process_id: processData.id,
-      template_id: templateId,
-      relationship_type: "self",
-      evaluator_name: personName,
-      evaluator_email: personEmail,
-      due_date: dueDate,
-      status: "pending",
-    })
-    .select("id,public_token,status")
-    .single();
+    .insert(assignmentRows)
+    .select("id,public_token,status,template_id");
 
   if (assignmentError) {
     await db.from("assessment_processes").delete().eq("id", processData.id);
@@ -226,11 +267,19 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    assignment_id: assignment.id,
-    public_token: assignment.public_token,
-    path: `/e/${assignment.public_token}`,
+    process_id: processData.id,
+    assignment_id: assignments?.[0]?.id ?? null,
+    assignment_ids: (assignments ?? []).map((item) => item.id),
+    public_token: processData.public_token,
+    path: `/p/${processData.public_token}`,
     person_name: personName,
+    person_email: personEmail,
+    person_phone: personPhone,
     organization_name: organizationResult.data.name,
-    template_name: template.name,
+    template_name:
+      orderedTemplates.length === 1
+        ? orderedTemplates[0].name
+        : `Batería de ${orderedTemplates.length} evaluaciones`,
+    template_names: orderedTemplates.map((template) => template.name),
   });
 }
