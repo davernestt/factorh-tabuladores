@@ -13,9 +13,12 @@ export default function Home() {
               Evaluaciones
             </div>
           </div>
-          <div className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-600">
-            Plataforma de Desarrollo
-          </div>
+          <Link
+            href="/protected"
+            className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-600 shadow-sm hover:text-neutral-900"
+          >
+            Acceso administrativo
+          </Link>
         </header>
 
         <section className="mt-12 overflow-hidden rounded-[2rem] border border-neutral-200 bg-white shadow-sm">
@@ -57,12 +60,6 @@ export default function Home() {
           <p className="mt-2 text-neutral-600">
             Abre el enlace único que recibiste de FactorRH o de tu organización.
           </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex rounded-xl bg-orange-500 px-5 py-3 font-bold text-white"
-          >
-            FactorRH Evaluaciones
-          </Link>
         </section>
       </div>
     </main>
