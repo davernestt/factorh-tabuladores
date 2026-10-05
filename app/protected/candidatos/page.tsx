@@ -225,6 +225,8 @@ async function CandidatesContent() {
                                       personName={personName}
                                       templateName={template?.name ?? "Evaluación"}
                                       organizationName={organization?.name ?? "FactorRH"}
+                                      email={person.email}
+                                      phone={person.phone}
                                     />
                                     <Link
                                       href={`/e/${assignment.public_token}`}
