@@ -2,14 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+const ADMIN_EMAILS = ["david@factorh.com.mx"];
 
-  // Las evaluaciones públicas por token y su API deben poder abrirse
-  // sin iniciar sesión.
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
+
   const isPublicAssessment =
     pathname.startsWith("/e/") || pathname.startsWith("/api/evaluacion/");
 
@@ -17,7 +15,6 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // If the env vars are not set, skip proxy check.
   if (!hasEnvVars) {
     return supabaseResponse;
   }
@@ -34,9 +31,7 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );
@@ -47,12 +42,30 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
+  const email = String(user?.email ?? "").trim().toLowerCase();
+  const isAdmin = ADMIN_EMAILS.includes(email);
+
+  if (pathname.startsWith("/protected")) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      return NextResponse.redirect(url);
+    }
+
+    if (!isAdmin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("error", "unauthorized");
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (
     pathname !== "/" &&
     !user &&
     !pathname.startsWith("/login") &&
-    !pathname.startsWith("/auth")
+    !pathname.startsWith("/auth") &&
+    !pathname.startsWith("/protected")
   ) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
