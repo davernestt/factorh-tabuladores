@@ -121,10 +121,7 @@ export default function AssessmentClient({ token }: { token: string }) {
         };
       }
       setResponses(initial);
-      setStarted(
-        assessment.assignment.status === "in_progress" ||
-          assessment.assignment.status === "completed",
-      );
+      setStarted(false);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "Ocurrió un error inesperado.",
@@ -309,18 +306,48 @@ export default function AssessmentClient({ token }: { token: string }) {
           <section className="mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
             <div className="border-b border-neutral-200 bg-neutral-900 px-7 py-9 text-white md:px-10">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-400">
-                {data.organization.name}
+                Portal del participante · FactorRH
               </div>
               <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-                {data.template.name}
+                Hola, {data.person.first_name.trim()}
               </h1>
               <p className="mt-3 max-w-2xl text-neutral-300">
-                {data.template.description}
+                Tienes una evaluación asignada por {data.organization.name}.
               </p>
             </div>
 
             <div className="p-7 md:p-10">
-              <div className="grid gap-4 rounded-2xl bg-neutral-50 p-5 md:grid-cols-2">
+              <div className="rounded-2xl border border-neutral-200 p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">
+                  Evaluación asignada
+                </div>
+                <h2 className="mt-2 text-2xl font-black text-neutral-900">
+                  {data.template.name}
+                </h2>
+                {data.template.description && (
+                  <p className="mt-2 text-neutral-600">
+                    {data.template.description}
+                  </p>
+                )}
+                {data.assignment.status === "in_progress" && (
+                  <div className="mt-5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-neutral-700">
+                        Avance guardado
+                      </span>
+                      <span className="text-neutral-500">{progress}%</span>
+                    </div>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-neutral-100">
+                      <div
+                        className="h-full rounded-full bg-orange-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 grid gap-4 rounded-2xl bg-neutral-50 p-5 md:grid-cols-2">
                 <Info label="Participante" value={`${data.person.first_name.trim()} ${data.person.last_name ?? ""}`.trim()} />
                 <Info label="Puesto" value={data.person.job_title ?? "No especificado"} />
                 <Info label="Área" value={data.person.area ?? "No especificada"} />
@@ -356,7 +383,9 @@ export default function AssessmentClient({ token }: { token: string }) {
                 onClick={() => setStarted(true)}
                 className="mt-8 w-full rounded-xl bg-orange-500 px-6 py-4 font-bold text-white transition hover:bg-orange-600"
               >
-                Iniciar evaluación
+                {data.assignment.status === "in_progress"
+                  ? "Continuar evaluación"
+                  : "Comenzar evaluación"}
               </button>
             </div>
           </section>
