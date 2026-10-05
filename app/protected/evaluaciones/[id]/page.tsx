@@ -2,12 +2,28 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 
 type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function EvaluationDetailPage({ params }: PageProps) {
+export default function EvaluationDetailPage({ params }: PageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
+          <p className="text-neutral-600">Cargando detalle de evaluación...</p>
+        </div>
+      }
+    >
+      <EvaluationDetailContent params={params} />
+    </Suspense>
+  );
+}
+
+async function EvaluationDetailContent({ params }: PageProps) {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
