@@ -3,7 +3,8 @@
 import { useState } from "react";
 
 type Props = {
-  token: string;
+  token?: string;
+  path?: string;
   personName: string;
   templateName: string;
   organizationName: string;
@@ -13,6 +14,7 @@ type Props = {
 
 export default function CopyAssessmentLink({
   token,
+  path,
   personName,
   templateName,
   organizationName,
@@ -22,7 +24,8 @@ export default function CopyAssessmentLink({
   const [copied, setCopied] = useState<"link" | "message" | null>(null);
 
   function assessmentUrl() {
-    return `${window.location.origin}/e/${token}`;
+    const target = path ?? (token ? `/e/${token}` : "/");
+    return `${window.location.origin}${target}`;
   }
 
   function invitationMessage() {
