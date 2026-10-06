@@ -1,17 +1,28 @@
 import { AuthButton } from "@/components/auth-button";
+import { getCurrentAppUser, landingForRole } from "@/lib/auth/app-user";
 import Link from "next/link";
 import { Suspense } from "react";
 
-export default function ProtectedLayout({
+export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const appUser = await getCurrentAppUser();
+  const role = appUser?.role ?? "client";
+  const homeHref = appUser ? landingForRole(role) : "/auth/login";
+
+  const isAdmin = role === "super_admin";
+  const canCommercial = isAdmin || role === "commercial";
+  const canOperate = isAdmin || ["recruiter", "ese_operator", "consultant"].includes(role);
+  const canAssess = isAdmin || role === "recruiter" || role === "consultant";
+  const canRecruit = isAdmin || role === "recruiter";
+
   return (
     <main className="min-h-screen bg-neutral-100">
       <nav className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-          <Link href="/protected/dashboard" className="flex items-center gap-3">
+          <Link href={homeHref} className="flex items-center gap-3">
             <div>
               <div className="text-xl font-black tracking-tight text-neutral-900">
                 Factor<span className="text-orange-500">RH</span>
@@ -24,61 +35,39 @@ export default function ProtectedLayout({
 
           <div className="flex items-center gap-4">
             <div className="hidden items-center gap-1 rounded-xl bg-neutral-100 p-1 md:flex">
-              <Link
-                href="/protected/dashboard"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-white hover:text-orange-700"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/protected"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Evaluaciones
-              </Link>
-              <Link
-                href="/protected/comercial"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Comercial
-              </Link>
-              <Link
-                href="/protected/operacion"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Operación
-              </Link>
-              <Link
-                href="/protected/candidatos"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Candidatos
-              </Link>
-              <Link
-                href="/protected/catalogo"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Catálogo
-              </Link>
-              <Link
-                href="/protected/empresas"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Empresas
-              </Link>
-              <Link
-                href="/protected/baterias"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
-              >
-                Baterías
-              </Link>
+              {isAdmin && (
+                <Nav href="/protected/dashboard">Dashboard</Nav>
+              )}
+
+              {canAssess && <Nav href="/protected">Evaluaciones</Nav>}
+
+              {canCommercial && (
+                <Nav href="/protected/comercial">Comercial</Nav>
+              )}
+
+              {canOperate && (
+                <Nav href="/protected/operacion">Operación</Nav>
+              )}
+
+              {canRecruit && (
+                <>
+                  <Nav href="/protected/candidatos">Candidatos</Nav>
+                  <Nav href="/protected/catalogo">Catálogo</Nav>
+                  <Nav href="/protected/empresas">Empresas</Nav>
+                  <Nav href="/protected/baterias">Baterías</Nav>
+                </>
+              )}
+
+              {isAdmin && <Nav href="/protected/usuarios">Usuarios</Nav>}
             </div>
+
             <Link
               href="/"
               className="hidden text-sm font-medium text-neutral-500 hover:text-neutral-900 sm:block"
             >
               Sitio público
             </Link>
+
             <Suspense>
               <AuthButton />
             </Suspense>
@@ -88,5 +77,22 @@ export default function ProtectedLayout({
 
       <div className="mx-auto max-w-7xl px-5 py-8">{children}</div>
     </main>
+  );
+}
+
+function Nav({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-orange-700"
+    >
+      {children}
+    </Link>
   );
 }
