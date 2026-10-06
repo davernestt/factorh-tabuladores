@@ -173,7 +173,7 @@ function TopMenu({
   children: React.ReactNode;
 }) {
   return (
-    <details className="group relative">
+    <details name="factorh-main-nav" className="group relative">
       <summary className="flex cursor-pointer list-none items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-bold text-neutral-700 transition hover:bg-orange-50 hover:text-orange-700 [&::-webkit-details-marker]:hidden">
         {label}
         <span className="text-[10px] text-neutral-400 transition group-open:rotate-180">
