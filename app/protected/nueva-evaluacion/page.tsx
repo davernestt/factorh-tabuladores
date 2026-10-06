@@ -15,6 +15,7 @@ export default function NewAssessmentPage({
     person?: string;
     returnTo?: string;
     process?: string;
+    recruitmentCandidate?: string;
   }>;
 }) {
   return (
@@ -39,6 +40,7 @@ async function NewAssessmentContent({
     person?: string;
     returnTo?: string;
     process?: string;
+    recruitmentCandidate?: string;
   }>;
 }) {
   const authClient = await createClient();
@@ -166,6 +168,7 @@ async function NewAssessmentContent({
           initialPersonId={initialPersonId}
           initialProcessName={params.process}
           returnTo={safeReturnTo}
+          initialRecruitmentCandidateId={params.recruitmentCandidate}
         />
       </div>
     </div>
