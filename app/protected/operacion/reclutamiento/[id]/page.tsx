@@ -317,6 +317,12 @@ export default async function RecruitmentPage({params}:{params:Promise<{id:strin
 
                         <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-3">
                           <Link
+                            href={`/protected/operacion/reclutamiento/${job.id}/candidatos/${link.id}`}
+                            className="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-bold text-neutral-700 hover:border-orange-300 hover:text-orange-700"
+                          >
+                            Ver ficha
+                          </Link>
+                          <Link
                             href={assessmentHref}
                             className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-bold text-white hover:bg-neutral-900"
                           >
