@@ -81,12 +81,20 @@ export default async function OperacionPage() {
             El puente entre lo que FactoRH vende y lo que tiene que entregar.
           </p>
         </div>
-        <Link
-          href="/protected/comercial"
-          className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
-        >
-          Ir a Comercial
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/protected/operacion/reclutamiento"
+            className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-bold text-orange-700 shadow-sm hover:bg-orange-100"
+          >
+            Indicadores de Reclutamiento
+          </Link>
+          <Link
+            href="/protected/comercial"
+            className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
+          >
+            Ir a Comercial
+          </Link>
+        </div>
       </div>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
