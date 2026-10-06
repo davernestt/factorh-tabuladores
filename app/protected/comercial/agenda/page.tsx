@@ -100,8 +100,7 @@ export default async function AgendaComercialPage() {
         .from("sales_opportunities")
         .select(
           "id,organization_id,title,stage,priority,next_action,next_action_at,estimated_value",
-        )
-        .not("stage", "in", '("won","lost")'),
+        ),
       db
         .from("sales_quotes")
         .select(
@@ -112,7 +111,9 @@ export default async function AgendaComercialPage() {
     ]);
 
   const activities = activitiesResult.data ?? [];
-  const opportunities = opportunitiesResult.data ?? [];
+  const opportunities = (opportunitiesResult.data ?? []).filter(
+    (item) => item.stage !== "won" && item.stage !== "lost",
+  );
   const quotes = quotesResult.data ?? [];
   const organizations = new Map(
     (organizationsResult.data ?? []).map((item) => [item.id, item.name]),
