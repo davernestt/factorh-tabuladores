@@ -37,6 +37,12 @@ export default function ProtectedLayout({
                 Comercial
               </Link>
               <Link
+                href="/protected/operacion"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
+              >
+                Operación
+              </Link>
+              <Link
                 href="/protected/candidatos"
                 className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
               >
