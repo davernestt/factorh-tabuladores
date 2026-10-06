@@ -11,7 +11,7 @@ export default function ProtectedLayout({
     <main className="min-h-screen bg-neutral-100">
       <nav className="border-b border-neutral-200 bg-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5">
-          <Link href="/protected" className="flex items-center gap-3">
+          <Link href="/protected/dashboard" className="flex items-center gap-3">
             <div>
               <div className="text-xl font-black tracking-tight text-neutral-900">
                 Factor<span className="text-orange-500">RH</span>
@@ -25,6 +25,12 @@ export default function ProtectedLayout({
           <div className="flex items-center gap-4">
             <div className="hidden items-center gap-1 rounded-xl bg-neutral-100 p-1 md:flex">
               <Link
+                href="/protected/dashboard"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-white hover:text-orange-700"
+              >
+                Dashboard
+              </Link>
+              <Link
                 href="/protected"
                 className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
               >
@@ -32,7 +38,7 @@ export default function ProtectedLayout({
               </Link>
               <Link
                 href="/protected/comercial"
-                className="rounded-lg px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-white hover:text-orange-700"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
               >
                 Comercial
               </Link>
