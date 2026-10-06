@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,49 +12,25 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const [unauthorized, setUnauthorized] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setUnauthorized(params.get("error") === "unauthorized");
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      router.push("/protected");
-      router.refresh();
-    } catch (error: unknown) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "No fue posible iniciar sesión",
-      );
-    } finally {
-      setIsLoading(false);
+    const error = params.get("error");
+    if (error === "unauthorized") {
+      setMessage("Esta cuenta no tiene autorización para entrar al panel.");
+    } else if (error === "invalid_credentials") {
+      setMessage("Correo o contraseña incorrectos.");
+    } else if (error === "login_failed") {
+      setMessage("No fue posible iniciar sesión. Intenta nuevamente.");
     }
-  };
+  }, []);
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -76,11 +51,11 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin}>
+          <form action="/api/auth/login" method="post">
             <div className="flex flex-col gap-6">
-              {unauthorized && (
+              {message && (
                 <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
-                  Esta cuenta no tiene autorización para entrar al panel.
+                  {message}
                 </p>
               )}
 
@@ -88,11 +63,11 @@ export function LoginForm({
                 <Label htmlFor="email">Correo</Label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="david@factorh.com.mx"
+                  autoComplete="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
@@ -108,17 +83,15 @@ export function LoginForm({
                 </div>
                 <Input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
-              {error && <p className="text-sm text-red-500">{error}</p>}
-
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Ingresando..." : "Entrar"}
+              <Button type="submit" className="w-full">
+                Entrar
               </Button>
             </div>
 
