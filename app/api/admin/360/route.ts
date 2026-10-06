@@ -3,6 +3,7 @@ import { randomBytes, createHash } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorized360Admin } from '@/lib/feedback360-auth';
 import type { FeedbackRole } from '@/lib/feedback360';
+import { build360Url } from '@/lib/feedback360-url';
 
 type Rater = { role: FeedbackRole; name: string; email?: string };
 type RequestBody = { organization_id?: string; person_id?: string; name?: string; due_date?: string; raters?: Rater[] };
@@ -42,5 +43,5 @@ export async function POST(request: NextRequest) {
     await db.from('feedback360_cycles').delete().eq('id',cycle.id);
     return fail(ratersError.message,500);
   }
-  return NextResponse.json({ ok:true, cycle_id:cycle.id, invitations:invitations.map(r=>({ role:r.role,name:r.name,email:r.email,path:`/360/${r.token}` })) }, { status:201, headers:{'Cache-Control':'no-store'} });
+  return NextResponse.json({ ok:true, cycle_id:cycle.id, invitations:invitations.map(r=>({ role:r.role,name:r.name,email:r.email,url:build360Url(r.token) })) }, { status:201, headers:{'Cache-Control':'no-store'} });
 }
