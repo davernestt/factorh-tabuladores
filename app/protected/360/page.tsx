@@ -1,9 +1,18 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorized360Admin } from '@/lib/feedback360-auth';
 
-export default async function Feedback360Index() {
+export default function Feedback360Index() {
+  return (
+    <Suspense fallback={<Loading360 />}>
+      <Feedback360IndexContent />
+    </Suspense>
+  );
+}
+
+async function Feedback360IndexContent() {
   if(!await authorized360Admin())redirect('/auth/login');
   const db=createAdminClient();
   const [cyclesR, peopleR, orgsR, ratersR] = await Promise.all([
@@ -26,3 +35,5 @@ export default async function Feedback360Index() {
     </section>
   </div>;
 }
+
+function Loading360(){return <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500"/><p className="text-neutral-600">Cargando evaluaciones 360°...</p></div>}
