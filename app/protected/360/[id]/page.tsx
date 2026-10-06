@@ -4,7 +4,8 @@ import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorized360Admin } from '@/lib/feedback360-auth';
 import { FEEDBACK_ROLES, interpret360, type FeedbackRole } from '@/lib/feedback360';
-import { band360, summarize360 } from '@/lib/feedback360-report';
+import { band360, professional360, summarize360 } from '@/lib/feedback360-report';
+import { CompetencyBars, GapBars, Radar360 } from './report-visuals';
 import CycleActions from './cycle-actions';
 import InviteActions from './invite-actions';
 import './print.css';
@@ -48,6 +49,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
   const closed=cycle.status==='closed';
   const summary=summarize360(raters,answersR.data??[],closed);
   const analysis=closed?interpret360(summary.dimensions):null;
+  const professional=closed?professional360(summary.dimensions):null;
   const person=personR.data;
   const personName=`${person.first_name} ${person.last_name??''}`.trim();
 
@@ -100,10 +102,28 @@ async function Feedback360DetailContent({ params }: PageProps) {
         <div className="mt-6 overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-500"><tr><th className="px-4 py-3">Competencia</th><th className="px-4 py-3">AUTO</th><th className="px-4 py-3">Jefe</th><th className="px-4 py-3">Pares</th><th className="px-4 py-3">Colaboradores</th><th className="px-4 py-3">Brecha</th></tr></thead><tbody className="divide-y divide-neutral-100">{summary.dimensions.map(d=><tr key={d.key}><td className="px-4 py-4 font-bold text-neutral-800">{d.name}</td>{(['self','manager','peer','report'] as FeedbackRole[]).map(role=><td key={role} className="px-4 py-4 text-neutral-700">{d.scores[role]!==undefined?<><strong>{d.scores[role]!.toFixed(2)}</strong><div className="text-xs text-neutral-400">{band360(d.scores[role]!)}{(role==='peer'||role==='report')&&d.counts[role] ? ` · n=${d.counts[role]}` : ''}</div></>:'—'}</td>)}<td className="px-4 py-4 font-bold text-neutral-700">{d.gap===null?'—':d.gap>0?`+${d.gap.toFixed(2)}`:d.gap.toFixed(2)}</td></tr>)}</tbody></table></div>
       </section>
 
+      {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Lectura ejecutiva</div><h2 className="mt-2 text-3xl font-black text-neutral-800">{professional.headline}</h2><div className="mt-5 space-y-3 text-sm leading-7 text-neutral-600">{professional.executiveSummary.map((p,i)=><p key={i}>{p}</p>)}</div></div>
+          <div className="min-w-[190px] rounded-2xl bg-neutral-800 p-6 text-white"><div className="text-xs font-bold uppercase tracking-[.14em] text-orange-300">Índice del entorno</div><div className="mt-2 text-5xl font-black">{professional.overall?.toFixed(2)??'—'}</div><div className="mt-1 text-sm text-neutral-300">sobre 4.00</div></div>
+        </div>
+      </section>}
+
+      {professional&&<section className="grid gap-5 xl:grid-cols-2">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Mapa 360°</div><h2 className="mt-2 text-xl font-black text-neutral-800">Percepción por fuente</h2><p className="mt-1 text-sm text-neutral-500">Compara la forma en que la persona se observa con la experiencia de jefe, pares y colaboradores.</p><div className="mt-5"><Radar360 dimensions={summary.dimensions}/></div></div>
+        <div className="space-y-5"><div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Ranking</div><h2 className="mt-2 text-xl font-black text-neutral-800">Competencias según el entorno</h2><div className="mt-5"><CompetencyBars dimensions={summary.dimensions}/></div></div><div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Autopercepción</div><h2 className="mt-2 text-xl font-black text-neutral-800">Brechas Auto vs entorno</h2><p className="mt-1 text-xs text-neutral-500">Positivo = la persona se califica por encima del entorno. | ≥0.70 = conversación prioritaria.</p><div className="mt-5"><GapBars dimensions={summary.dimensions}/></div></div></div>
+      </section>}
+
       {analysis&&<section className="grid gap-5 lg:grid-cols-3">
         <Insight title="Fortalezas validadas" items={analysis.strengths.map(x=>`${x.name} · ${x.external.toFixed(2)}`)}/>
         <Insight title="Prioridades de desarrollo" items={analysis.priorities.map(x=>`${x.name} · ${x.external.toFixed(2)}`)}/>
         <Insight title="Posibles puntos ciegos" items={analysis.blindSpots.length?analysis.blindSpots.map(x=>`${x.name}: AUTO ${x.scores.self?.toFixed(2)} vs entorno ${x.external.toFixed(2)}`):['No se detectaron brechas de autopercepción ≥ 0.70.']}/>
+      </section>}
+
+      {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Plan de desarrollo individual</div><h2 className="mt-2 text-2xl font-black text-neutral-800">Ruta de mejora · 90 días</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-500">El plan prioriza las competencias con menor valoración externa y las traduce en conductas observables, seguimiento y evidencia de avance.</p>
+        <div className="mt-6 grid gap-4">{professional.developmentPlan.map((p,i)=><article key={p.competency} className="rounded-2xl border border-neutral-200 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><span className="text-xs font-bold uppercase tracking-[.12em] text-orange-600">Prioridad {i+1} · {p.horizon}</span><h3 className="mt-1 text-lg font-black text-neutral-800">{p.competency}</h3></div><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">{p.indicator}</span></div><p className="mt-3 text-sm font-semibold text-neutral-700">{p.objective}</p><ul className="mt-3 grid gap-2 text-sm leading-6 text-neutral-600 md:grid-cols-3">{p.actions.map((a,j)=><li key={j} className="rounded-xl bg-neutral-50 p-3">{a}</li>)}</ul></article>)}</div>
+        <div className="mt-7 rounded-2xl bg-neutral-800 p-6 text-white"><h3 className="font-black">Sugerencias para la devolución y seguimiento</h3><ul className="mt-4 grid gap-3 text-sm leading-6 text-neutral-300 md:grid-cols-2">{professional.recommendations.map((x,i)=><li key={i}><span className="mr-2 font-black text-orange-400">0{i+1}</span>{x}</li>)}</ul></div>
       </section>}
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
