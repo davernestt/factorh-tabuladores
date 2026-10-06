@@ -190,7 +190,7 @@ export default async function OperacionDetailPage({
 
   if (error || !order) notFound();
 
-  const [organizationResult, quoteResult, opportunityResult, updatesResult] =
+  const [organizationResult, quoteResult, opportunityResult, updatesResult, moduleResult] =
     await Promise.all([
       db.from("organizations").select("name").eq("id", order.organization_id).single(),
       db
@@ -208,6 +208,11 @@ export default async function OperacionDetailPage({
         .select("id,update_type,title,notes,created_at")
         .eq("service_order_id", id)
         .order("created_at", { ascending: false }),
+      order.service_type === "recruitment"
+        ? db.from("recruitment_jobs").select("id").eq("service_order_id", id).maybeSingle()
+        : order.service_type === "ese"
+          ? Promise.resolve({ data: { id }, error: null })
+          : db.from("consulting_projects").select("id").eq("service_order_id", id).maybeSingle(),
     ]);
 
   const organization = organizationResult.data;
@@ -215,6 +220,23 @@ export default async function OperacionDetailPage({
   const opportunity = opportunityResult.data;
   const updates = updatesResult.data ?? [];
   const guide = serviceGuide[order.service_type] ?? serviceGuide.hr_consulting;
+  const moduleId = moduleResult.data?.id ?? null;
+
+  const moduleHref =
+    order.service_type === "recruitment" && moduleId
+      ? `/protected/operacion/reclutamiento/${moduleId}`
+      : order.service_type === "ese"
+        ? `/protected/operacion/ese/${order.id}`
+        : order.service_type === "hr_consulting" && moduleId
+          ? `/protected/operacion/consultoria/${moduleId}`
+          : null;
+
+  const moduleLabel =
+    order.service_type === "recruitment"
+      ? "Abrir vacante y candidatos"
+      : order.service_type === "ese"
+        ? "Administrar estudios"
+        : "Abrir proyecto y tareas";
 
   return (
     <div>
@@ -243,12 +265,22 @@ export default async function OperacionDetailPage({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-right shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-            Valor comercial
-          </div>
-          <div className="mt-1 text-2xl font-black text-neutral-900">
-            {money(Number(order.commercial_value || 0))}
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          {moduleHref && (
+            <Link
+              href={moduleHref}
+              className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+            >
+              {moduleLabel}
+            </Link>
+          )}
+          <div className="rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-right shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+              Valor comercial
+            </div>
+            <div className="mt-1 text-2xl font-black text-neutral-900">
+              {money(Number(order.commercial_value || 0))}
+            </div>
           </div>
         </div>
       </div>
