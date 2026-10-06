@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
+import { Suspense } from "react";
 
 type RouteContext = {
   params: Promise<{ token: string }>;
@@ -20,7 +21,24 @@ type Template = {
   description: string | null;
 };
 
-export default async function ParticipantPortalPage({ params }: RouteContext) {
+export default function ParticipantPortalPage(props: RouteContext) {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-neutral-100 flex items-center justify-center p-6">
+          <div className="rounded-3xl bg-white border border-neutral-200 p-10 shadow-sm text-center">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
+            <p className="text-neutral-600">Cargando evaluaciones...</p>
+          </div>
+        </main>
+      }
+    >
+      <ParticipantPortalContent {...props} />
+    </Suspense>
+  );
+}
+
+async function ParticipantPortalContent({ params }: RouteContext) {
   const { token } = await params;
   const db = createAdminClient();
 
