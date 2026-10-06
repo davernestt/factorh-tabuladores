@@ -40,6 +40,7 @@ type Organization = {
 type Template = {
   id: string;
   name: string;
+  assessment_type: string;
 };
 
 type Question = {
@@ -106,7 +107,7 @@ async function AdminDashboardContent() {
       .from("people")
       .select("id,first_name,last_name,job_title,area"),
     db.from("organizations").select("id,name"),
-    db.from("assessment_templates").select("id,name"),
+    db.from("assessment_templates").select("id,name,assessment_type"),
     db
       .from("assessment_questions")
       .select("id,template_id,question_type"),
@@ -352,6 +353,15 @@ async function AdminDashboardContent() {
                           >
                             Ver detalle
                           </Link>
+                          {assignment.status === "completed" &&
+                            template?.assessment_type?.startsWith("leadership") && (
+                              <Link
+                                href={`/protected/evaluaciones/${assignment.id}/reporte`}
+                                className="text-xs font-bold text-neutral-900 hover:text-orange-600"
+                              >
+                                Ver reporte
+                              </Link>
+                            )}
                           {assignment.status !== "completed" &&
                             assignment.status !== "cancelled" && (
                               <Link
