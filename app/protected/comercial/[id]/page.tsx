@@ -136,6 +136,7 @@ async function updateStage(formData: FormData) {
   });
 
   revalidatePath("/protected/comercial");
+  revalidatePath("/protected/comercial/agenda");
   revalidatePath(`/protected/comercial/${id}`);
 }
 
@@ -201,6 +202,7 @@ async function addActivity(formData: FormData) {
   await db.from("sales_opportunities").update(opportunityUpdate).eq("id", id);
 
   revalidatePath("/protected/comercial");
+  revalidatePath("/protected/comercial/agenda");
   revalidatePath(`/protected/comercial/${id}`);
 }
 
@@ -228,15 +230,28 @@ async function completeActivity(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  const { data: nextActivity } = await db
+    .from("sales_activities")
+    .select("subject,scheduled_at")
+    .eq("opportunity_id", opportunityId)
+    .eq("status", "pending")
+    .not("scheduled_at", "is", null)
+    .order("scheduled_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
   await db
     .from("sales_opportunities")
     .update({
       last_contact_at: now,
+      next_action: nextActivity?.subject ?? null,
+      next_action_at: nextActivity?.scheduled_at ?? null,
       updated_at: now,
     })
     .eq("id", opportunityId);
 
   revalidatePath("/protected/comercial");
+  revalidatePath("/protected/comercial/agenda");
   revalidatePath(`/protected/comercial/${opportunityId}`);
 }
 
