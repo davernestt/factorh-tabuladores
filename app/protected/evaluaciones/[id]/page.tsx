@@ -65,7 +65,7 @@ async function EvaluationDetailContent({ params }: PageProps) {
       .single(),
     db
       .from("assessment_templates")
-      .select("id,name,description")
+      .select("id,name,description,assessment_type")
       .eq("id", assignment.template_id)
       .single(),
     db
@@ -182,7 +182,18 @@ async function EvaluationDetailContent({ params }: PageProps) {
           <p className="mt-1 text-sm text-neutral-500">{processData.name}</p>
         </div>
 
-        <StatusBadge status={assignment.status} />
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge status={assignment.status} />
+          {assignment.status === "completed" &&
+            template.assessment_type?.startsWith("leadership") && (
+              <Link
+                href={`/protected/evaluaciones/${assignment.id}/reporte`}
+                className="rounded-xl bg-neutral-900 px-4 py-2 text-sm font-bold text-white hover:bg-neutral-800"
+              >
+                Ver reporte
+              </Link>
+            )}
+        </div>
       </div>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
