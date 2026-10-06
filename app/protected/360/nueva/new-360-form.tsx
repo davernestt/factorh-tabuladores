@@ -9,6 +9,7 @@ type Rater = { id:number; role:FeedbackRole; name:string; email:string };
 type Invite={role:FeedbackRole;name:string;email:string|null;path:string};
 const btn='rounded-xl bg-orange-500 px-5 py-3 font-bold text-white hover:bg-orange-600 disabled:opacity-50';
 const input='w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-800 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100';
+const PUBLIC_360_ORIGIN=process.env.NEXT_PUBLIC_360_BASE_URL||'https://factorh-evaluaciones-git-feedback360-v1-davidcarrillorh-5996.vercel.app';
 let idx=1;
 const fresh=(role:FeedbackRole):Rater=>({id:idx++,role,name:'',email:''});
 export default function New360Form({organizations,people}:{organizations:Organization[];people:Person[]}){
@@ -37,8 +38,8 @@ export default function New360Form({organizations,people}:{organizations:Organiz
     <h2 className="mt-2 text-2xl font-black text-neutral-800">Invitaciones individuales</h2>
     <p className="mt-3 max-w-3xl text-sm text-neutral-600">Copia las ligas y envíalas a sus evaluadores. Por seguridad solo se muestran en este momento. Guárdalas antes de salir: la base de datos conserva únicamente la huella criptográfica del token.</p>
     <div className="mt-6 space-y-3">{invites.map((r,i)=><div key={i} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 md:flex md:items-center md:justify-between md:gap-4">
-      <div><p className="font-bold text-neutral-800">{r.name} <span className="ml-2 text-xs font-medium text-neutral-500">{FEEDBACK_ROLES[r.role]}</span></p><p className="mt-1 max-w-lg break-all text-xs text-neutral-500">{typeof window!=='undefined'?`${window.location.origin}${r.path}`:r.path}</p></div>
-      <button type="button" className="mt-3 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:border-orange-400 md:mt-0" onClick={()=>void navigator.clipboard.writeText(`${window.location.origin}${r.path}`)}>Copiar liga</button>
+      <div><p className="font-bold text-neutral-800">{r.name} <span className="ml-2 text-xs font-medium text-neutral-500">{FEEDBACK_ROLES[r.role]}</span></p><p className="mt-1 max-w-lg break-all text-xs text-neutral-500">{`${PUBLIC_360_ORIGIN}${r.path}`}</p></div>
+      <button type="button" className="mt-3 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:border-orange-400 md:mt-0" onClick={()=>void navigator.clipboard.writeText(`${PUBLIC_360_ORIGIN}${r.path}`)}>Copiar liga</button>
     </div>)}</div>
     <div className="mt-7"><Link href={`/protected/360/${cycleId}`} className={btn}>Ver seguimiento y reporte →</Link></div>
   </section>;
