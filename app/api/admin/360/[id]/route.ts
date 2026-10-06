@@ -1,6 +1,7 @@
 import { NextRequest,NextResponse } from 'next/server';
 import { authorized360Admin } from '@/lib/feedback360-auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { build360Url } from '@/lib/feedback360-url';
 type Context={params:Promise<{id:string}>};
 export async function PATCH(request:NextRequest,ctx:Context){
   if(!await authorized360Admin())return NextResponse.json({error:'No autorizado.'},{status:403});
@@ -28,5 +29,5 @@ export async function POST(request:NextRequest,ctx:Context){
   const {data,error}=await db.from('feedback360_raters').update({token_hash}).eq('id',body.rater_id).eq('cycle_id',id).eq('status','pending').select('id').maybeSingle();
   if(error)return NextResponse.json({error:'No fue posible reexpedir la liga.'},{status:500});
   if(!data)return NextResponse.json({error:'El evaluador no está pendiente.'},{status:409});
-  return NextResponse.json({ok:true,path:`/360/${token}`},{headers:{'Cache-Control':'no-store'}});
+  return NextResponse.json({ok:true,url:build360Url(token)},{headers:{'Cache-Control':'no-store'}});
 }
