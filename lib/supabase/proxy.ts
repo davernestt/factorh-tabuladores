@@ -11,7 +11,9 @@ export async function updateSession(request: NextRequest) {
   const isPublicAssessment =
     pathname.startsWith("/e/") ||
     pathname.startsWith("/p/") ||
-    pathname.startsWith("/api/evaluacion/");
+    pathname.startsWith("/360/") ||
+    pathname.startsWith("/api/evaluacion/") ||
+    pathname.startsWith("/api/360/");
 
   if (isPublicAssessment) {
     return supabaseResponse;
