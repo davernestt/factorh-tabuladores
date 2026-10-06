@@ -15,7 +15,7 @@ export default async function ProtectedLayout({
   const isAdmin = role === "super_admin";
   const canCommercial = isAdmin || role === "commercial";
   const canOperate = isAdmin || ["recruiter", "ese_operator", "consultant"].includes(role);
-  const canAssess = isAdmin || role === "recruiter" || role === "consultant";
+  const canAssess = isAdmin || role === "recruiter";
   const canRecruit = isAdmin || role === "recruiter";
 
   return (
