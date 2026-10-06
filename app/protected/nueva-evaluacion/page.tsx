@@ -4,8 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import NewAssessmentForm from "./new-assessment-form";
-
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
+import { getCurrentAppUser } from "@/lib/auth/app-user";
 
 export default function NewAssessmentPage({
   searchParams,
@@ -45,14 +44,14 @@ async function NewAssessmentContent({
 }) {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
-  const email = String(authData?.claims?.email ?? "").trim().toLowerCase();
 
-  if (
-    authError ||
-    !authData?.claims ||
-    !ADMIN_EMAILS.includes(email)
-  ) {
+  if (authError || !authData?.claims) {
     redirect("/auth/login");
+  }
+
+  const appUser = await getCurrentAppUser();
+  if (!appUser || !["super_admin", "recruiter"].includes(appUser.role)) {
+    redirect("/auth/login?error=unauthorized");
   }
 
   const params = await searchParams;
