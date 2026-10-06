@@ -19,7 +19,7 @@ export function summarize360(raters:ResultRater[], answers:ResultAnswer[], relea
         return values.length>=3?values.reduce((a,b)=>a+b,0)/values.length:null;
       }).filter((x):x is number=>x!==null);
       counts[role]=perRater.length;
-      if((releaseAggregates || (role!=='peer'&&role!=='report')) && perRater.length >= (role==='peer'||role==='report'?3:1))scores[role]=perRater.reduce((a,b)=>a+b,0)/perRater.length;
+      if((releaseAggregates || (role!=='peer'&&role!=='report')) && perRater.length >= 1) scores[role]=perRater.reduce((a,b)=>a+b,0)/perRater.length;
     }
     const external=(['manager','peer','report'] as FeedbackRole[]).map(role=>scores[role]).filter((v):v is number=>v!==undefined);
     const gap=scores.self!==undefined&&external.length?Number((scores.self-external.reduce((a,b)=>a+b,0)/external.length).toFixed(2)):null;
@@ -35,14 +35,14 @@ export function summarize360(raters:ResultRater[], answers:ResultAnswer[], relea
         .map(r=>byRater.get(r.id)?.get(key))
         .filter((v):v is number=>v!==undefined);
       counts[role]=values.length;
-      if((releaseAggregates || (role!=='peer'&&role!=='report')) && values.length >= (role==='peer'||role==='report'?3:1)){
+      if((releaseAggregates || (role!=='peer'&&role!=='report')) && values.length >= 1){
         scores[role]=values.reduce((a,b)=>a+b,0)/values.length;
       }
     }
     return {key,competencyKey:c.key,competency:c.name,facet:item.facet,prompt:item.prompt,scores,counts};
   }));
   const byRole=Object.fromEntries((['self','manager','peer','report'] as FeedbackRole[]).map(role=>[role,{invited:raters.filter(r=>r.role===role).length,completed:completed.filter(r=>r.role===role).length}])) as Record<FeedbackRole,{invited:number;completed:number}>;
-  return { dimensions, facets, byRole, total:raters.length, completed:completed.length, suppressedGroups:(['peer','report'] as FeedbackRole[]).filter(role=>byRole[role].completed>0&&byRole[role].completed<3) };
+  return { dimensions, facets, byRole, total:raters.length, completed:completed.length, smallSampleGroups:(['peer','report'] as FeedbackRole[]).filter(role=>byRole[role].completed>0&&byRole[role].completed<3) };
 }
 
 export function band360(value:number){return value>=3.5?'Muy bien':value>=3?'Estable':value>=2.4?'Atención':'Riesgo';}
