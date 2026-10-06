@@ -7,7 +7,16 @@ import NewAssessmentForm from "./new-assessment-form";
 
 const ADMIN_EMAILS = ["david@factorh.com.mx"];
 
-export default function NewAssessmentPage() {
+export default function NewAssessmentPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    organization?: string;
+    person?: string;
+    returnTo?: string;
+    process?: string;
+  }>;
+}) {
   return (
     <Suspense
       fallback={
@@ -17,12 +26,21 @@ export default function NewAssessmentPage() {
         </div>
       }
     >
-      <NewAssessmentContent />
+      <NewAssessmentContent searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function NewAssessmentContent() {
+async function NewAssessmentContent({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    organization?: string;
+    person?: string;
+    returnTo?: string;
+    process?: string;
+  }>;
+}) {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
   const email = String(authData?.claims?.email ?? "").trim().toLowerCase();
@@ -35,6 +53,7 @@ async function NewAssessmentContent() {
     redirect("/auth/login");
   }
 
+  const params = await searchParams;
   const db = createAdminClient();
 
   const [
@@ -95,6 +114,24 @@ async function NewAssessmentContent() {
     );
   }
 
+  const organizationIds = new Set((organizationsResult.data ?? []).map((item) => item.id));
+  const personIds = new Set((peopleResult.data ?? []).map((item) => item.id));
+
+  const initialOrganizationId =
+    params.organization && organizationIds.has(params.organization)
+      ? params.organization
+      : undefined;
+
+  const initialPersonId =
+    params.person && personIds.has(params.person)
+      ? params.person
+      : undefined;
+
+  const safeReturnTo =
+    params.returnTo && params.returnTo.startsWith("/protected/")
+      ? params.returnTo
+      : undefined;
+
   return (
     <div>
       <Link
@@ -125,6 +162,10 @@ async function NewAssessmentContent() {
           templateAccess={accessResult.data ?? []}
           batteries={batteriesResult.data ?? []}
           batteryItems={batteryItemsResult.data ?? []}
+          initialOrganizationId={initialOrganizationId}
+          initialPersonId={initialPersonId}
+          initialProcessName={params.process}
+          returnTo={safeReturnTo}
         />
       </div>
     </div>
