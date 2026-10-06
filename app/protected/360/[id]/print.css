@@ -1,0 +1,7 @@
+@media print {
+  nav, .no-print { display: none !important; }
+  body, main { background: white !important; }
+  main > div { padding: 0 !important; max-width: none !important; }
+  section, header { break-inside: avoid; }
+  @page { size: A4; margin: 12mm; }
+}
