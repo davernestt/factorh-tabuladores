@@ -92,17 +92,26 @@ export default async function UsersPage() {
         ← Volver al Dashboard
       </Link>
 
-      <div className="mt-5">
-        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-          Seguridad y acceso
+      <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
+            Seguridad y acceso
+          </div>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
+            Usuarios y Roles
+          </h1>
+          <p className="mt-2 max-w-3xl text-neutral-600">
+            Crea usuarios, asigna su tipo de acceso y administra sus permisos dentro
+            de FactoRH.
+          </p>
         </div>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
-          Usuarios y Roles
-        </h1>
-        <p className="mt-2 max-w-3xl text-neutral-600">
-          Define qué puede administrar cada cuenta autenticada. El acceso a datos
-          también está protegido mediante políticas RLS en Supabase.
-        </p>
+
+        <Link
+          href="/protected/usuarios/nuevo"
+          className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+        >
+          + Crear usuario
+        </Link>
       </div>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -126,8 +135,8 @@ export default async function UsersPage() {
         <div className="border-b border-neutral-200 px-6 py-5">
           <h2 className="font-black text-neutral-900">Cuentas autenticadas</h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Primero debe existir la cuenta en Supabase Auth; desde aquí asignas el rol
-            de aplicación y, si aplica, la empresa cliente.
+            Administra usuarios existentes, cambia su tipo de acceso, empresa
+            asociada o activa/desactiva su cuenta.
           </p>
         </div>
 
