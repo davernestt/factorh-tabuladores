@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
+import { getCurrentAppUser } from "@/lib/auth/app-user";
 
 type CreateBody = {
   organization_id?: string;
@@ -27,9 +26,13 @@ function clean(value: unknown) {
 export async function POST(request: NextRequest) {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
-  const email = String(authData?.claims?.email ?? "").trim().toLowerCase();
 
-  if (authError || !authData?.claims || !ADMIN_EMAILS.includes(email)) {
+  if (authError || !authData?.claims) {
+    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
+  }
+
+  const appUser = await getCurrentAppUser();
+  if (!appUser || !["super_admin", "recruiter"].includes(appUser.role)) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
