@@ -54,6 +54,10 @@ type Props = {
   templateAccess: TemplateAccess[];
   batteries: Battery[];
   batteryItems: BatteryItem[];
+  initialOrganizationId?: string;
+  initialPersonId?: string;
+  initialProcessName?: string;
+  returnTo?: string;
 };
 
 type CreatedResult = {
@@ -77,16 +81,36 @@ export default function NewAssessmentForm({
   templateAccess,
   batteries,
   batteryItems,
+  initialOrganizationId: initialOrganizationIdProp,
+  initialPersonId,
+  initialProcessName,
+  returnTo,
 }: Props) {
-  const initialOrganizationId = organizations[0]?.id ?? "";
+  const initialOrganizationId =
+    initialOrganizationIdProp &&
+    organizations.some((organization) => organization.id === initialOrganizationIdProp)
+      ? initialOrganizationIdProp
+      : organizations[0]?.id ?? "";
+
+  const preselectedPerson =
+    initialPersonId
+      ? people.find(
+          (person) =>
+            person.id === initialPersonId &&
+            person.organization_id === initialOrganizationId,
+        )
+      : undefined;
 
   const [organizationId, setOrganizationId] = useState(initialOrganizationId);
   const [personMode, setPersonMode] = useState<"existing" | "new">(
+    preselectedPerson ||
     people.some((person) => person.organization_id === initialOrganizationId)
       ? "existing"
       : "new",
   );
-  const [existingPersonId, setExistingPersonId] = useState("");
+  const [existingPersonId, setExistingPersonId] = useState(
+    preselectedPerson?.id ?? "",
+  );
   const [templateIds, setTemplateIds] = useState<string[]>([]);
   const [selectedBatteryId, setSelectedBatteryId] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -95,7 +119,7 @@ export default function NewAssessmentForm({
   const [phone, setPhone] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [area, setArea] = useState("");
-  const [processName, setProcessName] = useState("");
+  const [processName, setProcessName] = useState(initialProcessName ?? "");
   const [dueDate, setDueDate] = useState("");
   const [created, setCreated] = useState<CreatedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -287,10 +311,10 @@ export default function NewAssessmentForm({
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Link
-            href="/protected"
+            href={returnTo ?? "/protected"}
             className="rounded-xl bg-orange-500 px-5 py-3 text-center font-bold text-white hover:bg-orange-600"
           >
-            Volver al panel
+            {returnTo ? "Volver al proceso de selección" : "Volver al panel"}
           </Link>
           <button
             type="button"
@@ -553,7 +577,7 @@ export default function NewAssessmentForm({
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link
-          href="/protected"
+          href={returnTo ?? "/protected"}
           className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center font-bold text-neutral-700 hover:bg-neutral-50"
         >
           Cancelar
