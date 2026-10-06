@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorized360Admin } from '@/lib/feedback360-auth';
@@ -8,7 +9,17 @@ import CycleActions from './cycle-actions';
 import InviteActions from './invite-actions';
 import './print.css';
 
-export default async function Feedback360Detail({params}:{params:Promise<{id:string}>}) {
+type PageProps = { params: Promise<{ id: string }> };
+
+export default function Feedback360Detail(props: PageProps) {
+  return (
+    <Suspense fallback={<Loading360 message="Cargando seguimiento y reporte 360°..." />}>
+      <Feedback360DetailContent {...props} />
+    </Suspense>
+  );
+}
+
+async function Feedback360DetailContent({ params }: PageProps) {
   if(!await authorized360Admin()) redirect('/auth/login');
   const {id}=await params;
   const db=createAdminClient();
@@ -109,3 +120,5 @@ export default async function Feedback360Detail({params}:{params:Promise<{id:str
 
 function Insight({title,items}:{title:string;items:string[]}){return <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><h3 className="font-black text-neutral-800">{title}</h3><ul className="mt-4 space-y-2 text-sm text-neutral-600">{items.map((x,i)=><li key={i} className="rounded-xl bg-neutral-50 px-3 py-2">{x}</li>)}</ul></section>}
 function ErrorBox({message}:{message:string}){return <div className="rounded-3xl border border-red-200 bg-red-50 p-7"><h1 className="font-bold text-red-800">No fue posible cargar el 360°</h1><p className="mt-2 text-sm text-red-700">{message}</p></div>}
+
+function Loading360({message}:{message:string}){return <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500"/><p className="text-neutral-600">{message}</p></div>}
