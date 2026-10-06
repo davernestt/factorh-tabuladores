@@ -36,6 +36,26 @@ type Organization = {
   name: string;
 };
 
+type PendingActivity = {
+  id: string;
+  opportunity_id: string | null;
+  organization_id: string;
+  subject: string;
+  scheduled_at: string | null;
+  status: string;
+};
+
+type Quote = {
+  id: string;
+  opportunity_id: string;
+  organization_id: string;
+  quote_number: string;
+  status: string;
+  total: number | string;
+  sent_at: string | null;
+  created_at: string;
+};
+
 function money(value: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -49,7 +69,17 @@ function shortDate(value: string | null) {
   return new Intl.DateTimeFormat("es-MX", {
     day: "2-digit",
     month: "short",
+    timeZone: "America/Mexico_City",
   }).format(new Date(value));
+}
+
+function dateKey(value: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
 }
 
 function Metric({
@@ -95,14 +125,22 @@ export default async function ComercialPage() {
       db.from("organizations").select("id,name"),
       db
         .from("sales_activities")
-        .select("id,status,scheduled_at")
-        .eq("status", "pending"),
+        .select(
+          "id,opportunity_id,organization_id,subject,status,scheduled_at",
+        )
+        .eq("status", "pending")
+        .order("scheduled_at", { ascending: true, nullsFirst: false }),
       db
         .from("sales_quotes")
-        .select("id,status,total"),
+        .select(
+          "id,opportunity_id,organization_id,quote_number,status,total,sent_at,created_at",
+        ),
     ]);
 
   const opportunities = (opportunitiesResult.data ?? []) as Opportunity[];
+  const activities = (activitiesResult.data ?? []) as PendingActivity[];
+  const quotes = (quotesResult.data ?? []) as Quote[];
+
   const organizations = new Map(
     ((organizationsResult.data ?? []) as Organization[]).map((item) => [
       item.id,
@@ -114,7 +152,6 @@ export default async function ComercialPage() {
     (item) => item.stage !== "won" && item.stage !== "lost",
   );
   const won = opportunities.filter((item) => item.stage === "won");
-  const quotes = quotesResult.data ?? [];
   const activeQuotes = quotes.filter(
     (item) =>
       item.status === "draft" ||
@@ -128,16 +165,32 @@ export default async function ComercialPage() {
   );
 
   const now = new Date();
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(23, 59, 59, 999);
+  const todayKey = dateKey(now);
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
 
-  const todayFollowUps = (activitiesResult.data ?? []).filter((item) => {
-    if (!item.scheduled_at) return false;
-    const value = new Date(item.scheduled_at);
-    return value >= start && value <= end;
-  }).length;
+  const todayFollowUps = activities.filter(
+    (item) =>
+      item.scheduled_at &&
+      dateKey(new Date(item.scheduled_at)) === todayKey,
+  );
+
+  const overdue = activities.filter(
+    (item) =>
+      item.scheduled_at &&
+      new Date(item.scheduled_at) < now &&
+      dateKey(new Date(item.scheduled_at)) !== todayKey,
+  );
+
+  const noNextAction = open.filter((item) => !item.next_action_at);
+
+  const staleQuotes = quotes.filter((item) => {
+    if (item.status !== "sent" && item.status !== "follow_up") return false;
+    const reference = item.sent_at || item.created_at;
+    return new Date(reference) < threeDaysAgo;
+  });
+
+  const attentionTotal =
+    overdue.length + noNextAction.length + staleQuotes.length;
 
   return (
     <div>
@@ -155,12 +208,21 @@ export default async function ComercialPage() {
           </p>
         </div>
 
-        <Link
-          href="/protected/comercial/nuevo"
-          className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
-        >
-          + Nuevo prospecto
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/protected/comercial/agenda"
+            className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
+          >
+            Agenda comercial
+            {attentionTotal > 0 ? ` · ${attentionTotal}` : ""}
+          </Link>
+          <Link
+            href="/protected/comercial/nuevo"
+            className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+          >
+            + Nuevo prospecto
+          </Link>
+        </div>
       </div>
 
       <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -176,7 +238,7 @@ export default async function ComercialPage() {
         />
         <Metric
           label="Seguimientos hoy"
-          value={String(todayFollowUps)}
+          value={String(todayFollowUps.length)}
           note="Actividades programadas"
         />
         <Metric
@@ -190,6 +252,58 @@ export default async function ComercialPage() {
           note="Cierres registrados"
         />
       </div>
+
+      <section className="mt-7 rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-orange-600">
+              Atención comercial
+            </div>
+            <h2 className="mt-2 text-xl font-black text-neutral-900">
+              {attentionTotal === 0
+                ? "Tu seguimiento está al día"
+                : `${attentionTotal} pendientes requieren atención`}
+            </h2>
+            <p className="mt-1 text-sm text-neutral-500">
+              Prioriza vencidos, oportunidades sin siguiente paso y cotizaciones que se están enfriando.
+            </p>
+          </div>
+
+          <Link
+            href="/protected/comercial/agenda"
+            className="rounded-xl bg-neutral-800 px-5 py-3 text-center text-sm font-bold text-white hover:bg-neutral-900"
+          >
+            Abrir agenda →
+          </Link>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <AttentionCard
+            label="Vencidos"
+            value={overdue.length}
+            note="Seguimientos anteriores a hoy"
+            tone="red"
+          />
+          <AttentionCard
+            label="Hoy"
+            value={todayFollowUps.length}
+            note="Compromisos programados"
+            tone="orange"
+          />
+          <AttentionCard
+            label="Sin próxima acción"
+            value={noNextAction.length}
+            note="Oportunidades abiertas"
+            tone="amber"
+          />
+          <AttentionCard
+            label="Cotizaciones frías"
+            value={staleQuotes.length}
+            note="Más de 3 días sin movimiento"
+            tone="neutral"
+          />
+        </div>
+      </section>
 
       <section className="mt-7 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-neutral-200 px-6 py-5 md:flex-row md:items-center md:justify-between">
@@ -255,7 +369,13 @@ export default async function ComercialPage() {
                             <span>{money(Number(item.estimated_value || 0))}</span>
                             <span>{shortDate(item.next_action_at)}</span>
                           </div>
-                          <div className="mt-2 text-xs leading-5 text-neutral-500">
+                          <div
+                            className={
+                              item.next_action_at
+                                ? "mt-2 text-xs leading-5 text-neutral-500"
+                                : "mt-2 text-xs font-bold leading-5 text-red-600"
+                            }
+                          >
                             {item.next_action || "Sin próxima acción"}
                           </div>
                         </Link>
@@ -299,15 +419,49 @@ export default async function ComercialPage() {
             Disciplina comercial
           </div>
           <h2 className="mt-3 text-2xl font-black">
-            Toda oportunidad debe tener una próxima acción.
+            Primero seguimiento, después prospección.
           </h2>
           <p className="mt-3 text-sm leading-6 text-neutral-300">
-            El sistema ya está preparado para guardar la próxima acción y su fecha.
-            Los siguientes pasos serán alertas, edición de etapas y seguimiento desde
-            la propia ficha del prospecto.
+            La Agenda Comercial concentra vencidos, actividades de hoy,
+            oportunidades sin siguiente paso y cotizaciones que necesitan reactivación.
           </p>
+          <Link
+            href="/protected/comercial/agenda"
+            className="mt-5 inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-black text-neutral-900"
+          >
+            Revisar pendientes
+          </Link>
         </section>
       </div>
+    </div>
+  );
+}
+
+function AttentionCard({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: number;
+  note: string;
+  tone: "red" | "orange" | "amber" | "neutral";
+}) {
+  const classes = {
+    red: "border-red-200 bg-red-50",
+    orange: "border-orange-200 bg-orange-50",
+    amber: "border-amber-200 bg-amber-50",
+    neutral: "border-neutral-200 bg-neutral-50",
+  }[tone];
+
+  return (
+    <div className={`rounded-2xl border p-4 ${classes}`}>
+      <div className="text-xs font-black uppercase tracking-wide text-neutral-600">
+        {label}
+      </div>
+      <div className="mt-2 text-2xl font-black text-neutral-900">{value}</div>
+      <div className="mt-1 text-xs text-neutral-500">{note}</div>
     </div>
   );
 }
