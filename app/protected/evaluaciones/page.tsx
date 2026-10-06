@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChecks, MessagesSquare, MoveUpRight } from 'lucide-react';
@@ -12,7 +13,15 @@ const modules = [
   { name: 'Próximas herramientas', description: 'Desempeño, DNC y People Review, entre otras soluciones.', icon: CircleHelp, href: null, active: false, tag: 'Planeación' },
 ];
 
-export default async function EvaluationModulesPage() {
+export default function EvaluationModulesPage() {
+  return (
+    <Suspense fallback={<LoadingModules />}>
+      <EvaluationModulesPageContent />
+    </Suspense>
+  );
+}
+
+async function EvaluationModulesPageContent() {
   const auth = await createClient();
   const { data, error } = await auth.auth.getClaims();
   if (error || !data?.claims) redirect('/auth/login');
@@ -34,3 +43,5 @@ export default async function EvaluationModulesPage() {
     </div>
   </div>;
 }
+
+function LoadingModules(){return <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500"/><p className="text-neutral-600">Cargando centro de evaluaciones...</p></div>}
