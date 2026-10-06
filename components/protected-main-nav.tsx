@@ -86,7 +86,7 @@ export function ProtectedMainNav({
               onNavigate={close}
             />
             <MenuLink
-              href="/protected/feedback360"
+              href="/protected/360"
               title="360°"
               description="Evaluación multifuente"
               onNavigate={close}
