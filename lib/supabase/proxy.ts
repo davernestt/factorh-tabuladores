@@ -31,6 +31,17 @@ function roleCanAccess(pathname: string, role: AppRole) {
     return role === "recruiter";
   }
 
+  if (
+    pathname.startsWith("/protected/psicometrias") ||
+    pathname.startsWith("/protected/feedback360")
+  ) {
+    return role === "recruiter";
+  }
+
+  if (pathname.startsWith("/protected/estudios")) {
+    return role === "ese_operator";
+  }
+
   if (pathname.startsWith("/protected/operacion/reclutamiento")) {
     return role === "recruiter";
   }
