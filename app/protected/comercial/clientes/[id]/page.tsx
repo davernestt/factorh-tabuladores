@@ -71,7 +71,7 @@ export default async function ClienteDetailPage({
 
   if (error || !organization) notFound();
 
-  const [contactsResult, opportunitiesResult, quotesResult, activitiesResult] =
+  const [contactsResult, opportunitiesResult, quotesResult, activitiesResult, ordersResult] =
     await Promise.all([
       db
         .from("sales_contacts")
@@ -100,12 +100,23 @@ export default async function ClienteDetailPage({
         .eq("organization_id", id)
         .order("created_at", { ascending: false })
         .limit(20),
+      db
+        .from("service_orders")
+        .select(
+          "id,order_number,service_type,title,status,target_date,commercial_value,created_at",
+        )
+        .eq("organization_id", id)
+        .order("created_at", { ascending: false }),
     ]);
 
   const contacts = contactsResult.data ?? [];
   const opportunities = opportunitiesResult.data ?? [];
   const quotes = quotesResult.data ?? [];
   const activities = activitiesResult.data ?? [];
+  const orders = ordersResult.data ?? [];
+  const activeOrders = orders.filter(
+    (item) => item.status !== "completed" && item.status !== "cancelled",
+  );
 
   const acceptedQuotes = quotes.filter((item) => item.status === "accepted");
   const totalSales = acceptedQuotes.reduce(
@@ -192,9 +203,9 @@ export default async function ClienteDetailPage({
           note="Venta adicional potencial"
         />
         <Metric
-          label="Contactos"
-          value={String(contacts.filter((item) => item.active).length)}
-          note="Personas relacionadas"
+          label="Servicios activos"
+          value={String(activeOrders.length)}
+          note="Órdenes en operación"
         />
       </div>
 
@@ -326,6 +337,52 @@ export default async function ClienteDetailPage({
                     </div>
                     <div className="text-lg font-black text-neutral-900">
                       {money(Number(quote.total || 0))}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-6 py-5">
+              <div>
+                <h2 className="font-black text-neutral-900">Servicios en operación</h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Lo vendido que ya está en proceso de entrega.
+                </p>
+              </div>
+              <Link
+                href="/protected/operacion"
+                className="text-xs font-bold text-orange-600 hover:text-orange-700"
+              >
+                Ver operación
+              </Link>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="p-8 text-center text-sm text-neutral-500">
+                Sin órdenes de servicio registradas.
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {orders.map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/protected/operacion/${order.id}`}
+                    className="flex flex-col gap-3 p-5 transition hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <div className="font-black text-neutral-900">
+                        {order.order_number}
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-neutral-500">
+                        {serviceLabels[order.service_type] ?? order.service_type} · {order.status}
+                      </div>
+                      <div className="mt-1 text-sm text-neutral-600">{order.title}</div>
+                    </div>
+                    <div className="text-lg font-black text-neutral-900">
+                      {money(Number(order.commercial_value || 0))}
                     </div>
                   </Link>
                 ))}
