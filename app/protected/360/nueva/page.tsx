@@ -1,10 +1,19 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { authorized360Admin } from '@/lib/feedback360-auth';
 import New360Form from './new-360-form';
 
-export default async function New360Page() {
+export default function New360Page() {
+  return (
+    <Suspense fallback={<LoadingNew360 />}>
+      <New360PageContent />
+    </Suspense>
+  );
+}
+
+async function New360PageContent() {
   if(!await authorized360Admin()) redirect('/auth/login');
   const db=createAdminClient();
   const [organizations,people]=await Promise.all([
@@ -19,3 +28,5 @@ export default async function New360Page() {
     <div className="mt-7"><New360Form organizations={organizations.data??[]} people={people.data??[]} /></div>
   </div>;
 }
+
+function LoadingNew360(){return <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500"/><p className="text-neutral-600">Cargando formulario 360°...</p></div>}
