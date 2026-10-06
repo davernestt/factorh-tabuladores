@@ -62,7 +62,8 @@ export function canManageService(role: AppRole, serviceType: string) {
 
 export function landingForRole(role: AppRole) {
   if (role === "commercial") return "/protected/comercial";
-  if (["recruiter", "ese_operator", "consultant"].includes(role)) {
+  if (role === "ese_operator") return "/protected/operacion/ese";
+  if (["recruiter", "consultant"].includes(role)) {
     return "/protected/operacion";
   }
   if (role === "client") return "/auth/login?error=client_portal_pending";
