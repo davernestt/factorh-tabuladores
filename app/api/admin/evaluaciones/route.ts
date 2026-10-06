@@ -17,6 +17,7 @@ type CreateBody = {
   area?: string;
   process_name?: string;
   due_date?: string | null;
+  recruitment_job_candidate_id?: string | null;
 };
 
 function clean(value: unknown) {
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json()) as CreateBody;
   const organizationId = clean(body.organization_id);
   const existingPersonId = clean(body.existing_person_id);
+  const recruitmentJobCandidateId = clean(body.recruitment_job_candidate_id);
   const requestedIds = Array.isArray(body.template_ids)
     ? body.template_ids.map(clean).filter(Boolean)
     : [];
@@ -203,6 +205,49 @@ export async function POST(request: NextRequest) {
     personPhone = newPerson.phone;
   }
 
+  if (recruitmentJobCandidateId) {
+    const { data: recruitmentCandidate, error: recruitmentCandidateError } =
+      await db
+        .from("recruitment_job_candidates")
+        .select("id,person_id,recruitment_job_id")
+        .eq("id", recruitmentJobCandidateId)
+        .maybeSingle();
+
+    if (recruitmentCandidateError) {
+      return NextResponse.json(
+        { error: recruitmentCandidateError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!recruitmentCandidate || recruitmentCandidate.person_id !== personId) {
+      return NextResponse.json(
+        { error: "El candidato de reclutamiento no corresponde a la persona seleccionada." },
+        { status: 400 },
+      );
+    }
+
+    const { data: recruitmentJob, error: recruitmentJobError } = await db
+      .from("recruitment_jobs")
+      .select("id,organization_id")
+      .eq("id", recruitmentCandidate.recruitment_job_id)
+      .maybeSingle();
+
+    if (recruitmentJobError) {
+      return NextResponse.json(
+        { error: recruitmentJobError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!recruitmentJob || recruitmentJob.organization_id !== organizationId) {
+      return NextResponse.json(
+        { error: "La vacante no pertenece a la empresa seleccionada." },
+        { status: 400 },
+      );
+    }
+  }
+
   const defaultProcessName =
     orderedTemplates.length === 1
       ? `${orderedTemplates[0].name} - ${personName}`
@@ -219,6 +264,7 @@ export async function POST(request: NextRequest) {
       status: "open",
       start_date: new Date().toISOString().slice(0, 10),
       target_date: clean(body.due_date) || null,
+      recruitment_job_candidate_id: recruitmentJobCandidateId || null,
     })
     .select("id,public_token")
     .single();
@@ -263,6 +309,16 @@ export async function POST(request: NextRequest) {
       { error: assignmentError.message },
       { status: 500 },
     );
+  }
+
+  if (recruitmentJobCandidateId) {
+    await db
+      .from("recruitment_job_candidates")
+      .update({
+        stage: "assessment",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", recruitmentJobCandidateId);
   }
 
   return NextResponse.json({
