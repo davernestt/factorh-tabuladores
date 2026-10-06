@@ -31,6 +31,12 @@ export default function ProtectedLayout({
                 Evaluaciones
               </Link>
               <Link
+                href="/protected/comercial"
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-orange-600 hover:bg-white hover:text-orange-700"
+              >
+                Comercial
+              </Link>
+              <Link
                 href="/protected/candidatos"
                 className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-neutral-900"
               >
