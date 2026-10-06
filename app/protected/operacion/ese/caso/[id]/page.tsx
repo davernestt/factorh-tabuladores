@@ -4,7 +4,6 @@ import { getCurrentAppUser } from "@/lib/auth/app-user";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import StructuredSection from "./structured-section";
 
 type FieldDef = {
   key: string;
@@ -643,23 +642,7 @@ export default async function EseCasePage({
             </h2>
           </div>
 
-          {[
-            "documentos",
-            "hogar",
-            "educacion",
-            "laboral",
-            "economia",
-            "patrimonio",
-            "referencia_laboral_1",
-            "referencia_laboral_2",
-            "referencias",
-          ].includes(activeKey) ? (
-            <StructuredSection
-              caseId={study.id}
-              sectionKey={activeKey}
-              completed={saved?.completed ?? false}
-            />
-          ) : activeKey === "fotografias" ? (
+          {activeKey === "fotografias" ? (
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               {photoCategories.map(([category, label]) => {
                 const categoryPhotos = signedPhotos.filter((item) => item.category === category);
