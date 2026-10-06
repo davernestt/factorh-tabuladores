@@ -84,7 +84,7 @@ export default async function ComercialPage() {
 
   const db = createAdminClient();
 
-  const [opportunitiesResult, organizationsResult, activitiesResult] =
+  const [opportunitiesResult, organizationsResult, activitiesResult, quotesResult] =
     await Promise.all([
       db
         .from("sales_opportunities")
@@ -97,6 +97,9 @@ export default async function ComercialPage() {
         .from("sales_activities")
         .select("id,status,scheduled_at")
         .eq("status", "pending"),
+      db
+        .from("sales_quotes")
+        .select("id,status,total"),
     ]);
 
   const opportunities = (opportunitiesResult.data ?? []) as Opportunity[];
@@ -111,8 +114,12 @@ export default async function ComercialPage() {
     (item) => item.stage !== "won" && item.stage !== "lost",
   );
   const won = opportunities.filter((item) => item.stage === "won");
-  const proposals = opportunities.filter(
-    (item) => item.stage === "proposal_sent" || item.stage === "follow_up",
+  const quotes = quotesResult.data ?? [];
+  const activeQuotes = quotes.filter(
+    (item) =>
+      item.status === "draft" ||
+      item.status === "sent" ||
+      item.status === "follow_up",
   );
 
   const pipelineValue = open.reduce(
@@ -174,8 +181,8 @@ export default async function ComercialPage() {
         />
         <Metric
           label="Cotizaciones"
-          value={String(proposals.length)}
-          note="Propuestas y seguimientos abiertos"
+          value={String(activeQuotes.length)}
+          note="Cotizaciones activas"
         />
         <Metric
           label="Clientes ganados"
