@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { canManageService, getCurrentAppUser } from "@/lib/auth/app-user";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -64,6 +65,24 @@ async function requireUser() {
   return authData.claims;
 }
 
+async function requireOrderAccess(id: string) {
+  const appUser = await getCurrentAppUser();
+  if (!appUser) throw new Error("No autorizado.");
+
+  const db = createAdminClient();
+  const { data: order, error } = await db
+    .from("service_orders")
+    .select("id,service_type")
+    .eq("id", id)
+    .single();
+
+  if (error || !order || !canManageService(appUser.role, order.service_type)) {
+    throw new Error("No tienes permiso para gestionar este servicio.");
+  }
+
+  return appUser;
+}
+
 function money(value: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -86,6 +105,7 @@ async function updateOrder(formData: FormData) {
 
   const claims = await requireUser();
   const id = String(formData.get("order_id") || "");
+  await requireOrderAccess(id);
   const status = String(formData.get("status") || "");
   const priority = String(formData.get("priority") || "medium");
   const startDate = String(formData.get("start_date") || "").trim();
@@ -144,6 +164,7 @@ async function addUpdate(formData: FormData) {
 
   const claims = await requireUser();
   const id = String(formData.get("order_id") || "");
+  await requireOrderAccess(id);
   const updateType = String(formData.get("update_type") || "note");
   const title = String(formData.get("title") || "").trim();
   const notes = String(formData.get("notes") || "").trim();
@@ -189,6 +210,11 @@ export default async function OperacionDetailPage({
     .single();
 
   if (error || !order) notFound();
+
+  const appUser = await getCurrentAppUser();
+  if (!appUser || !canManageService(appUser.role, order.service_type)) {
+    notFound();
+  }
 
   const [organizationResult, quoteResult, opportunityResult, updatesResult, moduleResult] =
     await Promise.all([
