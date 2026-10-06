@@ -58,6 +58,7 @@ type Props = {
   initialPersonId?: string;
   initialProcessName?: string;
   returnTo?: string;
+  initialRecruitmentCandidateId?: string;
 };
 
 type CreatedResult = {
@@ -85,6 +86,7 @@ export default function NewAssessmentForm({
   initialPersonId,
   initialProcessName,
   returnTo,
+  initialRecruitmentCandidateId,
 }: Props) {
   const initialOrganizationId =
     initialOrganizationIdProp &&
@@ -229,6 +231,7 @@ export default function NewAssessmentForm({
           area,
           process_name: processName,
           due_date: dueDate || null,
+          recruitment_job_candidate_id: initialRecruitmentCandidateId || null,
         }),
       });
 
