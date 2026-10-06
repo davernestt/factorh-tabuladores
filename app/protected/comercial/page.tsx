@@ -223,9 +223,10 @@ export default async function ComercialPage() {
                       </div>
                     ) : (
                       stageItems.map((item) => (
-                        <div
+                        <Link
                           key={item.id}
-                          className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+                          href={`/protected/comercial/${item.id}`}
+                          className="block rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="font-bold text-neutral-900">
@@ -250,7 +251,7 @@ export default async function ComercialPage() {
                           <div className="mt-2 text-xs leading-5 text-neutral-500">
                             {item.next_action || "Sin próxima acción"}
                           </div>
-                        </div>
+                        </Link>
                       ))
                     )}
                   </div>
