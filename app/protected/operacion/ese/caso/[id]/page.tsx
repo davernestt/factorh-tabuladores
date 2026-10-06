@@ -335,6 +335,19 @@ const photoCategories = [
   ["complementaria", "Evidencia complementaria"],
 ] as const;
 
+const documentTypes = [
+  ["birth_certificate", "Acta de nacimiento"],
+  ["official_id", "Identificación oficial"],
+  ["curp", "CURP"],
+  ["tax_status", "Constancia de situación fiscal / RFC"],
+  ["imss", "NSS / documento IMSS"],
+  ["proof_address", "Comprobante de domicilio"],
+  ["proof_education", "Comprobante de estudios"],
+  ["driver_license", "Licencia de conducir"],
+  ["migration_document", "Documento migratorio"],
+  ["other", "Otro"],
+] as const;
+
 async function requireEseUser() {
   const auth = await createClient();
   const { data, error } = await auth.auth.getClaims();
@@ -392,6 +405,73 @@ async function saveSection(formData: FormData) {
     .update({
       progress,
       current_section: sectionKey,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", caseId);
+
+  revalidatePath(`/protected/operacion/ese/caso/${caseId}`);
+  revalidatePath("/protected/operacion/ese");
+}
+
+async function saveDocuments(formData: FormData) {
+  "use server";
+
+  const appUser = await requireEseUser();
+  const caseId = String(formData.get("case_id") || "");
+  if (!caseId) throw new Error("Estudio inválido.");
+
+  const rows = documentTypes.map(([key]) => {
+    const validRaw = String(formData.get(`${key}_valid`) || "");
+    const matchesRaw = String(formData.get(`${key}_matches`) || "");
+
+    return {
+      case_id: caseId,
+      document_type: key,
+      presented: String(formData.get(`${key}_presented`) || "") === "yes",
+      original_checked: String(formData.get(`${key}_original`) || "") === "yes",
+      valid: validRaw ? validRaw === "yes" : null,
+      matches: matchesRaw ? matchesRaw === "yes" : null,
+      observations: String(formData.get(`${key}_observations`) || "").trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+  });
+
+  const completed = formData.get("completed") === "on";
+  const db = createAdminClient();
+
+  const { error } = await db
+    .from("ese_case_documents")
+    .upsert(rows, { onConflict: "case_id,document_type" });
+
+  if (error) throw new Error(error.message);
+
+  const { error: sectionError } = await db.from("ese_case_sections").upsert(
+    {
+      case_id: caseId,
+      section_key: "documentos",
+      data: {},
+      completed,
+      updated_by: appUser.userId,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "case_id,section_key" },
+  );
+
+  if (sectionError) throw new Error(sectionError.message);
+
+  const { data: completedRows } = await db
+    .from("ese_case_sections")
+    .select("section_key")
+    .eq("case_id", caseId)
+    .eq("completed", true);
+
+  const progress = Math.round(((completedRows?.length ?? 0) / sections.length) * 100);
+
+  await db
+    .from("ese_cases")
+    .update({
+      progress,
+      current_section: "documentos",
       updated_at: new Date().toISOString(),
     })
     .eq("id", caseId);
@@ -535,7 +615,7 @@ export default async function EseCasePage({
 
   if (error || !study) notFound();
 
-  const [orgResult, personResult, sectionResult, photosResult] = await Promise.all([
+  const [orgResult, personResult, sectionResult, photosResult, documentsResult] = await Promise.all([
     db.from("organizations").select("name").eq("id", study.organization_id).single(),
     study.person_id
       ? db
@@ -550,6 +630,10 @@ export default async function EseCasePage({
       .select("id,category,file_path,created_at")
       .eq("case_id", id)
       .order("created_at", { ascending: false }),
+    db
+      .from("ese_case_documents")
+      .select("document_type,presented,original_checked,valid,matches,observations")
+      .eq("case_id", id),
   ]);
 
   const savedSections = new Map(
@@ -559,6 +643,9 @@ export default async function EseCasePage({
   const saved = savedSections.get(activeKey);
   const values = (saved?.data ?? {}) as Record<string, string>;
   const photos = photosResult.data ?? [];
+  const documentsMap = new Map(
+    (documentsResult.data ?? []).map((item) => [item.document_type, item]),
+  );
 
   const signedPhotos = await Promise.all(
     photos.map(async (photo) => {
@@ -642,7 +729,111 @@ export default async function EseCasePage({
             </h2>
           </div>
 
-          {activeKey === "fotografias" ? (
+          {activeKey === "documentos" ? (
+            <form action={saveDocuments} className="mt-6 grid gap-5">
+              <input type="hidden" name="case_id" value={study.id} />
+
+              <div className="overflow-x-auto rounded-2xl border border-neutral-200">
+                <table className="min-w-[960px] w-full text-left text-sm">
+                  <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
+                    <tr>
+                      <th className="px-4 py-3">Documento</th>
+                      <th className="px-3 py-3">Presentado</th>
+                      <th className="px-3 py-3">Original cotejado</th>
+                      <th className="px-3 py-3">Vigente</th>
+                      <th className="px-3 py-3">Coincide</th>
+                      <th className="px-4 py-3">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {documentTypes.map(([key, label]) => {
+                      const row = documentsMap.get(key);
+                      const validValue =
+                        row?.valid === true ? "yes" : row?.valid === false ? "no" : "";
+                      const matchesValue =
+                        row?.matches === true ? "yes" : row?.matches === false ? "no" : "";
+
+                      return (
+                        <tr key={key} className="align-top">
+                          <td className="px-4 py-3 font-semibold text-neutral-800">
+                            {label}
+                          </td>
+                          <td className="px-3 py-3">
+                            <select
+                              name={`${key}_presented`}
+                              defaultValue={row?.presented ? "yes" : "no"}
+                              className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
+                            >
+                              <option value="no">No</option>
+                              <option value="yes">Sí</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-3">
+                            <select
+                              name={`${key}_original`}
+                              defaultValue={row?.original_checked ? "yes" : "no"}
+                              className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
+                            >
+                              <option value="no">No</option>
+                              <option value="yes">Sí</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-3">
+                            <select
+                              name={`${key}_valid`}
+                              defaultValue={validValue}
+                              className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
+                            >
+                              <option value="">No verificado</option>
+                              <option value="yes">Sí</option>
+                              <option value="no">No</option>
+                            </select>
+                          </td>
+                          <td className="px-3 py-3">
+                            <select
+                              name={`${key}_matches`}
+                              defaultValue={matchesValue}
+                              className="rounded-lg border border-neutral-300 bg-white px-2 py-2 text-xs"
+                            >
+                              <option value="">No verificado</option>
+                              <option value="yes">Sí</option>
+                              <option value="no">No</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              name={`${key}_observations`}
+                              defaultValue={row?.observations ?? ""}
+                              placeholder="Observaciones..."
+                              className="w-full min-w-52 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex flex-col gap-3 rounded-2xl bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <label className="flex items-center gap-3 text-sm font-bold text-neutral-700">
+                  <input
+                    type="checkbox"
+                    name="completed"
+                    defaultChecked={saved?.completed ?? false}
+                    className="h-5 w-5 accent-orange-500"
+                  />
+                  Marcar validación documental como completa
+                </label>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600"
+                >
+                  Guardar documentos
+                </button>
+              </div>
+            </form>
+          ) : activeKey === "fotografias" ? (
             <div className="mt-6 grid gap-5 md:grid-cols-2">
               {photoCategories.map(([category, label]) => {
                 const categoryPhotos = signedPhotos.filter((item) => item.category === category);
