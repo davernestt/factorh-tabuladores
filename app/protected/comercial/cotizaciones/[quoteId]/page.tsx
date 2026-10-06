@@ -64,6 +64,18 @@ async function updateQuoteStatus(formData: FormData) {
     throw new Error(quoteError?.message || "No se encontró la cotización.");
   }
 
+  const { data: opportunity, error: opportunityError } = await db
+    .from("sales_opportunities")
+    .select("id,title,service_type,priority")
+    .eq("id", quote.opportunity_id)
+    .single();
+
+  if (opportunityError || !opportunity) {
+    throw new Error(
+      opportunityError?.message || "No se encontró la oportunidad relacionada.",
+    );
+  }
+
   const now = new Date().toISOString();
   const quoteUpdate: Record<string, string | null> = {
     status,
@@ -109,6 +121,43 @@ async function updateQuoteStatus(formData: FormData) {
         updated_at: now,
       })
       .eq("id", quote.organization_id);
+
+    const { data: existingOrder } = await db
+      .from("service_orders")
+      .select("id")
+      .eq("quote_id", quote.id)
+      .maybeSingle();
+
+    if (!existingOrder) {
+      const { data: order, error: orderError } = await db
+        .from("service_orders")
+        .insert({
+          quote_id: quote.id,
+          opportunity_id: quote.opportunity_id,
+          organization_id: quote.organization_id,
+          service_type: opportunity.service_type,
+          title: opportunity.title,
+          status: "new",
+          priority: opportunity.priority || "medium",
+          commercial_value: quote.total,
+        })
+        .select("id,order_number")
+        .single();
+
+      if (orderError || !order) {
+        throw new Error(
+          orderError?.message || "No fue posible crear la orden de servicio.",
+        );
+      }
+
+      await db.from("service_order_updates").insert({
+        service_order_id: order.id,
+        update_type: "milestone",
+        title: `Orden ${order.order_number} creada desde cotización aceptada`,
+        notes: "Handoff automático de Comercial a Operación.",
+        created_by: typeof claims.sub === "string" ? claims.sub : null,
+      });
+    }
   }
 
   await db.from("sales_activities").insert({
@@ -123,6 +172,7 @@ async function updateQuoteStatus(formData: FormData) {
   });
 
   revalidatePath("/protected/comercial");
+  revalidatePath("/protected/operacion");
   revalidatePath(`/protected/comercial/${quote.opportunity_id}`);
   revalidatePath(`/protected/comercial/cotizaciones/${quoteId}`);
 }
@@ -146,7 +196,7 @@ export default async function QuoteDetailPage({
 
   if (error || !quote) notFound();
 
-  const [organizationResult, opportunityResult, itemsResult] = await Promise.all([
+  const [organizationResult, opportunityResult, itemsResult, serviceOrderResult] = await Promise.all([
     db
       .from("organizations")
       .select("name")
@@ -162,11 +212,17 @@ export default async function QuoteDetailPage({
       .select("id,description,quantity,unit_price,amount,sort_order")
       .eq("quote_id", quote.id)
       .order("sort_order", { ascending: true }),
+    db
+      .from("service_orders")
+      .select("id,order_number,status")
+      .eq("quote_id", quote.id)
+      .maybeSingle(),
   ]);
 
   const organization = organizationResult.data;
   const opportunity = opportunityResult.data;
   const items = itemsResult.data ?? [];
+  const serviceOrder = serviceOrderResult.data;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -324,9 +380,18 @@ export default async function QuoteDetailPage({
               Automatización
             </div>
             <p className="mt-3 text-sm leading-6 text-neutral-300">
-              Al marcar esta cotización como Aceptada, la oportunidad pasa a Ganado y la
-              empresa se convierte automáticamente en cliente.
+              Al marcar esta cotización como Aceptada, la oportunidad pasa a Ganado,
+              la empresa se convierte en cliente y se genera una orden de servicio
+              para Operación.
             </p>
+            {serviceOrder && (
+              <Link
+                href={`/protected/operacion/${serviceOrder.id}`}
+                className="mt-5 inline-flex rounded-xl bg-white px-4 py-2.5 text-sm font-black text-neutral-900"
+              >
+                Abrir {serviceOrder.order_number}
+              </Link>
+            )}
           </section>
         </aside>
       </div>
