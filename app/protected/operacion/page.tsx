@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/auth/app-user";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -40,15 +41,32 @@ export default async function OperacionPage() {
 
   if (authError || !authData?.claims) redirect("/auth/login");
 
+  const appUser = await getCurrentAppUser();
+  if (!appUser || appUser.role === "commercial" || appUser.role === "client") {
+    redirect("/auth/login?error=unauthorized");
+  }
+
   const db = createAdminClient();
+  const serviceFilter =
+    appUser.role === "recruiter"
+      ? "recruitment"
+      : appUser.role === "ese_operator"
+        ? "ese"
+        : appUser.role === "consultant"
+          ? "hr_consulting"
+          : null;
+
+  let ordersQuery = db
+    .from("service_orders")
+    .select(
+      "id,order_number,organization_id,service_type,title,status,priority,target_date,commercial_value,created_at",
+    )
+    .order("created_at", { ascending: false });
+
+  if (serviceFilter) ordersQuery = ordersQuery.eq("service_type", serviceFilter);
 
   const [ordersResult, organizationsResult] = await Promise.all([
-    db
-      .from("service_orders")
-      .select(
-        "id,order_number,organization_id,service_type,title,status,priority,target_date,commercial_value,created_at",
-      )
-      .order("created_at", { ascending: false }),
+    ordersQuery,
     db.from("organizations").select("id,name"),
   ]);
 
@@ -82,18 +100,22 @@ export default async function OperacionPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Link
-            href="/protected/operacion/reclutamiento"
-            className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-bold text-orange-700 shadow-sm hover:bg-orange-100"
-          >
-            Indicadores de Reclutamiento
-          </Link>
-          <Link
-            href="/protected/comercial"
-            className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
-          >
-            Ir a Comercial
-          </Link>
+          {(appUser.role === "super_admin" || appUser.role === "recruiter") && (
+            <Link
+              href="/protected/operacion/reclutamiento"
+              className="rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-bold text-orange-700 shadow-sm hover:bg-orange-100"
+            >
+              Indicadores de Reclutamiento
+            </Link>
+          )}
+          {appUser.role === "super_admin" && (
+            <Link
+              href="/protected/comercial"
+              className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
+            >
+              Ir a Comercial
+            </Link>
+          )}
         </div>
       </div>
 
