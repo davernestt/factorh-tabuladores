@@ -28,7 +28,7 @@ function roleCanAccess(pathname: string, role: AppRole) {
     pathname.startsWith("/protected/empresas") ||
     pathname.startsWith("/protected/baterias")
   ) {
-    return role === "recruiter" || role === "consultant";
+    return role === "recruiter";
   }
 
   if (pathname.startsWith("/protected/operacion/reclutamiento")) {
