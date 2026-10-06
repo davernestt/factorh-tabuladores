@@ -150,6 +150,44 @@ export default async function RecruitmentPage({params}:{params:Promise<{id:strin
     : {data:[] as any[]};
 
   const peopleMap = new Map((people ?? []).map(p=>[p.id,p]));
+
+  const recruitmentCandidateIds = candidateLinks.map((item) => item.id);
+  const { data: assessmentProcesses } = recruitmentCandidateIds.length
+    ? await db
+        .from("assessment_processes")
+        .select("id,recruitment_job_candidate_id,name,status,created_at")
+        .in("recruitment_job_candidate_id", recruitmentCandidateIds)
+        .order("created_at", { ascending: false })
+    : { data: [] as any[] };
+
+  const assessmentProcessIds = (assessmentProcesses ?? []).map((item) => item.id);
+  const { data: assessmentAssignments } = assessmentProcessIds.length
+    ? await db
+        .from("assessment_assignments")
+        .select("id,process_id,status,template_id,created_at")
+        .in("process_id", assessmentProcessIds)
+        .order("created_at", { ascending: false })
+    : { data: [] as any[] };
+
+  const processesByRecruitmentCandidate = new Map<string, any[]>();
+  for (const process of assessmentProcesses ?? []) {
+    if (!process.recruitment_job_candidate_id) continue;
+    const list =
+      processesByRecruitmentCandidate.get(process.recruitment_job_candidate_id) ?? [];
+    list.push(process);
+    processesByRecruitmentCandidate.set(
+      process.recruitment_job_candidate_id,
+      list,
+    );
+  }
+
+  const assignmentsByProcess = new Map<string, any[]>();
+  for (const assignment of assessmentAssignments ?? []) {
+    const list = assignmentsByProcess.get(assignment.process_id) ?? [];
+    list.push(assignment);
+    assignmentsByProcess.set(assignment.process_id, list);
+  }
+
   const org = orgResult.data;
 
   return (
@@ -231,25 +269,75 @@ export default async function RecruitmentPage({params}:{params:Promise<{id:strin
               <div className="divide-y divide-neutral-100">
                 {candidateLinks.map(link=>{
                   const person = peopleMap.get(link.person_id);
+                  const processes =
+                    processesByRecruitmentCandidate.get(link.id) ?? [];
+                  const assignments = processes.flatMap(
+                    (process) => assignmentsByProcess.get(process.id) ?? [],
+                  );
+                  const completedAssignments = assignments.filter(
+                    (assignment) => assignment.status === "completed",
+                  );
+                  const latestCompleted = completedAssignments[0];
+
+                  const returnTo = `/protected/operacion/reclutamiento/${job.id}`;
+                  const assessmentHref =
+                    `/protected/nueva-evaluacion?organization=${encodeURIComponent(job.organization_id)}` +
+                    `&person=${encodeURIComponent(link.person_id)}` +
+                    `&recruitmentCandidate=${encodeURIComponent(link.id)}` +
+                    `&process=${encodeURIComponent(`${job.vacancy_name} · Selección`)}` +
+                    `&returnTo=${encodeURIComponent(returnTo)}`;
+
                   return (
                     <div key={link.id} className="p-5">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <div className="font-black text-neutral-900">
-                            {person ? [person.first_name,person.last_name].filter(Boolean).join(" ") : "Candidato"}
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <div className="font-black text-neutral-900">
+                              {person ? [person.first_name,person.last_name].filter(Boolean).join(" ") : "Candidato"}
+                            </div>
+                            <div className="mt-1 text-xs text-neutral-500">
+                              {person?.email || person?.phone || "Sin contacto"}{link.source ? ` · ${link.source}` : ""}
+                            </div>
+                            {assignments.length > 0 && (
+                              <div className="mt-2 text-xs font-semibold text-orange-600">
+                                {assignments.length} {assignments.length === 1 ? "evaluación" : "evaluaciones"} · {completedAssignments.length} completadas
+                              </div>
+                            )}
                           </div>
-                          <div className="mt-1 text-xs text-neutral-500">
-                            {person?.email || person?.phone || "Sin contacto"}{link.source ? ` · ${link.source}` : ""}
-                          </div>
+
+                          <form action={updateCandidateStage} className="flex gap-2">
+                            <input type="hidden" name="candidate_id" value={link.id}/>
+                            <input type="hidden" name="job_id" value={job.id}/>
+                            <select name="stage" defaultValue={link.stage} className="rounded-lg border border-neutral-300 px-3 py-2 text-xs font-semibold">
+                              {Object.entries(candidateStageLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}
+                            </select>
+                            <button className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white">Guardar</button>
+                          </form>
                         </div>
-                        <form action={updateCandidateStage} className="flex gap-2">
-                          <input type="hidden" name="candidate_id" value={link.id}/>
-                          <input type="hidden" name="job_id" value={job.id}/>
-                          <select name="stage" defaultValue={link.stage} className="rounded-lg border border-neutral-300 px-3 py-2 text-xs font-semibold">
-                            {Object.entries(candidateStageLabels).map(([v,l])=><option key={v} value={v}>{l}</option>)}
-                          </select>
-                          <button className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white">Guardar</button>
-                        </form>
+
+                        <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-3">
+                          <Link
+                            href={assessmentHref}
+                            className="rounded-lg bg-neutral-800 px-3 py-2 text-xs font-bold text-white hover:bg-neutral-900"
+                          >
+                            + Asignar evaluación
+                          </Link>
+
+                          {latestCompleted && (
+                            <Link
+                              href={`/protected/evaluaciones/${latestCompleted.id}`}
+                              className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100"
+                            >
+                              Ver último resultado
+                            </Link>
+                          )}
+
+                          {assignments.length > 0 && !latestCompleted && (
+                            <span className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs font-bold text-neutral-500">
+                              Evaluación pendiente
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
