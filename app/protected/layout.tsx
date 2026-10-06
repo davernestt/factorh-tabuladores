@@ -3,7 +3,42 @@ import { getCurrentAppUser, landingForRole } from "@/lib/auth/app-user";
 import Link from "next/link";
 import { Suspense } from "react";
 
-export default async function ProtectedLayout({
+export default function ProtectedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-neutral-100">
+          <nav className="border-b border-neutral-200 bg-white">
+            <div className="mx-auto flex h-16 max-w-7xl items-center px-5">
+              <div>
+                <div className="text-xl font-black tracking-tight text-neutral-900">
+                  Factor<span className="text-orange-500">RH</span>
+                </div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                  Administración
+                </div>
+              </div>
+            </div>
+          </nav>
+          <div className="mx-auto max-w-7xl px-5 py-8">
+            <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
+              <p className="text-neutral-600">Cargando FactoRH...</p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <ProtectedLayoutContent>{children}</ProtectedLayoutContent>
+    </Suspense>
+  );
+}
+
+async function ProtectedLayoutContent({
   children,
 }: {
   children: React.ReactNode;
@@ -14,7 +49,8 @@ export default async function ProtectedLayout({
 
   const isAdmin = role === "super_admin";
   const canCommercial = isAdmin || role === "commercial";
-  const canOperate = isAdmin || ["recruiter", "ese_operator", "consultant"].includes(role);
+  const canOperate =
+    isAdmin || ["recruiter", "ese_operator", "consultant"].includes(role);
   const canAssess = isAdmin || role === "recruiter";
   const canRecruit = isAdmin || role === "recruiter";
 
@@ -35,9 +71,7 @@ export default async function ProtectedLayout({
 
           <div className="flex items-center gap-4">
             <div className="hidden items-center gap-1 rounded-xl bg-neutral-100 p-1 md:flex">
-              {isAdmin && (
-                <Nav href="/protected/dashboard">Dashboard</Nav>
-              )}
+              {isAdmin && <Nav href="/protected/dashboard">Dashboard</Nav>}
 
               {canAssess && <Nav href="/protected">Evaluaciones</Nav>}
 
@@ -45,9 +79,7 @@ export default async function ProtectedLayout({
                 <Nav href="/protected/comercial">Comercial</Nav>
               )}
 
-              {canOperate && (
-                <Nav href="/protected/operacion">Operación</Nav>
-              )}
+              {canOperate && <Nav href="/protected/operacion">Operación</Nav>}
 
               {canRecruit && (
                 <>
