@@ -210,6 +210,12 @@ export default async function ComercialPage() {
 
         <div className="flex flex-wrap gap-3">
           <Link
+            href="/protected/comercial/clientes"
+            className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
+          >
+            Clientes
+          </Link>
+          <Link
             href="/protected/comercial/agenda"
             className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center text-sm font-bold text-neutral-700 shadow-sm hover:border-orange-300 hover:text-orange-700"
           >
