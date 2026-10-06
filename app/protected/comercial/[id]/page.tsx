@@ -46,6 +46,15 @@ const activityLabels: Record<string, string> = {
   close: "Cierre",
 };
 
+const quoteStatusLabels: Record<string, string> = {
+  draft: "Borrador",
+  sent: "Enviada",
+  follow_up: "Seguimiento",
+  accepted: "Aceptada",
+  rejected: "Rechazada",
+  expired: "Vencida",
+};
+
 function money(value: number) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -250,7 +259,7 @@ export default async function OpportunityDetailPage({
 
   if (error || !opportunity) notFound();
 
-  const [organizationResult, contactResult, activitiesResult] = await Promise.all([
+  const [organizationResult, contactResult, activitiesResult, quotesResult] = await Promise.all([
     db
       .from("organizations")
       .select("id,name,website,phone,commercial_email,lifecycle_stage")
@@ -270,11 +279,17 @@ export default async function OpportunityDetailPage({
       )
       .eq("opportunity_id", id)
       .order("created_at", { ascending: false }),
+    db
+      .from("sales_quotes")
+      .select("id,quote_number,status,total,valid_until,created_at")
+      .eq("opportunity_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const organization = organizationResult.data;
   const contact = contactResult.data;
   const activities = activitiesResult.data ?? [];
+  const quotes = quotesResult.data ?? [];
 
   return (
     <div>
@@ -305,12 +320,20 @@ export default async function OpportunityDetailPage({
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-right shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-            Valor potencial
-          </div>
-          <div className="mt-1 text-2xl font-black text-neutral-900">
-            {money(Number(opportunity.estimated_value || 0))}
+        <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+          <Link
+            href={`/protected/comercial/${opportunity.id}/cotizaciones/nueva`}
+            className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+          >
+            + Crear cotización
+          </Link>
+          <div className="rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-right shadow-sm">
+            <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+              Valor potencial
+            </div>
+            <div className="mt-1 text-2xl font-black text-neutral-900">
+              {money(Number(opportunity.estimated_value || 0))}
+            </div>
           </div>
         </div>
       </div>
@@ -349,6 +372,52 @@ export default async function OpportunityDetailPage({
                 </button>
               </form>
             </div>
+          </section>
+
+          <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-neutral-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-black text-neutral-900">Cotizaciones</h2>
+                <p className="mt-1 text-sm text-neutral-500">
+                  Propuestas económicas vinculadas a esta oportunidad.
+                </p>
+              </div>
+              <Link
+                href={`/protected/comercial/${opportunity.id}/cotizaciones/nueva`}
+                className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-center text-sm font-bold text-orange-700 hover:bg-orange-100"
+              >
+                + Nueva cotización
+              </Link>
+            </div>
+
+            {quotes.length === 0 ? (
+              <div className="p-8 text-center text-sm text-neutral-500">
+                Aún no hay cotizaciones. Crea la primera propuesta para esta oportunidad.
+              </div>
+            ) : (
+              <div className="divide-y divide-neutral-100">
+                {quotes.map((quote) => (
+                  <Link
+                    key={quote.id}
+                    href={`/protected/comercial/cotizaciones/${quote.id}`}
+                    className="flex flex-col gap-3 p-5 transition hover:bg-neutral-50 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <div className="font-black text-neutral-900">
+                        {quote.quote_number}
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-neutral-500">
+                        {quoteStatusLabels[quote.status] ?? quote.status}
+                        {quote.valid_until ? ` · Vigencia ${quote.valid_until}` : ""}
+                      </div>
+                    </div>
+                    <div className="text-lg font-black text-neutral-900">
+                      {money(Number(quote.total || 0))}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
