@@ -1,5 +1,6 @@
 import { AuthButton } from "@/components/auth-button";
 import { getCurrentAppUser, landingForRole } from "@/lib/auth/app-user";
+import { ProtectedMainNav } from "@/components/protected-main-nav";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -55,75 +56,19 @@ async function ProtectedLayoutContent({
             <Brand />
           </Link>
 
-          <div className="hidden min-w-0 flex-1 items-center gap-1 lg:flex">
-            {canEvaluations && (
-              <TopMenu label="Evaluaciones">
-                <MenuLink
-                  href="/protected"
-                  title="PDL"
-                  description="Programa de Desarrollo de Líderes"
-                />
-                <MenuLink
-                  href="/protected/psicometrias"
-                  title="Psicometrías"
-                  description="Pruebas psicométricas y reportes"
-                />
-                <MenuLink
-                  href="/protected/feedback360"
-                  title="360°"
-                  description="Evaluación multifuente"
-                />
-                <MenuLink
-                  href="/protected/baterias"
-                  title="Baterías"
-                  description="Configuración y agrupación de pruebas"
-                />
-              </TopMenu>
-            )}
-
-            {canStudies && (
-              <TopMenu label="Estudios e Investigaciones" wide>
-                <MenuLink
-                  href="/protected/estudios"
-                  title="Dashboard de Estudios"
-                  description="Solicitados, avances, cierres y dictámenes"
-                />
-                <MenuLink
-                  href="/protected/estudios/aplicacion"
-                  title="Aplicación y captura"
-                  description="Estudios para levantar desde la plataforma"
-                />
-              </TopMenu>
-            )}
-
-            {canCommercial && (
-              <Nav href="/protected/comercial">Comercial</Nav>
-            )}
-
-            {canCandidates && (
-              <Nav href="/protected/candidatos">Candidatos</Nav>
-            )}
-
-            {canCompanies && <Nav href="/protected/empresas">Empresas</Nav>}
-
-            {isAdmin && <Nav href="/protected/usuarios">Usuarios</Nav>}
-          </div>
+          <ProtectedMainNav
+            canEvaluations={canEvaluations}
+            canStudies={canStudies}
+            canCommercial={canCommercial}
+            canCandidates={canCandidates}
+            canCompanies={canCompanies}
+            isAdmin={isAdmin}
+          />
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <Suspense>
               <AuthButton />
             </Suspense>
-          </div>
-        </div>
-
-        <div className="border-t border-neutral-100 px-4 py-2 lg:hidden">
-          <div className="flex flex-wrap gap-2">
-            {canEvaluations && <Nav href="/protected">Evaluaciones</Nav>}
-            {canStudies && <Nav href="/protected/estudios">Estudios</Nav>}
-            {canCommercial && <Nav href="/protected/comercial">Comercial</Nav>}
-            {canCandidates && <Nav href="/protected/candidatos">Candidatos</Nav>}
-            {canCompanies && <Nav href="/protected/empresas">Empresas</Nav>}
-            {isAdmin && <Nav href="/protected/usuarios">Usuarios</Nav>}
           </div>
         </div>
       </nav>
@@ -146,70 +91,3 @@ function Brand() {
   );
 }
 
-function Nav({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-bold text-neutral-700 transition hover:bg-orange-50 hover:text-orange-700"
-    >
-      {children}
-    </Link>
-  );
-}
-
-function TopMenu({
-  label,
-  wide = false,
-  children,
-}: {
-  label: string;
-  wide?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <details name="factorh-main-nav" className="group relative">
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-bold text-neutral-700 transition hover:bg-orange-50 hover:text-orange-700 [&::-webkit-details-marker]:hidden">
-        {label}
-        <span className="text-[10px] text-neutral-400 transition group-open:rotate-180">
-          ▼
-        </span>
-      </summary>
-
-      <div
-        className={
-          wide
-            ? "absolute left-0 top-[calc(100%+8px)] w-[340px] overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl"
-            : "absolute left-0 top-[calc(100%+8px)] w-[300px] overflow-hidden rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl"
-        }
-      >
-        {children}
-      </div>
-    </details>
-  );
-}
-
-function MenuLink({
-  href,
-  title,
-  description,
-}: {
-  href: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-xl px-4 py-3 transition hover:bg-orange-50"
-    >
-      <div className="text-sm font-black text-neutral-900">{title}</div>
-      <div className="mt-1 text-xs leading-5 text-neutral-500">{description}</div>
-    </Link>
-  );
-}
