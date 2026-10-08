@@ -4,11 +4,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import DeleteAssessmentButton from "./delete-assessment-button";
+import { relationshipLabel } from "@/lib/pdl-evaluation-role";
 
 type Assignment = {
   id: string;
   status: string;
   evaluator_name: string | null;
+  relationship_type: string;
   public_token: string;
   created_at: string;
   started_at: string | null;
@@ -97,7 +99,7 @@ async function AdminDashboardContent() {
     db
       .from("assessment_assignments")
       .select(
-        "id,status,evaluator_name,public_token,created_at,started_at,completed_at,process_id,template_id",
+        "id,status,evaluator_name,relationship_type,public_token,created_at,started_at,completed_at,process_id,template_id",
       )
       .order("created_at", { ascending: false }),
     db
@@ -314,6 +316,11 @@ async function AdminDashboardContent() {
                         </div>
                         <div className="mt-1 text-xs text-neutral-500">
                           {process?.name ?? "Proceso"}
+                        </div>
+                        <div className="mt-1 text-xs font-semibold text-neutral-600">
+                          {assignment.relationship_type === "self"
+                            ? "Responde la persona evaluada"
+                            : `Evalúa: ${assignment.evaluator_name ?? "Sin nombre"} · ${relationshipLabel(assignment.relationship_type)}`}
                         </div>
                       </td>
                       <td className="px-6 py-5">
