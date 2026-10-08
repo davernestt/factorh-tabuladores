@@ -223,12 +223,12 @@ async function AdminDashboardContent() {
           <div className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-500 shadow-sm">
             {total} {total === 1 ? "evaluación" : "evaluaciones"}
           </div>
-          <Link
-            href="/protected/nueva-evaluacion"
+          <a
+            href="/protected/nueva-evaluacion?fresh=1"
             className="rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm hover:bg-orange-600"
           >
             + Nueva evaluación
-          </Link>
+          </a>
         </div>
       </div>
 
