@@ -559,8 +559,8 @@ function drawDimensionCard(ctx: CanvasRenderingContext2D, item: DimensionExport,
 function drawStrengthPriorityColumns(ctx: CanvasRenderingContext2D, data: ReportData, y: number) {
   const gap = 24;
   const width = (PDF_CONTENT_WIDTH - gap) / 2;
-  drawListPanel(ctx, PDF_MARGIN, y, width, "Fortalezas mejor posicionadas", data.strengths, "strong");
-  drawListPanel(ctx, PDF_MARGIN + width + gap, y, width, "Focos prioritarios de desarrollo", data.priorities, "attention");
+  drawListPanel(ctx, PDF_MARGIN, y, width, "Competencias relativamente mejor posicionadas", data.strengths, "strong");
+  drawListPanel(ctx, PDF_MARGIN + width + gap, y, width, "Prioridades de desarrollo", data.priorities, "attention");
 }
 
 function drawListPanel(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, title: string, items: DimensionExport[], tone: "strong" | "attention") {
@@ -1217,16 +1217,21 @@ function buildWordReport(data: ReportData, radarImageName: string) {
           </tr>
           <tr><td colspan="2"><span class="pill ${toneClass(item.tone)}">${escapeHtml(item.level)}</span></td></tr>
           <tr><td colspan="2" class="body-text">${escapeHtml(item.narrative)}</td></tr>
+          ${item.strongestItem || item.developmentItem ? `<tr><td colspan="2" style="padding:6px 12px 12px;"><table class="behavior-pair" role="presentation"><tr>
+            <td class="behavior-strong"><b>Conducta relativamente más sólida</b><br/>${escapeHtml(item.strongestItem ?? "Sin contraste interno claro")}</td>
+            <td class="behavior-focus"><b>Principal conducta a desarrollar</b><br/>${escapeHtml(item.developmentItem ?? "Sin contraste interno claro")}</td>
+          </tr></table></td></tr>` : ""}
+          <tr><td colspan="2" class="reading"><b>Lectura conductual</b><br/>${escapeHtml(item.behavioralReading)}</td></tr>
           ${item.qualitativeEvidence.length ? `<tr><td colspan="2" class="evidence"><b>Evidencia cualitativa:</b><br/>${item.qualitativeEvidence.map((value) => "• " + escapeHtml(value)).join("<br/>")}</td></tr>` : ""}
         </table>`,
     )
     .join("");
 
   const strengths = data.strengths
-    .map((item) => `<tr><td><b>${escapeHtml(item.name)}</b><br/><span class="muted">${escapeHtml(item.strongestItem ?? "")}</span></td><td class="mini-score">${item.score?.toFixed(2) ?? "—"}</td></tr>`)
+    .map((item) => `<tr><td><b>${escapeHtml(item.name)}</b><br/><span class="muted"><b>Conducta relativamente más sólida:</b> ${escapeHtml(item.strongestItem ?? "")}</span></td><td class="mini-score">${item.score?.toFixed(2) ?? "—"}</td></tr>`)
     .join("");
   const priorities = data.priorities
-    .map((item) => `<tr><td><b>${escapeHtml(item.name)}</b><br/><span class="muted">${escapeHtml(item.developmentItem ?? "")}</span></td><td class="mini-score">${item.score?.toFixed(2) ?? "—"}</td></tr>`)
+    .map((item) => `<tr><td><b>${escapeHtml(item.name)}</b><br/><span class="muted"><b>Principal conducta a desarrollar:</b> ${escapeHtml(item.developmentItem ?? "")}</span></td><td class="mini-score">${item.score?.toFixed(2) ?? "—"}</td></tr>`)
     .join("");
 
   const dimensionRows = data.dimensions
@@ -1330,6 +1335,11 @@ function buildWordReport(data: ReportData, radarImageName: string) {
           .tone-functional { background:#eff6ff; color:#1e40af; }
           .tone-attention { background:#fffbeb; color:#92400e; }
           .tone-priority { background:#fef2f2; color:#991b1b; }
+          .behavior-pair td { width:50%; padding:10px; font-size:9.5pt; line-height:1.4; }
+          .behavior-strong { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0 !important; }
+          .behavior-focus { background:#fff7ed; color:#9a3412; border:1px solid #fed7aa !important; }
+          .reading { padding:12px 14px; background:#fafafa; color:#404040; border-left:4px solid #f97316 !important; }
+          .reading b { color:#ea580c; }
           .evidence { padding:10px 14px; background:#fafafa; color:#525252; border-top:1px solid #eeeeee !important; }
           .split { margin-top:14px; }
           .split > tbody > tr > td { width:50%; padding:0 5px; }
@@ -1421,8 +1431,8 @@ function buildWordReport(data: ReportData, radarImageName: string) {
         ${dimensions}
 
         <table class="split" role="presentation"><tr>
-          <td><table class="mini-card"><tr><td class="head green" colspan="2">Fortalezas mejor posicionadas</td></tr>${strengths}</table></td>
-          <td><table class="mini-card"><tr><td class="head amber" colspan="2">Focos prioritarios de desarrollo</td></tr>${priorities}</table></td>
+          <td><table class="mini-card"><tr><td class="head green" colspan="2">Competencias relativamente mejor posicionadas</td></tr>${strengths}</table></td>
+          <td><table class="mini-card"><tr><td class="head amber" colspan="2">Prioridades de desarrollo</td></tr>${priorities}</table></td>
         </tr></table>
 
         ${risks}
