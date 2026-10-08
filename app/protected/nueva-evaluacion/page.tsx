@@ -59,7 +59,7 @@ async function NewAssessmentContent() {
       .order("first_name"),
     db
       .from("assessment_templates")
-      .select("id,organization_id,name,description")
+      .select("id,organization_id,name,description,assessment_type")
       .eq("active", true)
       .order("name"),
     db
