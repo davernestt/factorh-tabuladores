@@ -6,6 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import ReportActions from "./report-actions";
 import { DimensionBars, Heatmap, RadarChart } from "./report-charts";
+import { relationshipLabel } from "@/lib/pdl-evaluation-role";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -40,7 +41,7 @@ async function LeadershipReportContent({ params }: PageProps) {
   const { data: assignment, error: assignmentError } = await db
     .from("assessment_assignments")
     .select(
-      "id,status,created_at,started_at,completed_at,process_id,template_id",
+      "id,status,relationship_type,evaluator_name,created_at,started_at,completed_at,process_id,template_id",
     )
     .eq("id", id)
     .maybeSingle();
@@ -215,12 +216,20 @@ async function LeadershipReportContent({ params }: PageProps) {
                   "Sin puesto registrado"}
               </div>
               <div className="mt-1 text-neutral-400">{organization.name}</div>
+              {assignment.relationship_type !== "self" && (
+                <div className="mt-4 border-t border-white/10 pt-4">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Fuente de evaluación</div>
+                  <div className="mt-1 font-bold text-white">
+                    {relationshipLabel(assignment.relationship_type)} · {assignment.evaluator_name ?? "Sin nombre"}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         <div className="p-7 md:p-10">
-          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Metric
               label="Resultado global"
               value={
@@ -236,6 +245,11 @@ async function LeadershipReportContent({ params }: PageProps) {
             <Metric
               label="Dimensiones"
               value={String(analysis.dimensions.length)}
+            />
+            <Metric
+              label="Fuente"
+              value={assignment.relationship_type === "self" ? "Autoevaluación" : relationshipLabel(assignment.relationship_type)}
+              compact
             />
             <Metric
               label="Fecha"
