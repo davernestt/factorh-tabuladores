@@ -177,7 +177,41 @@ async function LeadershipReportContent({ params }: PageProps) {
         >
           ← Volver al detalle
         </Link>
-        {completed && <ReportActions fileName={fileName} />}
+        {completed && (
+          <ReportActions
+            fileName={fileName}
+            reportData={{
+              personName,
+              jobTitle: person.job_title,
+              area: person.area,
+              organizationName: organization.name,
+              templateName: template.name,
+              sourceLabel:
+                assignment.relationship_type === "self"
+                  ? "Autoevaluación"
+                  : relationshipLabel(assignment.relationship_type),
+              evaluatorName:
+                assignment.relationship_type === "self"
+                  ? null
+                  : assignment.evaluator_name ?? null,
+              reportDate: formatDate(
+                assignment.completed_at ??
+                  assignment.started_at ??
+                  assignment.created_at,
+              ),
+              overall: analysis.overall,
+              overallLevel: analysis.overallLevel,
+              executiveSummary: analysis.executiveSummary,
+              perspectiveNote: analysis.perspectiveNote,
+              dimensions: analysis.dimensions,
+              strengths: analysis.strengths,
+              priorities: analysis.priorities,
+              risks: analysis.risks,
+              plan: analysis.plan,
+              openResponses: analysis.openResponses,
+            }}
+          />
+        )}
       </div>
 
       {!completed && (
