@@ -10,6 +10,8 @@ type Props = {
   organizationName: string;
   email?: string | null;
   phone?: string | null;
+  evaluatedPersonName?: string | null;
+  relationshipLabel?: string | null;
 };
 
 export default function CopyAssessmentLink({
@@ -20,6 +22,8 @@ export default function CopyAssessmentLink({
   organizationName,
   email,
   phone,
+  evaluatedPersonName,
+  relationshipLabel,
 }: Props) {
   const [copied, setCopied] = useState<"link" | "message" | null>(null);
 
@@ -29,6 +33,17 @@ export default function CopyAssessmentLink({
   }
 
   function invitationMessage() {
+    if (evaluatedPersonName) {
+      return `Hola ${personName}, te comparto la liga para responder "${templateName}" como ${relationshipLabel ?? "evaluador"} de ${evaluatedPersonName}, dentro del proceso de desarrollo de liderazgo de ${organizationName}.
+
+Ingresa aquí:
+${assessmentUrl()}
+
+Por favor responde únicamente con base en la evidencia y conductas que hayas observado.
+
+Gracias.`;
+    }
+
     return `Hola ${personName}, te comparto la liga para realizar tu evaluación "${templateName}" asignada por ${organizationName} a través de FactorRH.
 
 Ingresa aquí:
