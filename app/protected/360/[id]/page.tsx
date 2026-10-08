@@ -59,7 +59,8 @@ async function Feedback360DetailContent({ params }: PageProps) {
   return <div className="space-y-7">
     <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Link href="/protected/360" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Evaluación 360°</Link>{closed&&<ReportActions fileName={reportFileName} elementId="feedback360-report"/>}</div>
 
-    <article id="feedback360-report" className="space-y-7">\n    <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9">
+    <article id="feedback360-report" className="space-y-7">
+    <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactorRH · Evaluación 360° v{cycle.instrument_version}</div>
@@ -129,6 +130,17 @@ async function Feedback360DetailContent({ params }: PageProps) {
       </section>}
 
       {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Interpretación integral</div><h2 className="mt-2 text-2xl font-black text-neutral-800">Lectura competencia por competencia</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-neutral-500">Esta sección traduce el resultado numérico a implicaciones laborales, posibles efectos en la operación y acciones concretas de desarrollo.</p>
+        <div className="mt-6 grid gap-5">{professional.competencyReadings.map(r=><article key={r.key} className="break-inside-avoid rounded-2xl border border-neutral-200 p-5 md:p-6">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"><div><h3 className="text-lg font-black text-neutral-800">{r.name}</h3><p className="mt-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">{r.alignment}</p></div><div className="text-right"><div className="text-3xl font-black text-neutral-800">{r.external.toFixed(2)}</div><div className="text-xs text-neutral-400">entorno / 4.00</div></div></div>
+          <p className="mt-4 text-sm leading-7 text-neutral-700">{r.narrative}</p>
+          <div className="mt-4 grid gap-3 md:grid-cols-3"><div className="rounded-xl bg-neutral-50 p-4"><div className="text-xs font-bold uppercase text-neutral-400">Faceta más sólida</div><div className="mt-1 text-sm font-bold text-neutral-800">{r.strongestFacet??'Sin dato suficiente'}</div></div><div className="rounded-xl bg-neutral-50 p-4"><div className="text-xs font-bold uppercase text-neutral-400">Faceta a trabajar</div><div className="mt-1 text-sm font-bold text-neutral-800">{r.developmentFacet??'Sin dato suficiente'}</div></div><div className="rounded-xl bg-neutral-50 p-4"><div className="text-xs font-bold uppercase text-neutral-400">Brecha Auto–entorno</div><div className="mt-1 text-sm font-bold text-neutral-800">{r.gap===null?'—':(r.gap>0?'+':'')+r.gap.toFixed(2)}</div></div></div>
+          <div className="mt-4 rounded-xl border-l-4 border-orange-500 bg-orange-50 p-4"><div className="text-xs font-bold uppercase tracking-wide text-orange-700">Implicación para RH y liderazgo</div><p className="mt-2 text-sm leading-6 text-neutral-700">{r.impact}</p></div>
+          <div className="mt-4"><div className="text-xs font-bold uppercase tracking-wide text-neutral-400">Sugerencias de trabajo</div><ul className="mt-2 grid gap-2 text-sm leading-6 text-neutral-700 md:grid-cols-3">{r.suggestions.map((x,i)=><li key={i} className="rounded-xl bg-neutral-50 p-3">{x}</li>)}</ul></div>
+        </article>)}</div>
+      </section>}
+
+      {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Plan de desarrollo individual</div><h2 className="mt-2 text-2xl font-black text-neutral-800">Ruta de mejora · 90 días</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-500">El plan prioriza las competencias con menor valoración externa y las traduce en conductas observables, seguimiento y evidencia de avance.</p>
         <div className="mt-6 grid gap-4">{professional.developmentPlan.map((p,i)=><article key={p.competency} className="rounded-2xl border border-neutral-200 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><span className="text-xs font-bold uppercase tracking-[.12em] text-orange-600">Prioridad {i+1} · {p.horizon}</span><h3 className="mt-1 text-lg font-black text-neutral-800">{p.competency}</h3></div><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">{p.indicator}</span></div><p className="mt-3 text-sm font-semibold text-neutral-700">{p.objective}</p><ul className="mt-3 grid gap-2 text-sm leading-6 text-neutral-600 md:grid-cols-3">{p.actions.map((a,j)=><li key={j} className="rounded-xl bg-neutral-50 p-3">{a}</li>)}</ul></article>)}</div>
         <div className="mt-7 rounded-2xl bg-neutral-800 p-6 text-white"><h3 className="font-black">Sugerencias para la devolución y seguimiento</h3><ul className="mt-4 grid gap-3 text-sm leading-6 text-neutral-300 md:grid-cols-2">{professional.recommendations.map((x,i)=><li key={i}><span className="mr-2 font-black text-orange-400">0{i+1}</span>{x}</li>)}</ul></div>
@@ -143,6 +155,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
         <div className="mt-5 grid gap-4">{(commentsR.data??[]).length?(commentsR.data??[]).map((c,i)=><blockquote key={i} className="rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">“{c.comment}”</blockquote>):<p className="text-sm text-neutral-500">No se recibieron comentarios abiertos.</p>}</div>
       </section>
     </>}
+    </article>
   </div>;
 }
 
