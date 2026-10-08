@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { relationshipForAssessmentType } from "@/lib/pdl-evaluation-role";
 
 const ADMIN_EMAILS = ["david@factorh.com.mx"];
 type RouteContext={params:Promise<{id:string}>};
@@ -8,6 +9,8 @@ type Body={
   organization_id?:string; person_id?:string; process_name?:string; due_date?:string|null;
   first_name?:string; last_name?:string; email?:string; phone?:string; job_title?:string; area?:string;
   template_ids?:string[];
+  manager_evaluator_name?:string; manager_evaluator_email?:string; manager_evaluator_phone?:string;
+  interviewer_name?:string; interviewer_email?:string; interviewer_phone?:string;
 };
 const clean=(v:unknown)=>typeof v==="string"?v.trim():"";
 
@@ -62,13 +65,25 @@ export async function PATCH(request:NextRequest,context:RouteContext){
   }
 
   const [templatesR,accessR]=await Promise.all([
-    db.from("assessment_templates").select("id,name,active").in("id",requested).eq("active",true),
+    db.from("assessment_templates").select("id,name,assessment_type,active").in("id",requested).eq("active",true),
     db.from("organization_assessment_templates").select("template_id,enabled,participant_sendable").eq("organization_id",organizationId).in("template_id",requested),
   ]);
   if(templatesR.error||accessR.error)return NextResponse.json({error:templatesR.error?.message??accessR.error?.message},{status:500});
   if((templatesR.data??[]).length!==requested.length)return NextResponse.json({error:"Una o más evaluaciones no están disponibles."},{status:400});
   const allowed=new Set((accessR.data??[]).filter(x=>x.enabled&&x.participant_sendable).map(x=>x.template_id));
   if(requested.some(id=>!allowed.has(id)))return NextResponse.json({error:"Una o más evaluaciones no están habilitadas para esta empresa."},{status:400});
+
+  const templateById=new Map((templatesR.data??[]).map(t=>[t.id,t]));
+  const requiresManager=(templatesR.data??[]).some(t=>t.assessment_type==="leadership_direction");
+  const requiresInterviewer=(templatesR.data??[]).some(t=>t.assessment_type==="leadership_interview");
+  const managerName=clean(body.manager_evaluator_name);
+  const managerEmail=clean(body.manager_evaluator_email).toLowerCase()||null;
+  const managerPhone=clean(body.manager_evaluator_phone)||null;
+  const interviewerName=clean(body.interviewer_name);
+  const interviewerEmail=clean(body.interviewer_email).toLowerCase()||null;
+  const interviewerPhone=clean(body.interviewer_phone)||null;
+  if(requiresManager&&!managerName)return NextResponse.json({error:"Indica quién responderá la evaluación del jefe inmediato."},{status:400});
+  if(requiresInterviewer&&!interviewerName)return NextResponse.json({error:"Indica quién realizará la entrevista conductual."},{status:400});
 
   const firstName=clean(body.first_name);
   if(!firstName)return NextResponse.json({error:"El nombre del colaborador es obligatorio."},{status:400});
@@ -80,6 +95,7 @@ export async function PATCH(request:NextRequest,context:RouteContext){
 
   const personName=`${firstName} ${clean(body.last_name)}`.trim();
   const personEmail=clean(body.email).toLowerCase()||null;
+  const personPhone=clean(body.phone)||null;
   const dueDate=clean(body.due_date)?`${clean(body.due_date)}T23:59:59`:null;
 
   const processUpdate=await db.from("assessment_processes").update({
@@ -102,17 +118,33 @@ export async function PATCH(request:NextRequest,context:RouteContext){
     ...assignments.filter(a=>!pendingToDelete.some(x=>x.id===a.id)).map(a=>a.template_id),
     ...reused.filter(r=>!reusedToDelete.some(x=>x.id===r.id)).map(r=>r.template_id),
   ]);
+  const evaluatorFor=(templateId:string)=>{
+    const template=templateById.get(templateId);
+    const relationship=relationshipForAssessmentType(template?.assessment_type??"");
+    if(relationship==="manager")return {relationship,name:managerName,email:managerEmail,phone:managerPhone};
+    if(relationship==="interviewer")return {relationship,name:interviewerName,email:interviewerEmail,phone:interviewerPhone};
+    return {relationship:"self",name:personName,email:personEmail,phone:personPhone};
+  };
+
   const toAdd=requested.filter(templateId=>!existingIds.has(templateId));
   if(toAdd.length){
-    const ins=await db.from("assessment_assignments").insert(toAdd.map(templateId=>({
-      process_id:id,template_id:templateId,relationship_type:"self",evaluator_name:personName,evaluator_email:personEmail,due_date:dueDate,status:"pending",
-    })));
+    const ins=await db.from("assessment_assignments").insert(toAdd.map(templateId=>{
+      const evaluator=evaluatorFor(templateId);
+      return {
+        process_id:id,template_id:templateId,relationship_type:evaluator.relationship,
+        evaluator_name:evaluator.name,evaluator_email:evaluator.email,evaluator_phone:evaluator.phone,
+        due_date:dueDate,status:"pending",
+      };
+    }));
     if(ins.error)return NextResponse.json({error:ins.error.message},{status:500});
   }
 
-  const pendingIds=assignments.filter(a=>a.status==="pending"&&requested.includes(a.template_id)).map(a=>a.id);
-  if(pendingIds.length){
-    const upd=await db.from("assessment_assignments").update({evaluator_name:personName,evaluator_email:personEmail,due_date:dueDate}).in("id",pendingIds);
+  for(const assignment of assignments.filter(a=>a.status==="pending"&&requested.includes(a.template_id))){
+    const evaluator=evaluatorFor(assignment.template_id);
+    const upd=await db.from("assessment_assignments").update({
+      relationship_type:evaluator.relationship,evaluator_name:evaluator.name,evaluator_email:evaluator.email,
+      evaluator_phone:evaluator.phone,due_date:dueDate,
+    }).eq("id",assignment.id);
     if(upd.error)return NextResponse.json({error:upd.error.message},{status:500});
   }
 
