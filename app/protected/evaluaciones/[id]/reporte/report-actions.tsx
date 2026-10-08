@@ -75,14 +75,18 @@ export default function ReportActions({ fileName, reportData }: Props) {
     }
   }
 
-  function downloadWord() {
+  async function downloadWord() {
     if (exporting) return;
     setExporting("word");
     setError(null);
 
     try {
-      const html = buildWordReport(reportData);
-      const blob = new Blob(["\ufeff", html], {
+      await document.fonts?.ready;
+      const radarDataUrl = buildWordRadarImage(reportData.dimensions);
+      const radarBase64 = radarDataUrl.split(",")[1] ?? "";
+      const html = buildWordReport(reportData, "radar.png");
+      const mhtml = buildWordMhtml(html, radarBase64);
+      const blob = new Blob(["\ufeff", mhtml], {
         type: "application/msword;charset=utf-8",
       });
       triggerDownload(blob, `${sanitize(fileName)}.doc`);
@@ -135,12 +139,20 @@ function buildBrandedPdfPages(data: ReportData) {
   drawPdfHeader(ctx, data);
   drawMetricRow(ctx, data, 420);
   drawExecutiveSummary(ctx, data, 585);
-  drawRadar(ctx, data.dimensions, 350, 1050, 235);
-  drawDimensionBars(ctx, data.dimensions, 690, 860, 455, 630);
   drawFooter(ctx, 1);
   pages.push(first);
 
-  let pageNumber = 2;
+  const overview = createPdfPage();
+  const overviewCtx = overview.getContext("2d");
+  if (!overviewCtx) throw new Error("Canvas no disponible.");
+  drawSectionPageHeader(overviewCtx, data, "Vista global de competencias");
+  drawRadar(overviewCtx, data.dimensions, 320, 650, 205);
+  drawRadarLegend(overviewCtx, data.dimensions, 85, 920, 465);
+  drawDimensionBars(overviewCtx, data.dimensions, 650, 285, 500, 980);
+  drawFooter(overviewCtx, 2);
+  pages.push(overview);
+
+  let pageNumber = 3;
   for (let index = 0; index < data.dimensions.length; index += 2) {
     const page = createPdfPage();
     const pageCtx = page.getContext("2d");
@@ -155,14 +167,14 @@ function buildBrandedPdfPages(data: ReportData) {
     pages.push(page);
   }
 
-  const overview = createPdfPage();
-  const overviewCtx = overview.getContext("2d");
-  if (!overviewCtx) throw new Error("Canvas no disponible.");
-  drawSectionPageHeader(overviewCtx, data, "Fortalezas, prioridades y riesgos");
-  drawStrengthPriorityColumns(overviewCtx, data, 220);
-  drawRisks(overviewCtx, data.risks, 930);
-  drawFooter(overviewCtx, pageNumber++);
-  pages.push(overview);
+  const strengthsPage = createPdfPage();
+  const strengthsCtx = strengthsPage.getContext("2d");
+  if (!strengthsCtx) throw new Error("Canvas no disponible.");
+  drawSectionPageHeader(strengthsCtx, data, "Fortalezas, prioridades y riesgos");
+  drawStrengthPriorityColumns(strengthsCtx, data, 220);
+  drawRisks(strengthsCtx, data.risks, 930);
+  drawFooter(strengthsCtx, pageNumber++);
+  pages.push(strengthsPage);
 
   if (data.plan.length) {
     for (let index = 0; index < data.plan.length; index += 2) {
@@ -283,13 +295,14 @@ function drawMetricRow(ctx: CanvasRenderingContext2D, data: ReportData, y: numbe
     ctx.font = "700 12px Arial";
     ctx.fillText(label.toUpperCase(), x + 18, y + 32);
     ctx.fillStyle = "#171717";
-    ctx.font = value.length > 24 ? "800 18px Arial" : "800 28px Arial";
-    drawWrappedText(ctx, value, x + 18, y + 66, width - 36, 23, 2);
+    const metricFont = fitFontSize(ctx, value, width - 36, 28, 16, "800");
+    ctx.font = `800 ${metricFont}px Arial`;
+    drawWrappedText(ctx, value, x + 18, y + 66, width - 36, Math.max(20, metricFont + 4), 2);
   });
 }
 
 function drawExecutiveSummary(ctx: CanvasRenderingContext2D, data: ReportData, y: number) {
-  const height = 220;
+  const height = 340;
   roundRect(ctx, PDF_MARGIN, y, PDF_CONTENT_WIDTH, height, 20, "#fff7ed", "#fed7aa");
   ctx.fillStyle = "#c2410c";
   ctx.font = "700 13px Arial";
@@ -299,19 +312,46 @@ function drawExecutiveSummary(ctx: CanvasRenderingContext2D, data: ReportData, y
   ctx.fillText("Lectura general del perfil", PDF_MARGIN + 24, y + 68);
   ctx.fillStyle = "#404040";
   ctx.font = "17px Arial";
-  drawWrappedText(ctx, data.executiveSummary, PDF_MARGIN + 24, y + 102, PDF_CONTENT_WIDTH - 48, 24, 4);
+  const summaryEnd = drawWrappedText(
+    ctx,
+    data.executiveSummary,
+    PDF_MARGIN + 24,
+    y + 106,
+    PDF_CONTENT_WIDTH - 48,
+    25,
+    7,
+  );
+
+  const noteY = Math.max(y + 255, summaryEnd + 26);
+  ctx.strokeStyle = "#fed7aa";
+  ctx.beginPath();
+  ctx.moveTo(PDF_MARGIN + 24, noteY - 18);
+  ctx.lineTo(PDF_PAGE_WIDTH - PDF_MARGIN - 24, noteY - 18);
+  ctx.stroke();
+
+  ctx.fillStyle = "#9a3412";
+  ctx.font = "700 12px Arial";
+  ctx.fillText("CLAVE DE INTERPRETACIÓN", PDF_MARGIN + 24, noteY);
   ctx.fillStyle = "#737373";
   ctx.font = "15px Arial";
-  drawWrappedText(ctx, data.perspectiveNote, PDF_MARGIN + 24, y + 182, PDF_CONTENT_WIDTH - 48, 21, 2);
+  drawWrappedText(
+    ctx,
+    data.perspectiveNote,
+    PDF_MARGIN + 24,
+    noteY + 28,
+    PDF_CONTENT_WIDTH - 48,
+    21,
+    3,
+  );
 }
 
 function drawRadar(ctx: CanvasRenderingContext2D, dimensions: DimensionExport[], cx: number, cy: number, radius: number) {
   ctx.fillStyle = "#171717";
-  ctx.font = "800 22px Arial";
-  ctx.fillText("Radar de competencias", PDF_MARGIN, 875);
+  ctx.font = "800 24px Arial";
+  ctx.fillText("Radar de competencias", PDF_MARGIN, 220);
   ctx.fillStyle = "#737373";
   ctx.font = "14px Arial";
-  ctx.fillText("Lectura comparativa de las dimensiones de la prueba.", PDF_MARGIN, 902);
+  ctx.fillText("Los números del radar corresponden a la leyenda inferior.", PDF_MARGIN, 248);
 
   const count = Math.max(1, dimensions.length);
   for (let level = 1; level <= 5; level += 1) {
@@ -330,22 +370,28 @@ function drawRadar(ctx: CanvasRenderingContext2D, dimensions: DimensionExport[],
     ctx.stroke();
   }
 
-  dimensions.forEach((item, index) => {
+  dimensions.forEach((_, index) => {
     const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    const axisX = cx + Math.cos(angle) * radius;
+    const axisY = cy + Math.sin(angle) * radius;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.lineTo(axisX, axisY);
     ctx.strokeStyle = "#eeeeee";
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    const lx = cx + Math.cos(angle) * (radius + 34);
-    const ly = cy + Math.sin(angle) * (radius + 34);
-    ctx.fillStyle = "#525252";
-    ctx.font = "700 11px Arial";
-    const label = item.name.length > 22 ? item.name.slice(0, 21) + "…" : item.name;
-    ctx.textAlign = lx < cx - 15 ? "right" : lx > cx + 15 ? "left" : "center";
-    ctx.fillText(label, lx, ly);
+    const labelX = cx + Math.cos(angle) * (radius + 28);
+    const labelY = cy + Math.sin(angle) * (radius + 28);
+    ctx.beginPath();
+    ctx.arc(labelX, labelY, 16, 0, Math.PI * 2);
+    ctx.fillStyle = "#171717";
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 12px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(index + 1), labelX, labelY + 1);
   });
 
   ctx.beginPath();
@@ -366,11 +412,48 @@ function drawRadar(ctx: CanvasRenderingContext2D, dimensions: DimensionExport[],
   ctx.stroke();
 
   ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
 }
 
+function drawRadarLegend(
+  ctx: CanvasRenderingContext2D,
+  dimensions: DimensionExport[],
+  x: number,
+  y: number,
+  width: number,
+) {
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 17px Arial";
+  ctx.fillText("Leyenda del radar", x, y);
+
+  let rowY = y + 34;
+  dimensions.forEach((item, index) => {
+    ctx.beginPath();
+    ctx.arc(x + 13, rowY - 5, 11, 0, Math.PI * 2);
+    ctx.fillStyle = "#171717";
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 10px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(index + 1), x + 13, rowY - 4);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+
+    ctx.fillStyle = "#404040";
+    ctx.font = "700 13px Arial";
+    ctx.fillText(clipCanvasText(ctx, item.name, width - 84), x + 36, rowY);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#171717";
+    ctx.font = "800 13px Arial";
+    ctx.fillText(item.score === null ? "—" : item.score.toFixed(2), x + width, rowY);
+    ctx.textAlign = "left";
+    rowY += 31;
+  });
+}
 function drawDimensionBars(ctx: CanvasRenderingContext2D, dimensions: DimensionExport[], x: number, y: number, width: number, height: number) {
   ctx.fillStyle = "#171717";
-  ctx.font = "800 22px Arial";
+  ctx.font = "800 24px Arial";
   ctx.fillText("Resultado por dimensión", x, y - 52);
   ctx.fillStyle = "#737373";
   ctx.font = "14px Arial";
@@ -965,7 +1048,151 @@ function concatBytes(...parts: Uint8Array[]) {
   return output;
 }
 
-function buildWordReport(data: ReportData) {
+function fitFontSize(
+  ctx: CanvasRenderingContext2D,
+  value: string,
+  maxWidth: number,
+  start: number,
+  minimum: number,
+  weight = "800",
+) {
+  for (let size = start; size >= minimum; size -= 1) {
+    ctx.font = `${weight} ${size}px Arial`;
+    if (ctx.measureText(value).width <= maxWidth) return size;
+  }
+  return minimum;
+}
+
+function buildWordRadarImage(dimensions: DimensionExport[]) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 920;
+  canvas.height = 610;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible.");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const cx = 300;
+  const cy = 300;
+  const radius = 205;
+  const count = Math.max(1, dimensions.length);
+
+  for (let level = 1; level <= 5; level += 1) {
+    ctx.beginPath();
+    dimensions.forEach((_, index) => {
+      const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+      const r = (radius * level) / 5;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  dimensions.forEach((item, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.strokeStyle = "#eeeeee";
+    ctx.stroke();
+
+    const lx = cx + Math.cos(angle) * (radius + 25);
+    const ly = cy + Math.sin(angle) * (radius + 25);
+    ctx.beginPath();
+    ctx.arc(lx, ly, 14, 0, Math.PI * 2);
+    ctx.fillStyle = "#171717";
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 11px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(index + 1), lx, ly + 1);
+  });
+
+  ctx.beginPath();
+  dimensions.forEach((item, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    const r = radius * Math.max(0, Math.min(5, item.score ?? 0)) / 5;
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = "rgba(249,115,22,0.16)";
+  ctx.strokeStyle = "#f97316";
+  ctx.lineWidth = 5;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 20px Arial";
+  ctx.fillText("Leyenda", 585, 72);
+
+  let y = 110;
+  dimensions.forEach((item, index) => {
+    ctx.beginPath();
+    ctx.arc(600, y - 4, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "#171717";
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 9px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(index + 1), 600, y - 3);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#404040";
+    ctx.font = "700 13px Arial";
+    ctx.fillText(clipCanvasText(ctx, item.name, 230), 620, y);
+    ctx.fillStyle = "#171717";
+    ctx.font = "800 13px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(item.score === null ? "—" : item.score.toFixed(2), 890, y);
+    ctx.textAlign = "left";
+    y += 45;
+  });
+
+  return canvas.toDataURL("image/png");
+}
+
+function buildWordMhtml(html: string, radarBase64: string) {
+  const boundary = "----=_NextPart_FactorRH_Report";
+  return [
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/related; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/html; charset="utf-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "Content-Location: report.html",
+    "",
+    html,
+    "",
+    `--${boundary}`,
+    "Content-Type: image/png",
+    "Content-Transfer-Encoding: base64",
+    "Content-Location: radar.png",
+    "",
+    wrapBase64(radarBase64),
+    "",
+    `--${boundary}--`,
+  ].join("\r\n");
+}
+
+function wrapBase64(value: string) {
+  return value.match(/.{1,76}/g)?.join("\r\n") ?? value;
+}
+
+function buildWordReport(data: ReportData, radarImageName: string) {
   const dimensions = data.dimensions
     .map(
       (item) => `
@@ -1072,6 +1299,7 @@ function buildWordReport(data: ReportData) {
           .eyebrow { font-size:8pt; font-weight:bold; letter-spacing:1.2px; color:#c2410c; }
           .body-text { padding:12px 14px 14px; color:#404040; }
           .muted { color:#737373; font-size:9pt; }
+          .radar-section { margin-top:16px; page-break-inside:avoid; }
           .overview { margin-top:8px; }
           .overview th { background:#171717; color:#ffffff; padding:8px; font-size:8.5pt; text-align:left; }
           .overview td { border-bottom:1px solid #e5e7eb; padding:8px; }
@@ -1153,6 +1381,21 @@ function buildWordReport(data: ReportData) {
           <p>${escapeHtml(data.executiveSummary)}</p>
           <p class="muted">${escapeHtml(data.perspectiveNote)}</p>
         </td></tr></table>
+
+        <table class="radar-section" role="presentation">
+          <tr>
+            <td style="width:48%;padding:14px;border:1px solid #e5e7eb;">
+              <div class="eyebrow">VISTA GLOBAL</div>
+              <h2>Radar de competencias</h2>
+              <img src="${radarImageName}" alt="Radar de competencias" style="width:100%;max-width:430px;height:auto;"/>
+            </td>
+            <td style="width:52%;padding:14px;border:1px solid #e5e7eb;">
+              <div class="eyebrow">LECTURA RÁPIDA</div>
+              <h2>Resultado por dimensión</h2>
+              <p class="muted">La gráfica radial y las barras permiten identificar fortalezas relativas y focos de desarrollo.</p>
+            </td>
+          </tr>
+        </table>
 
         <h2 style="margin-top:20px;">Resultado por dimensión</h2>
         <table class="overview">
