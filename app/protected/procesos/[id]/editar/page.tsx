@@ -1,11 +1,17 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import EditProcessForm from "./edit-process-form";
 
 type Props={params:Promise<{id:string}>};
-export default async function EditProcessPage({params}:Props){
+
+export default function EditProcessPage(props:Props){
+  return <Suspense fallback={<div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm"><div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500"/><p className="text-neutral-600">Cargando editor del proceso...</p></div>}><EditProcessContent {...props}/></Suspense>
+}
+
+async function EditProcessContent({params}:Props){
   const auth=await createClient();const {data,error}=await auth.auth.getClaims();if(error||!data?.claims)redirect("/auth/login");
   const {id}=await params;const db=createAdminClient();
   const processR=await db.from("assessment_processes").select("id,organization_id,person_id,name,status,target_date,public_token").eq("id",id).maybeSingle();
