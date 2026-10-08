@@ -8,6 +8,8 @@ type Assignment = {
   status: "pending" | "in_progress" | "completed" | "cancelled";
   relationship_type: string;
   evaluator_name: string | null;
+  evaluator_email: string | null;
+  evaluator_phone: string | null;
   due_date: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -65,6 +67,7 @@ type AssessmentData = {
     name: string;
     description: string | null;
     version: number;
+    assessment_type: string;
   };
   dimensions: Dimension[];
   questions: Question[];
@@ -78,12 +81,28 @@ type LocalResponse = {
   is_not_observed: boolean;
 };
 
-const scaleLabels = [
+const selfScaleLabels = [
   "No lo realizo / necesito desarrollarlo significativamente",
   "Lo realizo ocasionalmente o necesito apoyo",
   "Lo realizo adecuadamente de manera habitual",
   "Lo realizo consistentemente y con autonomía",
   "Es una fortaleza; podría ser referente para otros",
+];
+
+const managerScaleLabels = [
+  "Rara vez demuestra la conducta / requiere desarrollo significativo",
+  "La demuestra de manera irregular o requiere apoyo frecuente",
+  "La demuestra adecuadamente en situaciones habituales",
+  "La demuestra de manera consistente y autónoma",
+  "Es una fortaleza observable y puede ser referente para otros",
+];
+
+const interviewScaleLabels = [
+  "No muestra evidencia suficiente; la conducta es reactiva, inconsistente o genera riesgos",
+  "Muestra intentos, pero requiere guía frecuente o actúa de manera poco consistente",
+  "Muestra una conducta funcional y generalmente consistente en situaciones habituales",
+  "Muestra dominio, anticipa problemas y actúa con autonomía y criterio",
+  "Es referente: además de ejecutar bien, desarrolla a otros y mejora el sistema",
 ];
 
 export default function AssessmentClient({ token }: { token: string }) {
@@ -152,6 +171,20 @@ export default function AssessmentClient({ token }: { token: string }) {
     scaleQuestions.length === 0
       ? 0
       : Math.round((answeredScale / scaleQuestions.length) * 100);
+
+  const relationship = data?.assignment.relationship_type ?? "self";
+  const isExternalEvaluator = relationship !== "self";
+  const isManagerEvaluation = relationship === "manager";
+  const isInterview = relationship === "interviewer";
+  const scaleLabels = isManagerEvaluation
+    ? managerScaleLabels
+    : isInterview
+      ? interviewScaleLabels
+      : selfScaleLabels;
+  const evaluatedName = data
+    ? `${data.person.first_name.trim()} ${data.person.last_name ?? ""}`.trim()
+    : "";
+  const evaluatorName = data?.assignment.evaluator_name?.trim() || "Evaluador";
 
   async function saveAnswer(
     question: Question,
@@ -294,22 +327,24 @@ export default function AssessmentClient({ token }: { token: string }) {
               Evaluación finalizada
             </div>
             <h1 className="mt-5 text-3xl font-bold text-neutral-900">
-              Gracias, {data.person.first_name.trim()}.
+              Gracias, {isExternalEvaluator ? evaluatorName : data.person.first_name.trim()}.
             </h1>
             <p className="mx-auto mt-3 max-w-xl text-neutral-600">
-              Tus respuestas quedaron registradas correctamente. El equipo
-              responsable revisará los resultados dentro del proceso
-              correspondiente.
+              {isExternalEvaluator
+                ? `Tu evaluación sobre ${evaluatedName} quedó registrada correctamente y se integrará a su proceso de desarrollo.`
+                : "Tus respuestas quedaron registradas correctamente. El equipo responsable revisará los resultados dentro del proceso correspondiente."}
             </p>
             <div className="mx-auto mt-8 max-w-xl rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-600">
               Esta evaluación quedó guardada correctamente.
             </div>
-            <Link
-              href={`/p/${data.process.public_token}`}
-              className="mx-auto mt-5 inline-flex rounded-xl bg-orange-500 px-6 py-3 font-bold text-white hover:bg-orange-600"
-            >
-              Volver a mis evaluaciones
-            </Link>
+            {!isExternalEvaluator && (
+              <Link
+                href={`/p/${data.process.public_token}`}
+                className="mx-auto mt-5 inline-flex rounded-xl bg-orange-500 px-6 py-3 font-bold text-white hover:bg-orange-600"
+              >
+                Volver a mis evaluaciones
+              </Link>
+            )}
           </section>
         </div>
       </main>
@@ -324,13 +359,15 @@ export default function AssessmentClient({ token }: { token: string }) {
           <section className="mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
             <div className="border-b border-neutral-200 bg-neutral-900 px-7 py-9 text-white md:px-10">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-400">
-                Portal del participante · FactorRH
+                {isExternalEvaluator ? "Portal del evaluador · FactorRH" : "Portal del participante · FactorRH"}
               </div>
               <h1 className="mt-3 text-3xl font-bold md:text-4xl">
-                Hola, {data.person.first_name.trim()}
+                Hola, {isExternalEvaluator ? evaluatorName : data.person.first_name.trim()}
               </h1>
               <p className="mt-3 max-w-2xl text-neutral-300">
-                Tienes una evaluación asignada por {data.organization.name}.
+                {isExternalEvaluator
+                  ? `Tienes una evaluación para aportar evidencia sobre el liderazgo de ${evaluatedName}.`
+                  : `Tienes una evaluación asignada por ${data.organization.name}.`}
               </p>
             </div>
 
@@ -366,7 +403,7 @@ export default function AssessmentClient({ token }: { token: string }) {
               </div>
 
               <div className="mt-5 grid gap-4 rounded-2xl bg-neutral-50 p-5 md:grid-cols-2">
-                <Info label="Participante" value={`${data.person.first_name.trim()} ${data.person.last_name ?? ""}`.trim()} />
+                <Info label={isExternalEvaluator ? "Persona evaluada" : "Participante"} value={evaluatedName} />
                 <Info label="Puesto" value={data.person.job_title ?? "No especificado"} />
                 <Info label="Área" value={data.person.area ?? "No especificada"} />
                 <Info label="Reactivos calificables" value={String(scaleQuestions.length)} />
@@ -377,9 +414,11 @@ export default function AssessmentClient({ token }: { token: string }) {
                   Antes de comenzar
                 </h2>
                 <p className="mt-2 text-neutral-600">
-                  Responde con la opción que mejor describa tu comportamiento
-                  habitual. No busques la respuesta ideal; buscamos una lectura
-                  útil y honesta para tu desarrollo.
+                  {isManagerEvaluation
+                    ? "Califica únicamente conductas que hayas observado directamente o sobre las que tengas evidencia suficiente. Evita valorar simpatía o afinidad personal; concéntrate en conductas de liderazgo y gestión."
+                    : isInterview
+                      ? "Registra ejemplos reales y recientes. Profundiza en qué ocurrió, qué hizo la persona, qué resultado obtuvo y qué haría diferente. Separa los hechos observados de tu interpretación y califica al final de cada dimensión."
+                      : "Responde con la opción que mejor describa tu comportamiento habitual. No busques la respuesta ideal; buscamos una lectura útil y honesta para tu desarrollo."}
                 </p>
               </div>
 
@@ -428,7 +467,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                 {data.template.name}
               </div>
               <div className="text-xs text-neutral-500">
-                {data.person.first_name.trim()} · {data.organization.name}
+                {isExternalEvaluator ? `Evaluando a ${evaluatedName}` : data.person.first_name.trim()} · {data.organization.name}
               </div>
             </div>
             <div className="text-right">
@@ -519,7 +558,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                                   responses[question.id]?.text_value ?? "",
                               })
                             }
-                            placeholder="Escribe tu reflexión..."
+                            placeholder={isExternalEvaluator ? "Registra evidencia, hechos o comentarios..." : "Escribe tu reflexión..."}
                             className="mt-3 w-full rounded-xl border border-neutral-300 bg-white p-3 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                           />
                           {savingQuestion === question.id && (
