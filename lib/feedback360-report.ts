@@ -57,6 +57,8 @@ export type ProfessionalInsight = {
   blindSpots:{name:string;gap:number;message:string}[];
   developmentPlan:{competency:string;objective:string;actions:string[];indicator:string;horizon:string}[];
   recommendations:string[];
+  methodology:string[];
+  competencyReadings:{key:string;name:string;external:number;self:number|null;gap:number|null;alignment:string;strongestFacet:string|null;developmentFacet:string|null;narrative:string;impact:string;suggestions:string[]}[];
 };
 
 const behaviorText=(name:string,score:number)=>{
@@ -66,7 +68,22 @@ const behaviorText=(name:string,score:number)=>{
   return `En ${name}, el resultado señala una prioridad de desarrollo relevante. Se recomienda intervención específica, seguimiento frecuente y evidencia conductual de avance.`;
 };
 
-export function professional360(dimensions:DimensionScore[]):ProfessionalInsight{
+const competencyGuidance:Record<string,{impact:string;suggestions:string[]}>={
+  responsabilidad:{impact:'La responsabilidad sostenida afecta directamente la confianza, el cumplimiento de acuerdos y la percepción de confiabilidad del liderazgo.',suggestions:['Cerrar compromisos con responsable y fecha explícita.','Revisar pendientes críticos semanalmente y documentar cierres.','Reconocer errores temprano y comunicar la acción correctiva.']},
+  calidad:{impact:'La calidad influye en retrabajos, errores, satisfacción del cliente interno y externo y credibilidad profesional.',suggestions:['Usar listas de verificación antes de liberar entregables.','Definir criterios mínimos de calidad por tipo de resultado.','Revisar causas de retrabajo y acordar una mejora mensual.']},
+  trabajo_equipo:{impact:'El trabajo en equipo impacta coordinación, cooperación transversal y velocidad para resolver temas que requieren a varias áreas.',suggestions:['Acordar reglas de colaboración y escalamiento.','Compartir información antes de que sea solicitada cuando afecte a otros.','Resolver diferencias sobre hechos, acuerdos y responsabilidades, no sobre personas.']},
+  comunicacion:{impact:'La comunicación determina claridad de prioridades, ejecución correcta, coordinación y prevención de conflictos evitables.',suggestions:['Cerrar conversaciones relevantes confirmando qué, quién y cuándo.','Practicar escucha antes de responder o decidir.','Adaptar el mensaje al interlocutor y verificar comprensión.']},
+  actitud:{impact:'La actitud observable influye en apertura al feedback, clima de trabajo, capacidad de recuperación y manejo de presión.',suggestions:['Recibir retroalimentación pidiendo ejemplos antes de justificar.','Identificar detonadores de reacción defensiva y preparar respuestas alternativas.','Modelar respeto y estabilidad especialmente bajo presión.']},
+  enfoque_cliente:{impact:'El enfoque al cliente afecta la capacidad de comprender necesidades, resolverlas y construir relaciones de confianza.',suggestions:['Confirmar la necesidad antes de proponer una solución.','Cerrar solicitudes verificando satisfacción y pendientes.','Registrar causas recurrentes para convertir atención reactiva en mejora preventiva.']},
+  organizacion:{impact:'La organización se refleja en prioridades, cumplimiento de fechas y capacidad para absorber cambios sin perder control.',suggestions:['Planear semanalmente prioridades y capacidad disponible.','Separar urgencia de importancia con criterios explícitos.','Mantener un tablero único de compromisos con fechas y seguimiento.']},
+  procesos:{impact:'La disciplina de procesos reduce variabilidad, pérdida de información, retrabajo y dependencia de conocimientos informales.',suggestions:['Documentar los pasos críticos que hoy dependen de memoria.','Medir retrabajos y excepciones para identificar fallas del proceso.','Proponer mejoras pequeñas y verificables en lugar de cambios amplios sin seguimiento.']},
+  resolucion_problemas:{impact:'La resolución de problemas incide en velocidad de respuesta, calidad de decisiones y prevención de recurrencias.',suggestions:['Definir el problema con datos antes de saltar a la solución.','Separar síntoma de causa raíz.','Verificar después si la solución realmente eliminó el problema.']},
+  proactividad:{impact:'La proactividad influye en anticipación, iniciativa y capacidad para mover temas sin depender de instrucciones constantes.',suggestions:['Anticipar semanalmente riesgos y oportunidades.','Convertir propuestas en acciones con responsable y fecha.','Distinguir claramente qué decisiones puede tomar sin escalar.']},
+  influencia:{impact:'La influencia afecta capacidad para alinear, negociar, generar compromiso y movilizar a otros sin depender sólo de autoridad formal.',suggestions:['Sustentar propuestas con datos, impacto y beneficio para el otro.','Explicar el propósito detrás de decisiones relevantes.','Preparar alternativas de negociación y puntos no negociables.']},
+  desarrollo:{impact:'El desarrollo de personas determina delegación, crecimiento del equipo y reducción de dependencia operativa del líder.',suggestions:['Dar feedback específico sobre conducta, impacto y siguiente paso.','Delegar resultados completos, no sólo tareas aisladas.','Revisar mensualmente fortalezas, brechas y avance de cada colaborador.']}
+};
+
+export function professional360(dimensions:DimensionScore[],facets:FacetScore[]=[]):ProfessionalInsight{
   const external=(d:DimensionScore)=>{
     const vals=(['manager','peer','report'] as FeedbackRole[]).map(r=>d.scores[r]).filter((v):v is number=>v!=null);
     return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
@@ -87,6 +104,19 @@ export function professional360(dimensions:DimensionScore[]):ProfessionalInsight
     priorities.length?`Las principales oportunidades se concentran en ${priorities.map(x=>x.name).join(', ')}. El foco recomendado es trabajar pocas conductas de alto impacto y verificar su transferencia al puesto mediante evidencia observable.`:'',
     blindSpots.length?`Se detectan ${blindSpots.length} brecha(s) de percepción relevante(s) (≥0.70). Estas diferencias no deben interpretarse como fallas por sí mismas, sino como hipótesis de conversación para contrastar expectativas, ejemplos y efectos en terceros.`:'La autopercepción y la percepción del entorno no muestran brechas críticas de 0.70 puntos o más.'
   ].filter(Boolean);
+  const competencyReadings=scored.map(d=>{
+    const related=facets.filter(f=>f.competencyKey===d.key).map(f=>{
+      const vals=(['manager','peer','report'] as FeedbackRole[]).map(r=>f.scores[r]).filter((v):v is number=>v!=null);
+      return {...f,external:vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null};
+    }).filter((f):f is typeof f & {external:number}=>f.external!==null).sort((a,b)=>b.external-a.external);
+    const roleValues=(['manager','peer','report'] as FeedbackRole[]).map(r=>d.scores[r]).filter((v):v is number=>v!=null);
+    const spread=roleValues.length>=2?Math.max(...roleValues)-Math.min(...roleValues):0;
+    const alignment=roleValues.length<2?'Lectura limitada por número de fuentes':spread<=.35?'Alta coincidencia entre fuentes':spread<=.70?'Coincidencia moderada entre fuentes':'Percepciones divergentes entre fuentes';
+    const gap=d.gap??null;
+    const perception=gap===null?'No hay base suficiente para comparar autopercepción y entorno.':Math.abs(gap)<.35?'La autopercepción se encuentra bastante alineada con el entorno.':gap>0?'La persona se evalúa por encima de la percepción del entorno; conviene explorar ejemplos concretos que expliquen la diferencia.':'El entorno observa esta competencia mejor de lo que la propia persona la reconoce; puede tratarse de una fortaleza subestimada.';
+    const guidance=competencyGuidance[d.key]??{impact:'Esta competencia influye en la efectividad observable en el puesto y debe interpretarse junto con ejemplos de conducta y resultados.',suggestions:['Definir una conducta observable a desarrollar.','Solicitar retroalimentación periódica.','Dar seguimiento con evidencia de desempeño.']};
+    return {key:d.key,name:d.name,external:d.external,self:d.scores.self??null,gap,alignment,strongestFacet:related[0]?.facet??null,developmentFacet:related.length?related[related.length-1].facet:null,narrative:`${behaviorText(d.name,d.external)} ${perception} ${alignment}.`,impact:guidance.impact,suggestions:guidance.suggestions};
+  });
   const developmentPlan=priorities.map((p,i)=>({
     competency:p.name,
     objective:`Incrementar la consistencia observable de ${p.name} y acercar la percepción del entorno a un nivel ≥ 3.20.`,
@@ -98,7 +128,12 @@ export function professional360(dimensions:DimensionScore[]):ProfessionalInsight
     indicator:'≥80% de acciones cumplidas + mejora observable en pulso de seguimiento.',
     horizon:i===0?'0–30 días':i===1?'31–60 días':'61–90 días'
   }));
-  return {overall,headline:overall==null?'Reporte 360°':overall>=3.5?'Fortalezas consolidadas':overall>=3?'Base sólida para evolucionar':overall>=2.4?'Potencial con focos definidos':'Desarrollo prioritario',executiveSummary,strengths,priorities,blindSpots,developmentPlan,recommendations:[
+  return {overall,headline:overall==null?'Reporte 360°':overall>=3.5?'Fortalezas consolidadas':overall>=3?'Base sólida para evolucionar':overall>=2.4?'Potencial con focos definidos':'Desarrollo prioritario',executiveSummary,strengths,priorities,blindSpots,developmentPlan,competencyReadings,methodology:[
+    'La escala mide frecuencia conductual de 1 (Casi nunca) a 4 (Consistentemente). Un promedio resume tendencia, no sustituye los ejemplos de conducta.',
+    'La lectura principal utiliza la percepción del entorno: jefe, pares y colaboradores. La autoevaluación se usa para identificar alineación o brechas de autopercepción.',
+    'Una brecha no implica por sí misma un problema. Se interpreta como una señal para conversar sobre expectativas, contexto, ejemplos y efectos observados.',
+    'Los resultados deben contrastarse con desempeño, objetivos, contexto del puesto y seguimiento posterior. No constituyen diagnóstico clínico ni de personalidad.'
+  ],recommendations:[
     'Realizar una sesión de devolución de 60–90 minutos centrada en patrones y ejemplos, evitando discutir quién emitió cada respuesta.',
     'Elegir máximo tres prioridades de desarrollo; intentar modificar demasiadas conductas al mismo tiempo reduce la transferencia al puesto.',
     'Acordar indicadores conductuales con el jefe inmediato y revisar avances a 30, 60 y 90 días.',
