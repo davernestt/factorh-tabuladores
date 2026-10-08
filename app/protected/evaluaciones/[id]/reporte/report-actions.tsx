@@ -482,67 +482,80 @@ function drawDimensionBars(ctx: CanvasRenderingContext2D, dimensions: DimensionE
 function drawDimensionCard(ctx: CanvasRenderingContext2D, item: DimensionExport, y: number) {
   const x = PDF_MARGIN;
   const width = PDF_CONTENT_WIDTH;
-  const height = 650;
+  const height = 1320;
   roundRect(ctx, x, y, width, height, 22, "#ffffff", "#e5e5e5");
 
   const tone = tonePalette(item.tone);
   ctx.fillStyle = tone.bg;
-  ctx.fillRect(x + 1, y + 1, width - 2, 92);
+  ctx.fillRect(x + 1, y + 1, width - 2, 100);
   ctx.fillStyle = tone.fg;
   ctx.font = "700 13px Arial";
-  ctx.fillText(`DIMENSIÓN ${item.order}`, x + 26, y + 34);
+  ctx.fillText(`DIMENSIÓN ${item.order}`, x + 28, y + 36);
   ctx.fillStyle = "#171717";
-  ctx.font = "800 26px Arial";
-  ctx.fillText(item.name, x + 26, y + 72);
+  ctx.font = "800 28px Arial";
+  ctx.fillText(item.name, x + 28, y + 76);
 
   ctx.textAlign = "right";
-  ctx.font = "800 36px Arial";
-  ctx.fillText(item.score === null ? "—" : item.score.toFixed(2), x + width - 30, y + 64);
+  ctx.font = "800 38px Arial";
+  ctx.fillText(item.score === null ? "—" : item.score.toFixed(2), x + width - 30, y + 68);
   ctx.textAlign = "left";
 
-  roundRect(ctx, x + 26, y + 118, 235, 40, 18, tone.badge, undefined);
+  roundRect(ctx, x + 28, y + 128, 260, 42, 18, tone.badge, undefined);
   ctx.fillStyle = tone.fg;
   ctx.font = "700 13px Arial";
-  ctx.fillText(shortLevel(item.level), x + 43, y + 144);
+  ctx.fillText(shortLevel(item.level), x + 47, y + 155);
 
   ctx.fillStyle = "#404040";
   ctx.font = "17px Arial";
-  let nextY = drawWrappedText(ctx, item.narrative, x + 26, y + 200, width - 52, 26, 8);
+  let nextY = drawWrappedText(ctx, item.narrative, x + 28, y + 220, width - 56, 26, 7);
+
+  const gap = 24;
+  const boxWidth = (width - 80) / 2;
+  const boxY = Math.max(y + 410, nextY + 36);
 
   if (item.strongestItem) {
-    nextY += 22;
-    ctx.fillStyle = "#166534";
-    ctx.font = "700 13px Arial";
-    ctx.fillText("CONDUCTA MEJOR POSICIONADA", x + 26, nextY);
+    roundRect(ctx, x + 28, boxY, boxWidth, 235, 18, "#ecfdf5", "#a7f3d0");
+    ctx.fillStyle = "#065f46";
+    ctx.font = "700 12px Arial";
+    ctx.fillText("CONDUCTA RELATIVAMENTE MÁS SÓLIDA", x + 48, boxY + 34);
     ctx.fillStyle = "#404040";
     ctx.font = "16px Arial";
-    nextY = drawWrappedText(ctx, item.strongestItem, x + 26, nextY + 30, width - 52, 24, 3);
+    drawWrappedText(ctx, item.strongestItem, x + 48, boxY + 72, boxWidth - 40, 23, 6);
   }
 
   if (item.developmentItem) {
-    nextY += 22;
+    const rightX = x + 28 + boxWidth + gap;
+    roundRect(ctx, rightX, boxY, boxWidth, 235, 18, "#fff7ed", "#fed7aa");
     ctx.fillStyle = "#c2410c";
-    ctx.font = "700 13px Arial";
-    ctx.fillText("FOCO CONDUCTUAL", x + 26, nextY);
+    ctx.font = "700 12px Arial";
+    ctx.fillText("PRINCIPAL CONDUCTA A DESARROLLAR", rightX + 20, boxY + 34);
     ctx.fillStyle = "#404040";
     ctx.font = "16px Arial";
-    nextY = drawWrappedText(ctx, item.developmentItem, x + 26, nextY + 30, width - 52, 24, 3);
+    drawWrappedText(ctx, item.developmentItem, rightX + 20, boxY + 72, boxWidth - 40, 23, 6);
   }
 
+  const readingY = boxY + 275;
+  roundRect(ctx, x + 28, readingY, width - 56, 300, 18, "#fafafa", "#e5e5e5");
+  ctx.fillStyle = "#ea580c";
+  ctx.font = "700 12px Arial";
+  ctx.fillText("LECTURA CONDUCTUAL", x + 50, readingY + 36);
+  ctx.fillStyle = "#404040";
+  ctx.font = "16px Arial";
+  drawWrappedText(ctx, item.behavioralReading, x + 50, readingY + 76, width - 100, 24, 8);
+
   if (item.qualitativeEvidence.length) {
-    nextY += 26;
-    roundRect(ctx, x + 26, nextY, width - 52, 125, 16, "#fafafa", "#eeeeee");
+    const evidenceY = readingY + 340;
+    roundRect(ctx, x + 28, evidenceY, width - 56, 210, 18, "#ffffff", "#eeeeee");
     ctx.fillStyle = "#737373";
     ctx.font = "700 12px Arial";
-    ctx.fillText("EVIDENCIA CUALITATIVA", x + 46, nextY + 30);
+    ctx.fillText("EVIDENCIA CUALITATIVA REPORTADA", x + 50, evidenceY + 34);
     ctx.fillStyle = "#525252";
     ctx.font = "italic 15px Arial";
-    drawWrappedText(ctx, item.qualitativeEvidence.join(" · "), x + 46, nextY + 60, width - 92, 22, 3);
+    drawWrappedText(ctx, item.qualitativeEvidence.join(" · "), x + 50, evidenceY + 74, width - 100, 23, 5);
   }
 
   return y + height;
 }
-
 function drawStrengthPriorityColumns(ctx: CanvasRenderingContext2D, data: ReportData, y: number) {
   const gap = 24;
   const width = (PDF_CONTENT_WIDTH - gap) / 2;
