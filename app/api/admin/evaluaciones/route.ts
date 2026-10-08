@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { relationshipForAssessmentType } from "@/lib/pdl-evaluation-role";
 
 const ADMIN_EMAILS = ["david@factorh.com.mx"];
 
@@ -19,6 +20,12 @@ type CreateBody = {
   area?: string;
   process_name?: string;
   due_date?: string | null;
+  manager_evaluator_name?: string;
+  manager_evaluator_email?: string;
+  manager_evaluator_phone?: string;
+  interviewer_name?: string;
+  interviewer_email?: string;
+  interviewer_phone?: string;
 };
 
 type ValidResult = {
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
   const [organizationResult, templatesResult, accessResult] = await Promise.all([
     db.from("organizations").select("id,name,active").eq("id", organizationId).eq("active", true).maybeSingle(),
     db.from("assessment_templates")
-      .select("id,name,organization_id,active,validity_days,allow_result_reuse")
+      .select("id,name,assessment_type,organization_id,active,validity_days,allow_result_reuse")
       .in("id", templateIds).eq("active", true),
     db.from("organization_assessment_templates")
       .select("template_id,enabled,participant_sendable")
@@ -125,6 +132,22 @@ export async function POST(request: NextRequest) {
   const orderedTemplates = templateIds
     .map((id) => templateById.get(id))
     .filter((template): template is NonNullable<typeof template> => Boolean(template));
+
+  const requiresManager = orderedTemplates.some((template) => template.assessment_type === "leadership_direction");
+  const requiresInterviewer = orderedTemplates.some((template) => template.assessment_type === "leadership_interview");
+  const managerName = clean(body.manager_evaluator_name);
+  const managerEmail = clean(body.manager_evaluator_email).toLowerCase() || null;
+  const managerPhone = clean(body.manager_evaluator_phone) || null;
+  const interviewerName = clean(body.interviewer_name);
+  const interviewerEmail = clean(body.interviewer_email).toLowerCase() || null;
+  const interviewerPhone = clean(body.interviewer_phone) || null;
+
+  if (requiresManager && !managerName) {
+    return NextResponse.json({ error: "Indica quién responderá la evaluación del jefe inmediato." }, { status: 400 });
+  }
+  if (requiresInterviewer && !interviewerName) {
+    return NextResponse.json({ error: "Indica quién realizará la entrevista conductual." }, { status: 400 });
+  }
 
   let personId = existingPersonId;
   let createdPersonId: string | null = null;
@@ -284,23 +307,43 @@ export async function POST(request: NextRequest) {
   }
 
   const dueDate = clean(body.due_date) ? `${clean(body.due_date)}T23:59:59` : null;
-  let assignments: { id: string; public_token: string; status: string; template_id: string }[] = [];
+  let assignments: {
+    id: string;
+    public_token: string;
+    status: string;
+    template_id: string;
+    relationship_type: string;
+    evaluator_name: string | null;
+    evaluator_email: string | null;
+    evaluator_phone: string | null;
+  }[] = [];
 
   if (templatesToApply.length) {
     const { data, error: assignmentError } = await db
       .from("assessment_assignments")
       .insert(
-        templatesToApply.map((template) => ({
-          process_id: processData.id,
-          template_id: template.id,
-          relationship_type: "self",
-          evaluator_name: personName,
-          evaluator_email: personEmail,
-          due_date: dueDate,
-          status: "pending",
-        })),
+        templatesToApply.map((template) => {
+          const relationship = relationshipForAssessmentType(template.assessment_type);
+          const evaluator =
+            relationship === "manager"
+              ? { name: managerName, email: managerEmail, phone: managerPhone }
+              : relationship === "interviewer"
+                ? { name: interviewerName, email: interviewerEmail, phone: interviewerPhone }
+                : { name: personName, email: personEmail, phone: personPhone };
+
+          return {
+            process_id: processData.id,
+            template_id: template.id,
+            relationship_type: relationship,
+            evaluator_name: evaluator.name,
+            evaluator_email: evaluator.email,
+            evaluator_phone: evaluator.phone,
+            due_date: dueDate,
+            status: "pending",
+          };
+        }),
       )
-      .select("id,public_token,status,template_id");
+      .select("id,public_token,status,template_id,relationship_type,evaluator_name,evaluator_email,evaluator_phone");
 
     if (assignmentError) {
       await db.from("assessment_processes").delete().eq("id", processData.id);
@@ -333,6 +376,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  const externalAssignments = assignments.filter((item) => item.relationship_type !== "self");
+  const selfAssignments = assignments.filter((item) => item.relationship_type === "self");
+
   return NextResponse.json({
     ok: true,
     process_id: processData.id,
@@ -340,6 +386,7 @@ export async function POST(request: NextRequest) {
     assignment_ids: assignments.map((item) => item.id),
     public_token: processData.public_token,
     path: `/p/${processData.public_token}`,
+    participant_path: selfAssignments.length ? `/p/${processData.public_token}` : null,
     person_name: personName,
     person_email: personEmail,
     person_phone: personPhone,
@@ -350,5 +397,14 @@ export async function POST(request: NextRequest) {
         : `Batería de ${orderedTemplates.length} evaluaciones`,
     template_names: orderedTemplates.map((template) => template.name),
     reused_template_names: templatesToReuse.map((template) => template.name),
+    delivery_links: externalAssignments.map((item) => ({
+      assignment_id: item.id,
+      path: `/e/${item.public_token}`,
+      template_name: templateById.get(item.template_id)?.name ?? "Evaluación",
+      relationship_type: item.relationship_type,
+      evaluator_name: item.evaluator_name,
+      evaluator_email: item.evaluator_email,
+      evaluator_phone: item.evaluator_phone,
+    })),
   });
 }
