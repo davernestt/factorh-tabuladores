@@ -10,6 +10,7 @@ type DimensionExport = {
   level: string;
   tone: "strong" | "functional" | "attention" | "priority";
   narrative: string;
+  behavioralReading: string;
   strongestItem: string | null;
   developmentItem: string | null;
   qualitativeEvidence: string[];
@@ -153,13 +154,13 @@ function buildBrandedPdfPages(data: ReportData) {
   pages.push(overview);
 
   let pageNumber = 3;
-  for (let index = 0; index < data.dimensions.length; index += 2) {
+  for (let index = 0; index < data.dimensions.length; index += 1) {
     const page = createPdfPage();
     const pageCtx = page.getContext("2d");
     if (!pageCtx) throw new Error("Canvas no disponible.");
     drawSectionPageHeader(pageCtx, data, "Interpretación por dimensión");
     let y = 210;
-    for (const item of data.dimensions.slice(index, index + 2)) {
+    for (const item of data.dimensions.slice(index, index + 1)) {
       y = drawDimensionCard(pageCtx, item, y);
       y += 34;
     }
