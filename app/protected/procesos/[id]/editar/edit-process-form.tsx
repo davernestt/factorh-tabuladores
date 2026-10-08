@@ -4,9 +4,9 @@ import Link from "next/link";
 
 type Organization={id:string;name:string};
 type Person={id:string;organization_id:string;first_name:string;last_name:string|null;email:string|null;phone:string|null;job_title:string|null;area:string|null};
-type Template={id:string;name:string};
+type Template={id:string;name:string;assessment_type:string};
 type Access={organization_id:string;template_id:string;enabled:boolean;participant_sendable:boolean};
-type Assignment={id:string;template_id:string;status:string};
+type Assignment={id:string;template_id:string;status:string;relationship_type:string;evaluator_name:string|null;evaluator_email:string|null;evaluator_phone:string|null};
 type Reused={id:string;template_id:string};
 type Process={id:string;organization_id:string;person_id:string;name:string;status:string;target_date:string|null;public_token:string};
 
@@ -24,6 +24,14 @@ export default function EditProcessForm({process,person,organizations,people,tem
   const [processName,setProcessName]=useState(process.name);
   const [dueDate,setDueDate]=useState(process.target_date??"");
   const [selected,setSelected]=useState<string[]>(Array.from(new Set([...assignments.map(a=>a.template_id),...reused.map(r=>r.template_id)])));
+  const managerAssignment=assignments.find(a=>a.relationship_type==="manager");
+  const interviewerAssignment=assignments.find(a=>a.relationship_type==="interviewer");
+  const [managerName,setManagerName]=useState(managerAssignment?.evaluator_name??"");
+  const [managerEmail,setManagerEmail]=useState(managerAssignment?.evaluator_email??"");
+  const [managerPhone,setManagerPhone]=useState(managerAssignment?.evaluator_phone??"");
+  const [interviewerName,setInterviewerName]=useState(interviewerAssignment?.evaluator_name??"");
+  const [interviewerEmail,setInterviewerEmail]=useState(interviewerAssignment?.evaluator_email??"");
+  const [interviewerPhone,setInterviewerPhone]=useState(interviewerAssignment?.evaluator_phone??"");
   const [saving,setSaving]=useState(false); const [message,setMessage]=useState<string|null>(null); const [error,setError]=useState<string|null>(null);
 
   const availablePeople=useMemo(()=>people.filter(p=>p.organization_id===organizationId),[people,organizationId]);
@@ -31,6 +39,8 @@ export default function EditProcessForm({process,person,organizations,people,tem
   const availableTemplates=templates.filter(t=>allowedIds.has(t.id));
   const statusByTemplate=new Map(assignments.map(a=>[a.template_id,a.status]));
   const reusedIds=new Set(reused.map(r=>r.template_id));
+  const selectedManager=availableTemplates.some(t=>t.assessment_type==="leadership_direction"&&selected.includes(t.id));
+  const selectedInterview=availableTemplates.some(t=>t.assessment_type==="leadership_interview"&&selected.includes(t.id));
 
   function changeOrg(id:string){setOrganizationId(id);setSelected([]);const first=people.find(p=>p.organization_id===id);if(first){setPersonId(first.id);loadPerson(first)}else setPersonId("");}
   function loadPerson(p:Person){setFirstName(p.first_name);setLastName(p.last_name??"");setEmail(p.email??"");setPhone(p.phone??"");setJobTitle(p.job_title??"");setArea(p.area??"");}
@@ -41,6 +51,8 @@ export default function EditProcessForm({process,person,organizations,people,tem
     const response=await fetch(`/api/admin/procesos/${process.id}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({
       organization_id:organizationId,person_id:personId,first_name:firstName,last_name:lastName,email,phone,job_title:jobTitle,area,
       process_name:processName,due_date:dueDate||null,template_ids:selected,
+      manager_evaluator_name:managerName,manager_evaluator_email:managerEmail,manager_evaluator_phone:managerPhone,
+      interviewer_name:interviewerName,interviewer_email:interviewerEmail,interviewer_phone:interviewerPhone,
     })});
     const payload=await response.json(); if(!response.ok)throw new Error(payload.error||"No fue posible guardar los cambios.");
     setMessage("Cambios guardados. La liga del participante sigue siendo la misma."); window.setTimeout(()=>window.location.reload(),900);
@@ -65,6 +77,7 @@ export default function EditProcessForm({process,person,organizations,people,tem
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Batería</div><h2 className="mt-2 text-xl font-black">Pruebas asignadas</h2><p className="mt-2 text-sm text-neutral-500">Puedes agregar pruebas a la misma liga. Una prueba pendiente puede quitarse. Las que ya iniciaron o fueron completadas quedan bloqueadas.</p>
       <div className="mt-5 grid gap-3 md:grid-cols-2">{availableTemplates.map(t=>{const status=statusByTemplate.get(t.id);const reusedResult=reusedIds.has(t.id);const locked=processCompleted||status==="in_progress"||status==="completed";const checked=selected.includes(t.id);return <label key={t.id} className={checked?"rounded-2xl border border-orange-300 bg-orange-50 p-4":"rounded-2xl border border-neutral-200 p-4"}><div className="flex items-start gap-3"><input type="checkbox" checked={checked} disabled={locked} onChange={()=>toggle(t.id)} className="mt-1 h-4 w-4 accent-orange-500"/><div><div className="font-bold text-neutral-900">{t.name}</div><div className="mt-1 text-xs text-neutral-500">{reusedResult?"Resultado vigente reutilizado":status==="completed"?"Completada":status==="in_progress"?"En proceso":status==="pending"?"Pendiente":checked?"Nueva":"Disponible"}{locked&&" · bloqueada"}</div></div></div></label>})}</div>
     </section>
+    {(selectedManager||selectedInterview)&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Evaluadores externos</div><h2 className="mt-2 text-xl font-black">Quién responderá estas herramientas</h2><p className="mt-2 text-sm leading-6 text-neutral-500">El resultado seguirá ligado al colaborador evaluado; únicamente cambia quién responde la herramienta.</p><div className="mt-5 grid gap-5 lg:grid-cols-2">{selectedManager&&<div className="rounded-2xl bg-neutral-50 p-5"><div className="font-black text-neutral-900">Jefe inmediato</div><div className="mt-4 space-y-4"><Field label="Nombre"><input className="input" value={managerName} onChange={e=>setManagerName(e.target.value)} required/></Field><Field label="Correo"><input className="input" type="email" value={managerEmail} onChange={e=>setManagerEmail(e.target.value)}/></Field><Field label="Teléfono / WhatsApp"><input className="input" value={managerPhone} onChange={e=>setManagerPhone(e.target.value)}/></Field></div></div>}{selectedInterview&&<div className="rounded-2xl bg-neutral-50 p-5"><div className="font-black text-neutral-900">Entrevistador</div><div className="mt-4 space-y-4"><Field label="Nombre"><input className="input" value={interviewerName} onChange={e=>setInterviewerName(e.target.value)} required/></Field><Field label="Correo"><input className="input" type="email" value={interviewerEmail} onChange={e=>setInterviewerEmail(e.target.value)}/></Field><Field label="Teléfono / WhatsApp"><input className="input" value={interviewerPhone} onChange={e=>setInterviewerPhone(e.target.value)}/></Field></div></div>}</div></section>}
     {error&&<div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}{message&&<div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{message}</div>}
     <div className="flex flex-wrap justify-between gap-3"><Link href="/protected" className="rounded-xl border border-neutral-300 bg-white px-5 py-3 font-bold text-neutral-700">Cancelar</Link><button disabled={saving||!selected.length} className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white disabled:opacity-40">{saving?"Guardando...":"Guardar cambios"}</button></div>
     <style jsx global>{`.input{width:100%;border:1px solid rgb(212 212 212);border-radius:.75rem;background:white;padding:.75rem .875rem;color:rgb(23 23 23);outline:none}.input:focus{border-color:rgb(249 115 22);box-shadow:0 0 0 3px rgb(255 237 213)}.input:disabled{background:rgb(245 245 245);color:rgb(115 115 115)}`}</style>
