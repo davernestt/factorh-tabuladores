@@ -36,6 +36,7 @@ export type DimensionAnalysis = {
   level: string;
   tone: "strong" | "functional" | "attention" | "priority";
   narrative: string;
+  behavioralReading: string;
   strongestItem: string | null;
   developmentItem: string | null;
   qualitativeEvidence: string[];
@@ -200,6 +201,42 @@ function guideFor(name: string) {
   );
 }
 
+
+function behavioralReadingFor(input: {
+  dimensionName: string;
+  score: number | null;
+  high: { question: LeadershipQuestionInput; value: number } | null;
+  low: { question: LeadershipQuestionInput; value: number } | null;
+}) {
+  const { dimensionName, score, high, low } = input;
+  if (score === null) {
+    return "No hay información cuantitativa suficiente para establecer una lectura conductual de esta dimensión.";
+  }
+
+  const guide = guideFor(dimensionName);
+
+  if (!high || !low) {
+    return `El resultado debe interpretarse como una referencia general de ${dimensionName}. Para convertirlo en un objetivo de desarrollo conviene contrastarlo con ejemplos observables y con otras fuentes del proceso.`;
+  }
+
+  if (high.value === low.value) {
+    return `Las conductas calificadas dentro de ${dimensionName} presentan valoraciones equivalentes, por lo que no existe un contraste interno suficientemente claro para señalar una conducta más sólida y otra más débil. El siguiente paso es contrastar esta dimensión con evidencia cualitativa y otras fuentes. Como objetivo de desarrollo, conviene: ${guide.target}`;
+  }
+
+  const caution =
+    score >= 3.8
+      ? "La primera puede considerarse un recurso actual de la persona dentro de esta dimensión."
+      : "La primera no debe interpretarse automáticamente como una fortaleza consolidada; únicamente es la conducta mejor valorada en términos relativos dentro de esta dimensión.";
+
+  return `La lectura muestra un contraste entre “${shortPrompt(
+    high.question.prompt,
+    125,
+  )}” y “${shortPrompt(
+    low.question.prompt,
+    125,
+  )}”. ${caution} El desarrollo debe concentrarse en elevar la consistencia de la segunda conducta. En términos de gestión, el objetivo es: ${guide.target}`;
+}
+
 export function buildLeadershipAnalysis(input: {
   assessmentType: string;
   templateName: string;
@@ -264,16 +301,14 @@ export function buildLeadershipAnalysis(input: {
         ? "No hay información cuantitativa suficiente para interpretar esta dimensión."
         : `El resultado de ${score.toFixed(2)}/5 ubica esta dimensión en “${band.level.toLowerCase()}”.`;
 
-      if (high && low && score !== null) {
-        narrative += ` La conducta mejor posicionada se relaciona con “${shortPrompt(
-          high.question.prompt,
-        )}”. La principal oportunidad de desarrollo aparece en “${shortPrompt(
-          low.question.prompt,
-        )}”.`;
-      } else if (low && score !== null) {
-        narrative += ` El foco conductual más claro está en “${shortPrompt(
-          low.question.prompt,
-        )}”.`;
+      const hasInternalContrast =
+        high && low && high.value !== low.value;
+
+      if (hasInternalContrast && score !== null) {
+        narrative += ` Dentro de esta dimensión existe una diferencia observable entre conductas, útil para priorizar el desarrollo sin confundir el reactivo mejor puntuado con una fortaleza absoluta.`;
+      } else if (score !== null && high && low) {
+        narrative +=
+          " Las conductas de esta dimensión muestran puntuaciones equivalentes, por lo que no existe un contraste interno claro.";
       }
 
       if (qualitativeEvidence.length > 0) {
@@ -289,8 +324,16 @@ export function buildLeadershipAnalysis(input: {
         level: band.level,
         tone: band.tone,
         narrative,
-        strongestItem: high ? high.question.prompt : null,
-        developmentItem: low ? low.question.prompt : null,
+        behavioralReading: behavioralReadingFor({
+          dimensionName: dimension.name,
+          score,
+          high,
+          low,
+        }),
+        strongestItem:
+          high && low && high.value !== low.value ? high.question.prompt : null,
+        developmentItem:
+          high && low && high.value !== low.value ? low.question.prompt : null,
         qualitativeEvidence,
       } satisfies DimensionAnalysis;
     })
