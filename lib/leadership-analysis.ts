@@ -100,7 +100,7 @@ function shortPrompt(value: string, max = 115) {
 
 function perspectiveFor(type: string, name: string) {
   if (type === "leadership_direction") {
-    return "Este resultado refleja la observación de Dirección sobre conductas laborales. Debe contrastarse con la autoevaluación, entrevista, casos y 360° antes de emitir una conclusión integral.";
+    return "Este resultado refleja la observación del jefe inmediato sobre conductas de liderazgo y gestión. Debe contrastarse con la autoevaluación, entrevista conductual, casos y 360° antes de emitir una conclusión integral.";
   }
   if (type === "leadership_interview") {
     return "Este resultado integra evidencia conductual reportada durante la entrevista. Su valor aumenta al contrastarlo con conductas observadas por terceros y resultados de otras herramientas.";
