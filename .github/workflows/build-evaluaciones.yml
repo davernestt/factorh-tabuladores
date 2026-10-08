@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - evaluaciones-v1
+      - feedback360-v1
   workflow_dispatch:
 
 jobs:
