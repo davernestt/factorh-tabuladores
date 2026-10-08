@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import { relationshipLabel } from "@/lib/pdl-evaluation-role";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -37,7 +38,7 @@ async function EvaluationDetailContent({ params }: PageProps) {
   const { data: assignment, error: assignmentError } = await db
     .from("assessment_assignments")
     .select(
-      "id,status,evaluator_name,public_token,created_at,started_at,completed_at,process_id,template_id",
+      "id,status,evaluator_name,evaluator_email,evaluator_phone,relationship_type,public_token,created_at,started_at,completed_at,process_id,template_id",
     )
     .eq("id", id)
     .maybeSingle();
@@ -196,8 +197,17 @@ async function EvaluationDetailContent({ params }: PageProps) {
         </div>
       </div>
 
-      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Metric label="Evaluación" value={template.name} small />
+        <Metric
+          label="Fuente"
+          value={
+            assignment.relationship_type === "self"
+              ? "Autoevaluación"
+              : `${relationshipLabel(assignment.relationship_type)} · ${assignment.evaluator_name ?? "Sin nombre"}`
+          }
+          small
+        />
         <Metric
           label="Avance"
           value={`${scaleAnswered}/${scaleTotal}`}
