@@ -398,6 +398,40 @@ async function LeadershipReportContent({ params }: PageProps) {
                     {dimension.narrative}
                   </p>
 
+                  {(dimension.strongestItem || dimension.developmentItem) && (
+                    <div className="mt-5 grid gap-3 md:grid-cols-2">
+                      {dimension.strongestItem && (
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                            Conducta relativamente más sólida
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+                            {dimension.strongestItem}
+                          </p>
+                        </div>
+                      )}
+                      {dimension.developmentItem && (
+                        <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                          <div className="text-xs font-semibold uppercase tracking-wide text-orange-700">
+                            Principal conducta a desarrollar
+                          </div>
+                          <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+                            {dimension.developmentItem}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-5 rounded-2xl border-l-4 border-orange-500 bg-neutral-50 p-4">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                      Lectura conductual
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-neutral-700">
+                      {dimension.behavioralReading}
+                    </p>
+                  </div>
+
                   {dimension.qualitativeEvidence.length > 0 && (
                     <div className="mt-5 rounded-2xl bg-neutral-50 p-4">
                       <div className="text-xs font-semibold uppercase tracking-wide text-neutral-400">
@@ -426,7 +460,7 @@ async function LeadershipReportContent({ params }: PageProps) {
                 Fortalezas
               </div>
               <h2 className="mt-2 text-xl font-black text-emerald-950">
-                Competencias mejor posicionadas
+                Competencias relativamente mejor posicionadas
               </h2>
               <div className="mt-5 space-y-3">
                 {analysis.strengths.map((item) => (
@@ -442,7 +476,7 @@ async function LeadershipReportContent({ params }: PageProps) {
                     </div>
                     {item.strongestItem && (
                       <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Conducta destacada: {item.strongestItem}
+                        Conducta relativamente más sólida: {item.strongestItem}
                       </p>
                     )}
                   </div>
@@ -471,7 +505,7 @@ async function LeadershipReportContent({ params }: PageProps) {
                     </div>
                     {item.developmentItem && (
                       <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                        Foco conductual: {item.developmentItem}
+                        Principal conducta a desarrollar: {item.developmentItem}
                       </p>
                     )}
                   </div>
