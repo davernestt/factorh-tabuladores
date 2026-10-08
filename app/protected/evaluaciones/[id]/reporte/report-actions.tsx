@@ -383,7 +383,7 @@ function buildImagePdf(images: Uint8Array[], widthPx: number, heightPx: number) 
   xref += `trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
   parts.push(encoder.encode(xref));
 
-  return new Blob(parts, { type: "application/pdf" });
+  return new Blob(parts.map((part) => part as unknown as BlobPart), { type: "application/pdf" });
 }
 
 function concatBytes(...parts: Uint8Array[]) {
