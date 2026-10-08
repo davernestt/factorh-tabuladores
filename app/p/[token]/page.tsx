@@ -70,6 +70,7 @@ async function ParticipantPortalContent({ params }: RouteContext) {
       .from("assessment_assignments")
       .select("id,template_id,public_token,status,created_at")
       .eq("process_id", process.id)
+      .eq("relationship_type", "self")
       .neq("status", "cancelled")
       .order("created_at"),
     db.from("assessment_process_reused_results").select("template_id,source_assignment_id,source_completed_at,valid_until").eq("process_id", process.id),
