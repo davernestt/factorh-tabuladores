@@ -94,6 +94,7 @@ export default function AssessmentClient({ token }: { token: string }) {
   const [savingQuestion, setSavingQuestion] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set());
 
   async function loadAssessment() {
     setLoading(true);
@@ -122,6 +123,7 @@ export default function AssessmentClient({ token }: { token: string }) {
         };
       }
       setResponses(initial);
+      setSavedQuestionIds(new Set(assessment.responses.map((item) => item.question_id)));
       setStarted(false);
     } catch (error) {
       setMessage(
@@ -142,15 +144,8 @@ export default function AssessmentClient({ token }: { token: string }) {
   );
 
   const answeredScale = useMemo(
-    () =>
-      scaleQuestions.filter((question) => {
-        const response = responses[question.id];
-        return Boolean(
-          response &&
-            (response.numeric_value !== null || response.is_not_observed),
-        );
-      }).length,
-    [responses, scaleQuestions],
+    () => scaleQuestions.filter((question) => savedQuestionIds.has(question.id)).length,
+    [savedQuestionIds, scaleQuestions],
   );
 
   const progress =
@@ -184,6 +179,12 @@ export default function AssessmentClient({ token }: { token: string }) {
         throw new Error(payload.error || "No fue posible guardar la respuesta.");
       }
 
+      setSavedQuestionIds((current) => {
+        const nextIds = new Set(current);
+        nextIds.add(question.id);
+        return nextIds;
+      });
+
       setData((current) =>
         current
           ? {
@@ -199,6 +200,11 @@ export default function AssessmentClient({ token }: { token: string }) {
           : current,
       );
     } catch (error) {
+      setSavedQuestionIds((current) => {
+        const nextIds = new Set(current);
+        nextIds.delete(question.id);
+        return nextIds;
+      });
       setMessage(
         error instanceof Error ? error.message : "No fue posible guardar.",
       );
@@ -208,9 +214,14 @@ export default function AssessmentClient({ token }: { token: string }) {
   }
 
   async function completeAssessment() {
+    if (savingQuestion) {
+      setMessage("Espera un momento: todavía estamos guardando la última respuesta.");
+      return;
+    }
+
     if (answeredScale < scaleQuestions.length) {
       setMessage(
-        `Aún faltan ${scaleQuestions.length - answeredScale} respuestas de escala.`,
+        `Aún faltan ${scaleQuestions.length - answeredScale} respuestas guardadas.`,
       );
       return;
     }
@@ -632,12 +643,12 @@ export default function AssessmentClient({ token }: { token: string }) {
             <div>
               <h2 className="text-xl font-bold">Finalizar evaluación</h2>
               <p className="mt-1 text-sm text-neutral-300">
-                Debes responder los {scaleQuestions.length} reactivos calificables.
+                Debes responder y guardar los {scaleQuestions.length} reactivos calificables.
               </p>
             </div>
             <button
               type="button"
-              disabled={finishing || answeredScale < scaleQuestions.length}
+              disabled={finishing || Boolean(savingQuestion) || answeredScale < scaleQuestions.length}
               onClick={() => void completeAssessment()}
               className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white transition enabled:hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
