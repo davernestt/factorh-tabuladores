@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: assignment, error: assignmentError } = await db
     .from("assessment_assignments")
     .select(
-      "id,status,relationship_type,evaluator_name,due_date,started_at,completed_at,process_id,template_id",
+      "id,status,relationship_type,evaluator_name,evaluator_email,evaluator_phone,due_date,started_at,completed_at,process_id,template_id",
     )
     .eq("public_token", token)
     .neq("status", "cancelled")
@@ -43,7 +43,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         .single(),
       db
         .from("assessment_templates")
-        .select("id,name,description,version,organization_id")
+        .select("id,name,description,version,organization_id,assessment_type")
         .eq("id", assignment.template_id)
         .single(),
       db
@@ -132,6 +132,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       name: templateResult.data.name,
       description: adaptText(templateResult.data.description),
       version: templateResult.data.version,
+      assessment_type: templateResult.data.assessment_type,
     },
     dimensions: (dimensionsResult.data ?? []).map((dimension) => ({
       ...dimension,
