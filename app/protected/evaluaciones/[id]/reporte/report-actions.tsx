@@ -57,15 +57,14 @@ export default function ReportActions({ fileName, reportData }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   async function downloadPdf() {
-    const report = document.getElementById("leadership-report");
-    if (!report || exporting) return;
+    if (exporting) return;
 
     setExporting("pdf");
     setError(null);
 
     try {
       await document.fonts?.ready;
-      const pageJpegs = await renderReportToJpegPages(report);
+      const pageJpegs = buildBrandedPdfPages(reportData);
       const pdf = buildImagePdf(pageJpegs, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT);
       triggerDownload(pdf, `${sanitize(fileName)}.pdf`);
     } catch (cause) {
@@ -125,6 +124,575 @@ const PDF_PAGE_HEIGHT = 1754;
 const PDF_MARGIN = 62;
 const PDF_CONTENT_WIDTH = PDF_PAGE_WIDTH - PDF_MARGIN * 2;
 const PDF_CONTENT_HEIGHT = PDF_PAGE_HEIGHT - PDF_MARGIN * 2;
+
+
+function buildBrandedPdfPages(data: ReportData) {
+  const pages: HTMLCanvasElement[] = [];
+  const first = createPdfPage();
+  const ctx = first.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible.");
+
+  drawPdfHeader(ctx, data);
+  drawMetricRow(ctx, data, 420);
+  drawExecutiveSummary(ctx, data, 585);
+  drawRadar(ctx, data.dimensions, 350, 1050, 235);
+  drawDimensionBars(ctx, data.dimensions, 690, 860, 455, 630);
+  drawFooter(ctx, 1);
+  pages.push(first);
+
+  let pageNumber = 2;
+  for (let index = 0; index < data.dimensions.length; index += 2) {
+    const page = createPdfPage();
+    const pageCtx = page.getContext("2d");
+    if (!pageCtx) throw new Error("Canvas no disponible.");
+    drawSectionPageHeader(pageCtx, data, "Interpretación por dimensión");
+    let y = 210;
+    for (const item of data.dimensions.slice(index, index + 2)) {
+      y = drawDimensionCard(pageCtx, item, y);
+      y += 34;
+    }
+    drawFooter(pageCtx, pageNumber++);
+    pages.push(page);
+  }
+
+  const overview = createPdfPage();
+  const overviewCtx = overview.getContext("2d");
+  if (!overviewCtx) throw new Error("Canvas no disponible.");
+  drawSectionPageHeader(overviewCtx, data, "Fortalezas, prioridades y riesgos");
+  drawStrengthPriorityColumns(overviewCtx, data, 220);
+  drawRisks(overviewCtx, data.risks, 930);
+  drawFooter(overviewCtx, pageNumber++);
+  pages.push(overview);
+
+  if (data.plan.length) {
+    for (let index = 0; index < data.plan.length; index += 2) {
+      const page = createPdfPage();
+      const pageCtx = page.getContext("2d");
+      if (!pageCtx) throw new Error("Canvas no disponible.");
+      drawSectionPageHeader(pageCtx, data, "Plan de acción 30 · 60 · 90 días");
+      let y = 220;
+      for (const item of data.plan.slice(index, index + 2)) {
+        y = drawPlanCard(pageCtx, item, index + data.plan.slice(index, index + 2).indexOf(item) + 1, y);
+        y += 28;
+      }
+      drawFooter(pageCtx, pageNumber++);
+      pages.push(page);
+    }
+  }
+
+  if (data.openResponses.length) {
+    let page = createPdfPage();
+    let pageCtx = page.getContext("2d");
+    if (!pageCtx) throw new Error("Canvas no disponible.");
+    drawSectionPageHeader(pageCtx, data, "Anexo cualitativo");
+    let y = 220;
+
+    for (const response of data.openResponses) {
+      const needed = estimateTextHeight(pageCtx, response.prompt, 900, 28) + estimateTextHeight(pageCtx, response.answer, 900, 26) + 95;
+      if (y + needed > PDF_PAGE_HEIGHT - 120) {
+        drawFooter(pageCtx, pageNumber++);
+        pages.push(page);
+        page = createPdfPage();
+        pageCtx = page.getContext("2d");
+        if (!pageCtx) throw new Error("Canvas no disponible.");
+        drawSectionPageHeader(pageCtx, data, "Anexo cualitativo");
+        y = 220;
+      }
+      y = drawResponseCard(pageCtx, response, y);
+      y += 22;
+    }
+
+    drawFooter(pageCtx, pageNumber++);
+    pages.push(page);
+  }
+
+  return pages.map((canvas) => dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)));
+}
+
+function drawPdfHeader(ctx: CanvasRenderingContext2D, data: ReportData) {
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 0, PDF_PAGE_WIDTH, 360);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 34px Arial";
+  ctx.fillText("Factor", 72, 82);
+  const factorWidth = ctx.measureText("Factor").width;
+  ctx.fillStyle = "#f97316";
+  ctx.fillText("RH", 72 + factorWidth, 82);
+
+  ctx.fillStyle = "#a3a3a3";
+  ctx.font = "700 14px Arial";
+  ctx.fillText("PROGRAMA DE DESARROLLO DE LÍDERES", 72, 118);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 46px Arial";
+  ctx.fillText("Reporte de Competencias", 72, 215);
+
+  ctx.fillStyle = "#d4d4d4";
+  ctx.font = "24px Arial";
+  drawWrappedText(ctx, data.templateName, 72, 252, 650, 30);
+
+  roundRect(ctx, 835, 72, 330, 205, 20, "#1f1f1f", "#3f3f46");
+  ctx.fillStyle = "#fb923c";
+  ctx.font = "700 13px Arial";
+  ctx.fillText("PERSONA EVALUADA", 865, 112);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 24px Arial";
+  drawWrappedText(ctx, data.personName, 865, 150, 270, 28);
+  ctx.fillStyle = "#d4d4d4";
+  ctx.font = "16px Arial";
+  drawWrappedText(ctx, [data.jobTitle, data.area].filter(Boolean).join(" · ") || "Sin puesto registrado", 865, 200, 270, 22);
+  ctx.fillText(data.organizationName, 865, 252);
+}
+
+function drawSectionPageHeader(ctx: CanvasRenderingContext2D, data: ReportData, title: string) {
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 0, PDF_PAGE_WIDTH, 150);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 28px Arial";
+  ctx.fillText("Factor", 62, 62);
+  const w = ctx.measureText("Factor").width;
+  ctx.fillStyle = "#f97316";
+  ctx.fillText("RH", 62 + w, 62);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 24px Arial";
+  ctx.fillText(title, 62, 112);
+
+  ctx.fillStyle = "#a3a3a3";
+  ctx.font = "14px Arial";
+  const meta = `${data.personName} · ${data.templateName}`;
+  ctx.fillText(clipCanvasText(ctx, meta, 560), 600, 88);
+  ctx.fillText(`${data.organizationName} · ${data.reportDate}`, 600, 112);
+}
+
+function drawMetricRow(ctx: CanvasRenderingContext2D, data: ReportData, y: number) {
+  const metrics = [
+    ["Resultado global", data.overall === null ? "—" : `${data.overall.toFixed(2)} / 5`],
+    ["Nivel", data.overallLevel],
+    ["Dimensiones", String(data.dimensions.length)],
+    ["Fuente", data.sourceLabel],
+    ["Fecha", data.reportDate],
+  ];
+  const gap = 14;
+  const width = (PDF_CONTENT_WIDTH - gap * 4) / 5;
+  metrics.forEach(([label, value], index) => {
+    const x = PDF_MARGIN + index * (width + gap);
+    roundRect(ctx, x, y, width, 125, 18, "#fafafa", "#e5e5e5");
+    ctx.fillStyle = "#a3a3a3";
+    ctx.font = "700 12px Arial";
+    ctx.fillText(label.toUpperCase(), x + 18, y + 32);
+    ctx.fillStyle = "#171717";
+    ctx.font = value.length > 24 ? "800 18px Arial" : "800 28px Arial";
+    drawWrappedText(ctx, value, x + 18, y + 66, width - 36, 23, 2);
+  });
+}
+
+function drawExecutiveSummary(ctx: CanvasRenderingContext2D, data: ReportData, y: number) {
+  const height = 220;
+  roundRect(ctx, PDF_MARGIN, y, PDF_CONTENT_WIDTH, height, 20, "#fff7ed", "#fed7aa");
+  ctx.fillStyle = "#c2410c";
+  ctx.font = "700 13px Arial";
+  ctx.fillText("SÍNTESIS EJECUTIVA", PDF_MARGIN + 24, y + 34);
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 22px Arial";
+  ctx.fillText("Lectura general del perfil", PDF_MARGIN + 24, y + 68);
+  ctx.fillStyle = "#404040";
+  ctx.font = "17px Arial";
+  drawWrappedText(ctx, data.executiveSummary, PDF_MARGIN + 24, y + 102, PDF_CONTENT_WIDTH - 48, 24, 4);
+  ctx.fillStyle = "#737373";
+  ctx.font = "15px Arial";
+  drawWrappedText(ctx, data.perspectiveNote, PDF_MARGIN + 24, y + 182, PDF_CONTENT_WIDTH - 48, 21, 2);
+}
+
+function drawRadar(ctx: CanvasRenderingContext2D, dimensions: DimensionExport[], cx: number, cy: number, radius: number) {
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 22px Arial";
+  ctx.fillText("Radar de competencias", PDF_MARGIN, 875);
+  ctx.fillStyle = "#737373";
+  ctx.font = "14px Arial";
+  ctx.fillText("Lectura comparativa de las dimensiones de la prueba.", PDF_MARGIN, 902);
+
+  const count = Math.max(1, dimensions.length);
+  for (let level = 1; level <= 5; level += 1) {
+    ctx.beginPath();
+    dimensions.forEach((_, index) => {
+      const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+      const r = (radius * level) / 5;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = "#e5e5e5";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  dimensions.forEach((item, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.strokeStyle = "#eeeeee";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const lx = cx + Math.cos(angle) * (radius + 34);
+    const ly = cy + Math.sin(angle) * (radius + 34);
+    ctx.fillStyle = "#525252";
+    ctx.font = "700 11px Arial";
+    const label = item.name.length > 22 ? item.name.slice(0, 21) + "…" : item.name;
+    ctx.textAlign = lx < cx - 15 ? "right" : lx > cx + 15 ? "left" : "center";
+    ctx.fillText(label, lx, ly);
+  });
+
+  ctx.beginPath();
+  dimensions.forEach((item, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / count;
+    const score = item.score ?? 0;
+    const r = radius * Math.max(0, Math.min(5, score)) / 5;
+    const x = cx + Math.cos(angle) * r;
+    const y = cy + Math.sin(angle) * r;
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = "rgba(249,115,22,0.16)";
+  ctx.strokeStyle = "#f97316";
+  ctx.lineWidth = 5;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.textAlign = "left";
+}
+
+function drawDimensionBars(ctx: CanvasRenderingContext2D, dimensions: DimensionExport[], x: number, y: number, width: number, height: number) {
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 22px Arial";
+  ctx.fillText("Resultado por dimensión", x, y - 52);
+  ctx.fillStyle = "#737373";
+  ctx.font = "14px Arial";
+  ctx.fillText("Fortalezas y brechas en una sola vista.", x, y - 28);
+
+  const rowHeight = Math.min(64, height / Math.max(1, dimensions.length));
+  dimensions.forEach((item, index) => {
+    const rowY = y + index * rowHeight;
+    ctx.fillStyle = "#404040";
+    ctx.font = "700 13px Arial";
+    ctx.fillText(clipCanvasText(ctx, item.name, width - 100), x, rowY + 16);
+    ctx.fillStyle = "#171717";
+    ctx.font = "800 14px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(item.score === null ? "—" : item.score.toFixed(2), x + width, rowY + 16);
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(x, rowY + 28, width, 12);
+    ctx.fillStyle = "#f97316";
+    ctx.fillRect(x, rowY + 28, width * Math.max(0, Math.min(1, (item.score ?? 0) / 5)), 12);
+  });
+}
+
+function drawDimensionCard(ctx: CanvasRenderingContext2D, item: DimensionExport, y: number) {
+  const x = PDF_MARGIN;
+  const width = PDF_CONTENT_WIDTH;
+  const height = 650;
+  roundRect(ctx, x, y, width, height, 22, "#ffffff", "#e5e5e5");
+
+  const tone = tonePalette(item.tone);
+  ctx.fillStyle = tone.bg;
+  ctx.fillRect(x + 1, y + 1, width - 2, 92);
+  ctx.fillStyle = tone.fg;
+  ctx.font = "700 13px Arial";
+  ctx.fillText(`DIMENSIÓN ${item.order}`, x + 26, y + 34);
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 26px Arial";
+  ctx.fillText(item.name, x + 26, y + 72);
+
+  ctx.textAlign = "right";
+  ctx.font = "800 36px Arial";
+  ctx.fillText(item.score === null ? "—" : item.score.toFixed(2), x + width - 30, y + 64);
+  ctx.textAlign = "left";
+
+  roundRect(ctx, x + 26, y + 118, 235, 40, 18, tone.badge, undefined);
+  ctx.fillStyle = tone.fg;
+  ctx.font = "700 13px Arial";
+  ctx.fillText(shortLevel(item.level), x + 43, y + 144);
+
+  ctx.fillStyle = "#404040";
+  ctx.font = "17px Arial";
+  let nextY = drawWrappedText(ctx, item.narrative, x + 26, y + 200, width - 52, 26, 8);
+
+  if (item.strongestItem) {
+    nextY += 22;
+    ctx.fillStyle = "#166534";
+    ctx.font = "700 13px Arial";
+    ctx.fillText("CONDUCTA MEJOR POSICIONADA", x + 26, nextY);
+    ctx.fillStyle = "#404040";
+    ctx.font = "16px Arial";
+    nextY = drawWrappedText(ctx, item.strongestItem, x + 26, nextY + 30, width - 52, 24, 3);
+  }
+
+  if (item.developmentItem) {
+    nextY += 22;
+    ctx.fillStyle = "#c2410c";
+    ctx.font = "700 13px Arial";
+    ctx.fillText("FOCO CONDUCTUAL", x + 26, nextY);
+    ctx.fillStyle = "#404040";
+    ctx.font = "16px Arial";
+    nextY = drawWrappedText(ctx, item.developmentItem, x + 26, nextY + 30, width - 52, 24, 3);
+  }
+
+  if (item.qualitativeEvidence.length) {
+    nextY += 26;
+    roundRect(ctx, x + 26, nextY, width - 52, 125, 16, "#fafafa", "#eeeeee");
+    ctx.fillStyle = "#737373";
+    ctx.font = "700 12px Arial";
+    ctx.fillText("EVIDENCIA CUALITATIVA", x + 46, nextY + 30);
+    ctx.fillStyle = "#525252";
+    ctx.font = "italic 15px Arial";
+    drawWrappedText(ctx, item.qualitativeEvidence.join(" · "), x + 46, nextY + 60, width - 92, 22, 3);
+  }
+
+  return y + height;
+}
+
+function drawStrengthPriorityColumns(ctx: CanvasRenderingContext2D, data: ReportData, y: number) {
+  const gap = 24;
+  const width = (PDF_CONTENT_WIDTH - gap) / 2;
+  drawListPanel(ctx, PDF_MARGIN, y, width, "Fortalezas mejor posicionadas", data.strengths, "strong");
+  drawListPanel(ctx, PDF_MARGIN + width + gap, y, width, "Focos prioritarios de desarrollo", data.priorities, "attention");
+}
+
+function drawListPanel(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, title: string, items: DimensionExport[], tone: "strong" | "attention") {
+  const palette = tone === "strong"
+    ? { bg: "#ecfdf5", border: "#a7f3d0", title: "#065f46" }
+    : { bg: "#fffbeb", border: "#fde68a", title: "#92400e" };
+  roundRect(ctx, x, y, width, 610, 22, palette.bg, palette.border);
+  ctx.fillStyle = palette.title;
+  ctx.font = "800 22px Arial";
+  drawWrappedText(ctx, title, x + 24, y + 44, width - 48, 26, 2);
+
+  let rowY = y + 115;
+  items.forEach((item) => {
+    roundRect(ctx, x + 22, rowY, width - 44, 135, 16, "rgba(255,255,255,0.82)", undefined);
+    ctx.fillStyle = "#171717";
+    ctx.font = "800 17px Arial";
+    drawWrappedText(ctx, item.name, x + 40, rowY + 35, width - 125, 22, 2);
+    ctx.fillStyle = palette.title;
+    ctx.font = "800 22px Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(item.score?.toFixed(2) ?? "—", x + width - 40, rowY + 35);
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#737373";
+    ctx.font = "14px Arial";
+    drawWrappedText(
+      ctx,
+      tone === "strong"
+        ? item.strongestItem ?? item.narrative
+        : item.developmentItem ?? item.narrative,
+      x + 40,
+      rowY + 73,
+      width - 80,
+      20,
+      3,
+    );
+    rowY += 158;
+  });
+}
+
+function drawRisks(ctx: CanvasRenderingContext2D, risks: string[], y: number) {
+  if (!risks.length) return;
+  roundRect(ctx, PDF_MARGIN, y, PDF_CONTENT_WIDTH, 600, 20, "#fef2f2", "#fecaca");
+  ctx.fillStyle = "#b91c1c";
+  ctx.font = "700 13px Arial";
+  ctx.fillText("RIESGOS DE DESARROLLO", PDF_MARGIN + 24, y + 38);
+  ctx.fillStyle = "#7f1d1d";
+  ctx.font = "800 22px Arial";
+  ctx.fillText("Impactos posibles si las brechas no se trabajan", PDF_MARGIN + 24, y + 76);
+
+  let nextY = y + 125;
+  ctx.font = "16px Arial";
+  for (const risk of risks) {
+    ctx.fillStyle = "#7f1d1d";
+    nextY = drawWrappedText(ctx, `• ${risk}`, PDF_MARGIN + 32, nextY, PDF_CONTENT_WIDTH - 64, 24, 4) + 18;
+  }
+}
+
+function drawPlanCard(ctx: CanvasRenderingContext2D, item: PlanExport, priority: number, y: number) {
+  const x = PDF_MARGIN;
+  const width = PDF_CONTENT_WIDTH;
+  const height = 665;
+  roundRect(ctx, x, y, width, height, 20, "#ffffff", "#d4d4d4");
+  ctx.fillStyle = "#171717";
+  ctx.fillRect(x + 1, y + 1, width - 2, 95);
+  ctx.fillStyle = "#fb923c";
+  ctx.font = "700 13px Arial";
+  ctx.fillText(`PRIORIDAD ${priority}`, x + 26, y + 34);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 24px Arial";
+  ctx.fillText(item.competency, x + 26, y + 70);
+
+  const colWidth = (width - 78) / 2;
+  const left = x + 26;
+  const right = left + colWidth + 26;
+  drawPlanCell(ctx, left, y + 130, colWidth, "Hallazgo actual", item.currentFinding);
+  drawPlanCell(ctx, right, y + 130, colWidth, "Conducta esperada", item.targetBehavior);
+  drawPlanCell(ctx, left, y + 310, colWidth, "Acción concreta", item.action);
+  drawPlanCell(ctx, right, y + 310, colWidth, "Indicador", item.indicator);
+
+  const boxWidth = (width - 104) / 3;
+  [
+    ["30 días", item.day30],
+    ["60 días", item.day60],
+    ["90 días", item.day90],
+  ].forEach(([label, value], index) => {
+    const bx = x + 26 + index * (boxWidth + 26);
+    roundRect(ctx, bx, y + 500, boxWidth, 135, 14, "#fafafa", "#eeeeee");
+    ctx.fillStyle = "#ea580c";
+    ctx.font = "800 16px Arial";
+    ctx.fillText(label, bx + 16, y + 528);
+    ctx.fillStyle = "#525252";
+    ctx.font = "13px Arial";
+    drawWrappedText(ctx, value, bx + 16, y + 558, boxWidth - 32, 18, 4);
+  });
+  return y + height;
+}
+
+function drawPlanCell(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, label: string, value: string) {
+  roundRect(ctx, x, y, width, 150, 14, "#ffffff", "#e5e5e5");
+  ctx.fillStyle = "#a3a3a3";
+  ctx.font = "700 12px Arial";
+  ctx.fillText(label.toUpperCase(), x + 16, y + 28);
+  ctx.fillStyle = "#404040";
+  ctx.font = "15px Arial";
+  drawWrappedText(ctx, value, x + 16, y + 58, width - 32, 21, 4);
+}
+
+function drawResponseCard(ctx: CanvasRenderingContext2D, response: { prompt: string; answer: string }, y: number) {
+  const promptHeight = estimateTextHeight(ctx, response.prompt, PDF_CONTENT_WIDTH - 56, 24);
+  const answerHeight = estimateTextHeight(ctx, response.answer, PDF_CONTENT_WIDTH - 56, 23);
+  const height = promptHeight + answerHeight + 72;
+  roundRect(ctx, PDF_MARGIN, y, PDF_CONTENT_WIDTH, height, 16, "#ffffff", "#e5e5e5");
+  ctx.fillStyle = "#171717";
+  ctx.font = "700 16px Arial";
+  let next = drawWrappedText(ctx, response.prompt, PDF_MARGIN + 24, y + 34, PDF_CONTENT_WIDTH - 48, 23);
+  ctx.fillStyle = "#525252";
+  ctx.font = "15px Arial";
+  next = drawWrappedText(ctx, response.answer, PDF_MARGIN + 24, next + 18, PDF_CONTENT_WIDTH - 48, 22);
+  return y + height;
+}
+
+function drawFooter(ctx: CanvasRenderingContext2D, pageNumber: number) {
+  ctx.strokeStyle = "#e5e5e5";
+  ctx.beginPath();
+  ctx.moveTo(PDF_MARGIN, PDF_PAGE_HEIGHT - 70);
+  ctx.lineTo(PDF_PAGE_WIDTH - PDF_MARGIN, PDF_PAGE_HEIGHT - 70);
+  ctx.stroke();
+
+  ctx.fillStyle = "#a3a3a3";
+  ctx.font = "12px Arial";
+  ctx.fillText("FactorRH · Reporte de desarrollo de liderazgo · Confidencial", PDF_MARGIN, PDF_PAGE_HEIGHT - 38);
+  ctx.textAlign = "right";
+  ctx.fillText(`Página ${pageNumber}`, PDF_PAGE_WIDTH - PDF_MARGIN, PDF_PAGE_HEIGHT - 38);
+  ctx.textAlign = "left";
+}
+
+function drawWrappedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines = 999,
+) {
+  const paragraphs = String(text ?? "").split(/\n+/);
+  let cursorY = y;
+  let linesUsed = 0;
+
+  for (const paragraph of paragraphs) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    let line = "";
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, cursorY);
+        cursorY += lineHeight;
+        linesUsed += 1;
+        if (linesUsed >= maxLines) return cursorY;
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line && linesUsed < maxLines) {
+      ctx.fillText(line, x, cursorY);
+      cursorY += lineHeight;
+      linesUsed += 1;
+    }
+    if (linesUsed >= maxLines) return cursorY;
+  }
+
+  return cursorY;
+}
+
+function estimateTextHeight(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, lineHeight: number) {
+  const words = String(text ?? "").split(/\s+/).filter(Boolean);
+  let line = "";
+  let lines = 1;
+  for (const word of words) {
+    const test = line ? `${line} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines += 1;
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  return lines * lineHeight;
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fill?: string,
+  stroke?: string,
+) {
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, radius);
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+}
+
+function clipCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let value = text;
+  while (value.length > 1 && ctx.measureText(value + "…").width > maxWidth) {
+    value = value.slice(0, -1);
+  }
+  return value + "…";
+}
+
+function tonePalette(tone: DimensionExport["tone"]) {
+  if (tone === "strong") return { bg: "#ecfdf5", badge: "#d1fae5", fg: "#065f46" };
+  if (tone === "functional") return { bg: "#eff6ff", badge: "#dbeafe", fg: "#1e40af" };
+  if (tone === "priority") return { bg: "#fef2f2", badge: "#fee2e2", fg: "#991b1b" };
+  return { bg: "#fffbeb", badge: "#fef3c7", fg: "#92400e" };
+}
 
 async function renderReportToJpegPages(report: HTMLElement) {
   const blocks: HTMLElement[] = [];
