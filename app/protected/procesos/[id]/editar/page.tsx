@@ -21,9 +21,9 @@ async function EditProcessContent({params}:Props){
     db.from("people").select("id,organization_id,first_name,last_name,email,phone,job_title,area").eq("id",process.person_id).single(),
     db.from("organizations").select("id,name").eq("active",true).order("name"),
     db.from("people").select("id,organization_id,first_name,last_name,email,phone,job_title,area").eq("active",true).order("first_name"),
-    db.from("assessment_templates").select("id,name").eq("active",true).order("name"),
+    db.from("assessment_templates").select("id,name,assessment_type").eq("active",true).order("name"),
     db.from("organization_assessment_templates").select("organization_id,template_id,enabled,participant_sendable"),
-    db.from("assessment_assignments").select("id,template_id,status").eq("process_id",id),
+    db.from("assessment_assignments").select("id,template_id,status,relationship_type,evaluator_name,evaluator_email,evaluator_phone").eq("process_id",id),
     db.from("assessment_process_reused_results").select("id,template_id").eq("process_id",id),
   ]);
   const firstError=personR.error||orgsR.error||peopleR.error||templatesR.error||accessR.error||assignmentsR.error||reusedR.error;
