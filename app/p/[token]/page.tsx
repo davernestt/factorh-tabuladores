@@ -14,6 +14,8 @@ type Assignment = {
   created_at: string;
 };
 
+type ReusedResult = { template_id:string; source_assignment_id:string; source_completed_at:string; valid_until:string };
+
 type Template = {
   id: string;
   organization_id: string | null;
@@ -53,7 +55,7 @@ async function ParticipantPortalContent({ params }: RouteContext) {
     return <PortalError />;
   }
 
-  const [personResult, organizationResult, assignmentsResult] = await Promise.all([
+  const [personResult, organizationResult, assignmentsResult, reusedResult] = await Promise.all([
     db
       .from("people")
       .select("first_name,last_name,job_title,area")
@@ -70,12 +72,14 @@ async function ParticipantPortalContent({ params }: RouteContext) {
       .eq("process_id", process.id)
       .neq("status", "cancelled")
       .order("created_at"),
+    db.from("assessment_process_reused_results").select("template_id,source_assignment_id,source_completed_at,valid_until").eq("process_id", process.id),
   ]);
 
   if (
     personResult.error ||
     organizationResult.error ||
     assignmentsResult.error ||
+    reusedResult.error ||
     !personResult.data ||
     !organizationResult.data
   ) {
@@ -84,7 +88,8 @@ async function ParticipantPortalContent({ params }: RouteContext) {
 
   const targetOrganization = organizationResult.data;
   const assignments = (assignmentsResult.data ?? []) as Assignment[];
-  const templateIds = assignments.map((assignment) => assignment.template_id);
+  const reused = (reusedResult.data ?? []) as ReusedResult[];
+  const templateIds = Array.from(new Set([...assignments.map((assignment) => assignment.template_id), ...reused.map((item) => item.template_id)]));
 
   const { data: templatesData, error: templatesError } =
     templateIds.length > 0
@@ -123,10 +128,10 @@ async function ParticipantPortalContent({ params }: RouteContext) {
   );
 
   const templateById = new Map(templates.map((template) => [template.id, template]));
-  const completed = assignments.filter(
-    (assignment) => assignment.status === "completed",
-  ).length;
-  const allCompleted = assignments.length > 0 && completed === assignments.length;
+  const completedAssignments = assignments.filter((assignment) => assignment.status === "completed").length;
+  const completed = completedAssignments + reused.length;
+  const totalItems = assignments.length + reused.length;
+  const allCompleted = totalItems > 0 && completed === totalItems;
   const personName = `${personResult.data.first_name.trim()} ${personResult.data.last_name ?? ""}`.trim();
 
   function adaptText(value: string | null, template: Template) {
@@ -153,9 +158,9 @@ async function ParticipantPortalContent({ params }: RouteContext) {
             </h1>
             <p className="mt-3 max-w-2xl text-neutral-300">
               {targetOrganization.name} te ha asignado{" "}
-              {assignments.length === 1
+              {totalItems === 1
                 ? "una evaluación"
-                : `una batería de ${assignments.length} evaluaciones`}.
+                : `una batería de ${totalItems} evaluaciones`}.
               Puedes completarlas desde esta misma liga.
             </p>
           </div>
@@ -169,7 +174,7 @@ async function ParticipantPortalContent({ params }: RouteContext) {
               />
               <Info
                 label="Avance"
-                value={`${completed} de ${assignments.length} completadas`}
+                value={`${completed} de ${totalItems} completadas`}
               />
             </div>
 
@@ -196,11 +201,12 @@ async function ParticipantPortalContent({ params }: RouteContext) {
                     </p>
                   </div>
                   <div className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-                    {completed}/{assignments.length}
+                    {completed}/{totalItems}
                   </div>
                 </div>
 
                 <div className="space-y-3">
+                  {reused.map((item, index) => { const template=templateById.get(item.template_id); if(!template)return null; return <div key={`reuse-${item.template_id}`} className="flex flex-col gap-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 md:flex-row md:items-center md:justify-between"><div><div className="text-xs font-semibold uppercase tracking-wide text-blue-600">Resultado vigente</div><h3 className="mt-1 font-black text-neutral-900">{template.name}</h3><p className="mt-1 text-xs text-neutral-500">Resultado del {new Date(item.source_completed_at).toLocaleDateString("es-MX")} · válido hasta {new Date(item.valid_until+"T12:00:00").toLocaleDateString("es-MX")}</p></div><span className="rounded-xl bg-white px-4 py-2 text-center text-sm font-bold text-blue-700">No requiere repetir ✓</span></div> })}
                   {assignments.map((assignment, index) => {
                     const template = templateById.get(assignment.template_id);
                     if (!template) return null;

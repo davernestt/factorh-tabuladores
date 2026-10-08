@@ -348,6 +348,12 @@ async function AdminDashboardContent() {
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-2">
                           <Link
+                            href={`/protected/procesos/${assignment.process_id}/editar`}
+                            className="text-xs font-bold text-neutral-700 hover:text-orange-600"
+                          >
+                            Editar proceso
+                          </Link>
+                          <Link
                             href={`/protected/evaluaciones/${assignment.id}`}
                             className="font-semibold text-orange-600 hover:text-orange-700"
                           >

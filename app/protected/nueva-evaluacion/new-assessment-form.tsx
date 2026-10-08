@@ -68,7 +68,10 @@ type CreatedResult = {
   organization_name: string;
   template_name: string;
   template_names: string[];
+  reused_template_names: string[];
 };
+
+type ValidResult = { template_id:string; template_name:string; source_assignment_id:string; completed_at:string; valid_until:string; validity_days:number };
 
 export default function NewAssessmentForm({
   organizations,
@@ -100,6 +103,8 @@ export default function NewAssessmentForm({
   const [created, setCreated] = useState<CreatedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [validResults, setValidResults] = useState<ValidResult[]>([]);
+  const [validDecisions, setValidDecisions] = useState<Record<string, "reuse" | "force">>({});
 
   const availablePeople = useMemo(
     () => people.filter((person) => person.organization_id === organizationId),
@@ -152,6 +157,8 @@ export default function NewAssessmentForm({
     setTemplateIds([]);
     setSelectedBatteryId("");
     setCreated(null);
+    setValidResults([]);
+    setValidDecisions({});
 
     const hasPeople = people.some(
       (person) => person.organization_id === value,
@@ -161,6 +168,8 @@ export default function NewAssessmentForm({
 
   function toggleTemplate(templateId: string) {
     setSelectedBatteryId("");
+    setValidResults([]);
+    setValidDecisions({});
     setTemplateIds((current) =>
       current.includes(templateId)
         ? current.filter((id) => id !== templateId)
@@ -170,6 +179,8 @@ export default function NewAssessmentForm({
 
   function applyBattery(batteryId: string) {
     setSelectedBatteryId(batteryId);
+    setValidResults([]);
+    setValidDecisions({});
 
     if (!batteryId) return;
 
@@ -205,10 +216,18 @@ export default function NewAssessmentForm({
           area,
           process_name: processName,
           due_date: dueDate || null,
+          reuse_template_ids: Object.entries(validDecisions).filter(([,decision])=>decision==="reuse").map(([id])=>id),
+          force_template_ids: Object.entries(validDecisions).filter(([,decision])=>decision==="force").map(([id])=>id),
         }),
       });
 
       const payload = await response.json();
+      if (response.status === 409 && payload.code === "valid_results_found") {
+        const rows = (payload.valid_results ?? []) as ValidResult[];
+        setValidResults(rows);
+        setValidDecisions((current) => ({...current, ...Object.fromEntries(rows.map((item) => [item.template_id, current[item.template_id] ?? "reuse"]))}));
+        return;
+      }
       if (!response.ok) {
         throw new Error(payload.error || "No fue posible crear la evaluación.");
       }
@@ -279,6 +298,7 @@ export default function NewAssessmentForm({
             />
           </div>
 
+          {created.reused_template_names.length > 0 && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"><strong>Resultados vigentes reutilizados:</strong> {created.reused_template_names.join(", ")}. Estas pruebas no se vuelven a contestar.</div>}
           <p className="mt-4 text-xs text-neutral-500">
             Esta liga abre el portal del participante. Si tiene varias pruebas,
             podrá responderlas desde el mismo acceso.
@@ -374,7 +394,7 @@ export default function NewAssessmentForm({
             <Field label="Colaborador">
               <select
                 value={existingPersonId}
-                onChange={(event) => setExistingPersonId(event.target.value)}
+                onChange={(event) => { setExistingPersonId(event.target.value); setValidResults([]); setValidDecisions({}); }}
                 className="input"
                 required
               >
@@ -544,6 +564,25 @@ export default function NewAssessmentForm({
           </Field>
         </div>
       </section>
+
+      {validResults.length > 0 && (
+        <section className="rounded-3xl border border-blue-200 bg-blue-50 p-6 shadow-sm md:p-8">
+          <div className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Resultados vigentes detectados</div>
+          <h2 className="mt-2 text-xl font-black text-neutral-900">Esta persona ya contestó una o más pruebas recientemente</h2>
+          <p className="mt-2 text-sm leading-6 text-neutral-600">Por defecto recomendamos reutilizar el resultado vigente. Como administrador puedes forzar una nueva aplicación cuando exista una razón de negocio.</p>
+          <div className="mt-5 space-y-3">{validResults.map(item => (
+            <div key={item.template_id} className="rounded-2xl bg-white p-4">
+              <div className="font-bold text-neutral-900">{item.template_name}</div>
+              <div className="mt-1 text-xs text-neutral-500">Completada {new Date(item.completed_at).toLocaleDateString("es-MX")} · vigente hasta {new Date(item.valid_until+"T12:00:00").toLocaleDateString("es-MX")}</div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className={validDecisions[item.template_id]!=="force"?"rounded-xl border border-blue-400 bg-blue-50 p-3 text-sm font-bold text-blue-800":"rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-600"}><input type="radio" className="mr-2" checked={validDecisions[item.template_id]!=="force"} onChange={()=>setValidDecisions(cur=>({...cur,[item.template_id]:"reuse"}))}/>Usar resultado vigente</label>
+                <label className={validDecisions[item.template_id]==="force"?"rounded-xl border border-orange-400 bg-orange-50 p-3 text-sm font-bold text-orange-800":"rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-600"}><input type="radio" className="mr-2" checked={validDecisions[item.template_id]==="force"} onChange={()=>setValidDecisions(cur=>({...cur,[item.template_id]:"force"}))}/>Aplicar nuevamente</label>
+              </div>
+            </div>
+          ))}</div>
+          <p className="mt-4 text-xs text-blue-700">Vuelve a presionar “Crear” para continuar con estas decisiones.</p>
+        </section>
+      )}
 
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
