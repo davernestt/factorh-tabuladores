@@ -125,6 +125,47 @@ export default function NewAssessmentForm({
   const [interviewerEmail, setInterviewerEmail] = useState("");
   const [interviewerPhone, setInterviewerPhone] = useState("");
 
+  function clearPersonDraft() {
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setPhone("");
+    setJobTitle("");
+    setArea("");
+  }
+
+  function clearExternalEvaluators() {
+    setManagerName("");
+    setManagerEmail("");
+    setManagerPhone("");
+    setInterviewerName("");
+    setInterviewerEmail("");
+    setInterviewerPhone("");
+  }
+
+  function clearAssessmentDraft() {
+    setExistingPersonId("");
+    setTemplateIds([]);
+    setSelectedBatteryId("");
+    setProcessName("");
+    setDueDate("");
+    setCreated(null);
+    setError(null);
+    setValidResults([]);
+    setValidDecisions({});
+    clearPersonDraft();
+    clearExternalEvaluators();
+  }
+
+  function selectPersonMode(mode: "existing" | "new") {
+    setPersonMode(mode);
+    setExistingPersonId("");
+    clearPersonDraft();
+    setValidResults([]);
+    setValidDecisions({});
+    setError(null);
+  }
+
   const availablePeople = useMemo(
     () => people.filter((person) => person.organization_id === organizationId),
     [people, organizationId],
@@ -182,12 +223,7 @@ export default function NewAssessmentForm({
 
   function changeOrganization(value: string) {
     setOrganizationId(value);
-    setExistingPersonId("");
-    setTemplateIds([]);
-    setSelectedBatteryId("");
-    setCreated(null);
-    setValidResults([]);
-    setValidDecisions({});
+    clearAssessmentDraft();
 
     const hasPeople = people.some(
       (person) => person.organization_id === value,
@@ -365,21 +401,18 @@ export default function NewAssessmentForm({
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Link
+          <a
             href="/protected"
             className="rounded-xl bg-orange-500 px-5 py-3 text-center font-bold text-white hover:bg-orange-600"
           >
             Volver al panel
-          </Link>
+          </a>
           <button
             type="button"
             onClick={() => {
-              setCreated(null);
-              setExistingPersonId("");
-              setTemplateIds([]);
-              setSelectedBatteryId("");
-              setProcessName("");
-              setDueDate("");
+              window.location.assign(
+                `/protected/nueva-evaluacion?fresh=${Date.now()}`,
+              );
             }}
             className="rounded-xl border border-neutral-300 bg-white px-5 py-3 font-bold text-neutral-800 hover:bg-neutral-50"
           >
@@ -391,7 +424,7 @@ export default function NewAssessmentForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form onSubmit={submit} autoComplete="off" className="space-y-6">
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="mb-6">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
@@ -423,7 +456,7 @@ export default function NewAssessmentForm({
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => setPersonMode("existing")}
+                onClick={() => selectPersonMode("existing")}
                 disabled={availablePeople.length === 0}
                 className={
                   personMode === "existing"
@@ -435,7 +468,7 @@ export default function NewAssessmentForm({
               </button>
               <button
                 type="button"
-                onClick={() => setPersonMode("new")}
+                onClick={() => selectPersonMode("new")}
                 className={
                   personMode === "new"
                     ? "rounded-xl border border-orange-500 bg-orange-50 px-4 py-3 font-semibold text-orange-700"
