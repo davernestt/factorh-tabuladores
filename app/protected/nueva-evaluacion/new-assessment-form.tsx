@@ -25,6 +25,7 @@ type Template = {
   organization_id: string | null;
   name: string;
   description: string | null;
+  assessment_type: string;
 };
 
 type TemplateAccess = {
@@ -56,12 +57,23 @@ type Props = {
   batteryItems: BatteryItem[];
 };
 
+type DeliveryLink = {
+  assignment_id: string;
+  path: string;
+  template_name: string;
+  relationship_type: string;
+  evaluator_name: string | null;
+  evaluator_email: string | null;
+  evaluator_phone: string | null;
+};
+
 type CreatedResult = {
   process_id: string;
   assignment_id: string | null;
   assignment_ids: string[];
   public_token: string;
   path: string;
+  participant_path: string | null;
   person_name: string;
   person_email: string | null;
   person_phone: string | null;
@@ -69,6 +81,7 @@ type CreatedResult = {
   template_name: string;
   template_names: string[];
   reused_template_names: string[];
+  delivery_links: DeliveryLink[];
 };
 
 type ValidResult = { template_id:string; template_name:string; source_assignment_id:string; completed_at:string; valid_until:string; validity_days:number };
@@ -105,6 +118,12 @@ export default function NewAssessmentForm({
   const [saving, setSaving] = useState(false);
   const [validResults, setValidResults] = useState<ValidResult[]>([]);
   const [validDecisions, setValidDecisions] = useState<Record<string, "reuse" | "force">>({});
+  const [managerName, setManagerName] = useState("");
+  const [managerEmail, setManagerEmail] = useState("");
+  const [managerPhone, setManagerPhone] = useState("");
+  const [interviewerName, setInterviewerName] = useState("");
+  const [interviewerEmail, setInterviewerEmail] = useState("");
+  const [interviewerPhone, setInterviewerPhone] = useState("");
 
   const availablePeople = useMemo(
     () => people.filter((person) => person.organization_id === organizationId),
@@ -129,6 +148,16 @@ export default function NewAssessmentForm({
   const availableTemplates = useMemo(
     () => templates.filter((template) => allowedTemplateIds.has(template.id)),
     [templates, allowedTemplateIds],
+  );
+
+  const selectedManagerEvaluation = useMemo(
+    () => availableTemplates.some((template) => template.assessment_type === "leadership_direction" && templateIds.includes(template.id)),
+    [availableTemplates, templateIds],
+  );
+
+  const selectedInterview = useMemo(
+    () => availableTemplates.some((template) => template.assessment_type === "leadership_interview" && templateIds.includes(template.id)),
+    [availableTemplates, templateIds],
   );
 
   const availableBatteries = useMemo(() => {
@@ -218,6 +247,12 @@ export default function NewAssessmentForm({
           due_date: dueDate || null,
           reuse_template_ids: Object.entries(validDecisions).filter(([,decision])=>decision==="reuse").map(([id])=>id),
           force_template_ids: Object.entries(validDecisions).filter(([,decision])=>decision==="force").map(([id])=>id),
+          manager_evaluator_name: managerName,
+          manager_evaluator_email: managerEmail,
+          manager_evaluator_phone: managerPhone,
+          interviewer_name: interviewerName,
+          interviewer_email: interviewerEmail,
+          interviewer_phone: interviewerPhone,
         }),
       });
 
@@ -244,10 +279,9 @@ export default function NewAssessmentForm({
     }
   }
 
-  const fullUrl =
-    created && typeof window !== "undefined"
-      ? `${window.location.origin}${created.path}`
-      : "";
+  function fullUrl(path: string) {
+    return typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+  }
 
   if (created) {
     return (
@@ -280,23 +314,48 @@ export default function NewAssessmentForm({
             </div>
           )}
 
-          <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-            Liga única para responder
-          </div>
-          <div className="mt-2 break-all rounded-xl border border-neutral-200 bg-white p-3 text-sm font-medium text-neutral-800">
-            {fullUrl}
-          </div>
+          {created.participant_path && (
+            <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-orange-600">Liga del líder evaluado</div>
+              <div className="mt-1 text-sm text-neutral-600">Contiene únicamente las pruebas que debe responder la propia persona.</div>
+              <div className="mt-3 break-all rounded-xl bg-neutral-50 p-3 text-sm font-medium text-neutral-800">{fullUrl(created.participant_path)}</div>
+              <div className="mt-3">
+                <CopyAssessmentLink
+                  path={created.participant_path}
+                  personName={created.person_name}
+                  templateName={created.template_name}
+                  organizationName={created.organization_name}
+                  email={created.person_email}
+                  phone={created.person_phone}
+                />
+              </div>
+            </div>
+          )}
 
-          <div className="mt-4">
-            <CopyAssessmentLink
-              path={created.path}
-              personName={created.person_name}
-              templateName={created.template_name}
-              organizationName={created.organization_name}
-              email={created.person_email}
-              phone={created.person_phone}
-            />
-          </div>
+          {created.delivery_links.map((link) => (
+            <div key={link.assignment_id} className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+              <div className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                {link.relationship_type === "manager" ? "Liga del jefe inmediato" : "Liga del entrevistador"}
+              </div>
+              <div className="mt-1 font-black text-neutral-900">{link.template_name}</div>
+              <div className="mt-1 text-sm text-neutral-600">
+                Evalúa a {created.person_name}{link.evaluator_name ? ` · Responde: ${link.evaluator_name}` : ""}
+              </div>
+              <div className="mt-3 break-all rounded-xl bg-white p-3 text-sm font-medium text-neutral-800">{fullUrl(link.path)}</div>
+              <div className="mt-3">
+                <CopyAssessmentLink
+                  path={link.path}
+                  personName={link.evaluator_name ?? "Evaluador"}
+                  evaluatedPersonName={created.person_name}
+                  relationshipLabel={link.relationship_type === "manager" ? "jefe inmediato" : "entrevistador"}
+                  templateName={link.template_name}
+                  organizationName={created.organization_name}
+                  email={link.evaluator_email}
+                  phone={link.evaluator_phone}
+                />
+              </div>
+            </div>
+          ))}
 
           {created.reused_template_names.length > 0 && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"><strong>Resultados vigentes reutilizados:</strong> {created.reused_template_names.join(", ")}. Estas pruebas no se vuelven a contestar.</div>}
           <p className="mt-4 text-xs text-neutral-500">
@@ -564,6 +623,56 @@ export default function NewAssessmentForm({
           </Field>
         </div>
       </section>
+
+      {(selectedManagerEvaluation || selectedInterview) && (
+        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">Paso 3</div>
+            <h2 className="mt-2 text-xl font-bold text-neutral-900">Quién responderá las evaluaciones externas</h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">
+              Estas herramientas se ligan al expediente del líder evaluado, pero la liga se envía a la persona que observa o entrevista.
+            </p>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            {selectedManagerEvaluation && (
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <div className="text-xs font-bold uppercase tracking-wide text-orange-600">Evaluación del jefe inmediato</div>
+                <h3 className="mt-1 font-black text-neutral-900">Datos de quien evaluará al líder</h3>
+                <div className="mt-4 space-y-4">
+                  <Field label="Nombre del jefe inmediato">
+                    <input className="input" value={managerName} onChange={(event)=>setManagerName(event.target.value)} required />
+                  </Field>
+                  <Field label="Correo (opcional)">
+                    <input type="email" className="input" value={managerEmail} onChange={(event)=>setManagerEmail(event.target.value)} />
+                  </Field>
+                  <Field label="WhatsApp / teléfono (opcional)">
+                    <input className="input" value={managerPhone} onChange={(event)=>setManagerPhone(event.target.value)} />
+                  </Field>
+                </div>
+              </div>
+            )}
+
+            {selectedInterview && (
+              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
+                <div className="text-xs font-bold uppercase tracking-wide text-orange-600">Entrevista conductual</div>
+                <h3 className="mt-1 font-black text-neutral-900">Datos de quien realizará la entrevista</h3>
+                <div className="mt-4 space-y-4">
+                  <Field label="Nombre del entrevistador">
+                    <input className="input" value={interviewerName} onChange={(event)=>setInterviewerName(event.target.value)} required />
+                  </Field>
+                  <Field label="Correo (opcional)">
+                    <input type="email" className="input" value={interviewerEmail} onChange={(event)=>setInterviewerEmail(event.target.value)} />
+                  </Field>
+                  <Field label="WhatsApp / teléfono (opcional)">
+                    <input className="input" value={interviewerPhone} onChange={(event)=>setInterviewerPhone(event.target.value)} />
+                  </Field>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {validResults.length > 0 && (
         <section className="rounded-3xl border border-blue-200 bg-blue-50 p-6 shadow-sm md:p-8">
