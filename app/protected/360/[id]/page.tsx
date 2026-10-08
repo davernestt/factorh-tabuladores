@@ -7,6 +7,7 @@ import { authorized360Admin } from '@/lib/feedback360-auth';
 import { FEEDBACK_ROLES, interpret360, type FeedbackRole } from '@/lib/feedback360';
 import { band360, professional360, summarize360 } from '@/lib/feedback360-report';
 import { CompetencyBars, GapBars, Radar360 } from './report-visuals';
+import ReportActions from '../report-actions';
 import CycleActions from './cycle-actions';
 import InviteActions from './invite-actions';
 import './print.css';
@@ -50,14 +51,15 @@ async function Feedback360DetailContent({ params }: PageProps) {
   const closed=cycle.status==='closed';
   const summary=summarize360(raters,answersR.data??[],closed);
   const analysis=closed?interpret360(summary.dimensions):null;
-  const professional=closed?professional360(summary.dimensions):null;
+  const professional=closed?professional360(summary.dimensions,summary.facets):null;
   const person=personR.data;
   const personName=`${person.first_name} ${person.last_name??''}`.trim();
+  const reportFileName=`Reporte-360-${personName}-${orgR.data.name}`;
 
   return <div className="space-y-7">
-    <div className="no-print"><Link href="/protected/360" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Evaluación 360°</Link></div>
+    <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Link href="/protected/360" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Evaluación 360°</Link>{closed&&<ReportActions fileName={reportFileName} elementId="feedback360-report"/>}</div>
 
-    <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9">
+    <article id="feedback360-report" className="space-y-7">\n    <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactorRH · Evaluación 360° v{cycle.instrument_version}</div>
@@ -98,7 +100,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
       <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-700">Mientras el ciclo permanece abierto sólo mostramos avance. Al cerrar el ciclo se liberan los resultados consolidados. Si un grupo de pares o colaboradores tiene menos de tres respuestas, el resultado se muestra con una advertencia de muestra reducida.</p>
     </section>:<>
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between"><div><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Reporte consolidado</div><h2 className="mt-2 text-2xl font-black text-neutral-800">12 competencias</h2></div><button className="no-print rounded-xl border border-neutral-300 px-4 py-2 text-sm font-bold text-neutral-700" onClick={undefined}>Usa Imprimir del navegador para PDF</button></div>
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between"><div><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Reporte consolidado</div><h2 className="mt-2 text-2xl font-black text-neutral-800">12 competencias</h2></div><div className="text-sm font-semibold text-neutral-400">Escala conductual 1–4</div></div>
         {summary.smallSampleGroups.length>0&&<p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-800"><strong>Muestra reducida:</strong> {summary.smallSampleGroups.map(r=>`${FEEDBACK_ROLES[r]} (n=${summary.byRole[r].completed})`).join(', ')}. Los resultados sí se muestran, pero deben interpretarse con cautela porque representan a menos de tres evaluadores.</p>}
         <div className="mt-6 overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-500"><tr><th className="px-4 py-3">Competencia</th><th className="px-4 py-3">AUTO</th><th className="px-4 py-3">Jefe</th><th className="px-4 py-3">Pares</th><th className="px-4 py-3">Colaboradores</th><th className="px-4 py-3">Brecha</th></tr></thead><tbody className="divide-y divide-neutral-100">{summary.dimensions.map(d=><tr key={d.key}><td className="px-4 py-4 font-bold text-neutral-800">{d.name}</td>{(['self','manager','peer','report'] as FeedbackRole[]).map(role=><td key={role} className="px-4 py-4 text-neutral-700">{d.scores[role]!==undefined?<><strong>{d.scores[role]!.toFixed(2)}</strong><div className="text-xs text-neutral-400">{band360(d.scores[role]!)}{(role==='peer'||role==='report')&&d.counts[role] ? ` · n=${d.counts[role]}` : ''}</div></>:'—'}</td>)}<td className="px-4 py-4 font-bold text-neutral-700">{d.gap===null?'—':d.gap>0?`+${d.gap.toFixed(2)}`:d.gap.toFixed(2)}</td></tr>)}</tbody></table></div>
       </section>
@@ -108,6 +110,11 @@ async function Feedback360DetailContent({ params }: PageProps) {
           <div className="max-w-3xl"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Lectura ejecutiva</div><h2 className="mt-2 text-3xl font-black text-neutral-800">{professional.headline}</h2><div className="mt-5 space-y-3 text-sm leading-7 text-neutral-600">{professional.executiveSummary.map((p,i)=><p key={i}>{p}</p>)}</div></div>
           <div className="min-w-[190px] rounded-2xl bg-neutral-800 p-6 text-white"><div className="text-xs font-bold uppercase tracking-[.14em] text-orange-300">Índice del entorno</div><div className="mt-2 text-5xl font-black">{professional.overall?.toFixed(2)??'—'}</div><div className="mt-1 text-sm text-neutral-300">sobre 4.00</div></div>
         </div>
+      </section>}
+
+      {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Cómo leer este 360°</div><h2 className="mt-2 text-2xl font-black text-neutral-800">Guía de interpretación profesional</h2><p className="mt-2 max-w-4xl text-sm leading-6 text-neutral-500">El valor del 360° no está solamente en el promedio. La lectura útil surge de combinar nivel de competencia, coincidencia entre fuentes, brechas de autopercepción y conductas específicas que pueden observarse en el trabajo.</p>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">{professional.methodology.map((x,i)=><div key={i} className="rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700"><strong className="mr-2 text-orange-600">0{i+1}</strong>{x}</div>)}</div>
       </section>}
 
       {professional&&<section className="grid gap-5 xl:grid-cols-2">
