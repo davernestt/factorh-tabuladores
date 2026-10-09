@@ -4,11 +4,30 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
-export default async function ProtectedLayout({
+export default function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-neutral-100">
+          <div className="mx-auto max-w-7xl px-5 py-8">
+            <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
+              <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
+              <p className="text-neutral-600">Cargando plataforma...</p>
+            </div>
+          </div>
+        </main>
+      }
+    >
+      <ProtectedShell>{children}</ProtectedShell>
+    </Suspense>
+  );
+}
+
+async function ProtectedShell({ children }: { children: React.ReactNode }) {
   const appUser = await getCurrentAppUser();
   if (!appUser) redirect("/auth/login");
 
