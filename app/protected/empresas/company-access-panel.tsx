@@ -97,13 +97,23 @@ export default function CompanyAccessPanel({
                     {user.active ? "Acceso activo" : "Acceso inactivo"}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void copy(user.email, "email:" + user.user_id)}
-                  className="rounded-xl border border-neutral-300 px-3 py-2 text-xs font-bold text-neutral-700"
-                >
-                  {copied === "email:" + user.user_id ? "Correo copiado" : "Copiar usuario"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void copy(user.email, "email:" + user.user_id)}
+                    className="rounded-xl border border-neutral-300 px-3 py-2 text-xs font-bold text-neutral-700"
+                  >
+                    {copied === "email:" + user.user_id ? "Correo copiado" : "Copiar usuario"}
+                  </button>
+                  <a
+                    href="/auth/forgot-password"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600"
+                  >
+                    Recuperar / crear contraseña
+                  </a>
+                </div>
               </div>
             </article>
           ))
