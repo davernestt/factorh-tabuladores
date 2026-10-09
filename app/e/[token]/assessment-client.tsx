@@ -113,6 +113,14 @@ const vectorScaleLabels = [
   "Me describe mucho",
 ];
 
+const needsScaleLabels = [
+  "No es importante para mí",
+  "Es poco importante para mí",
+  "Tiene importancia moderada",
+  "Es bastante importante para mí",
+  "Es muy importante para mí",
+];
+
 export default function AssessmentClient({ token }: { token: string }) {
   const [data, setData] = useState<AssessmentData | null>(null);
   const [responses, setResponses] = useState<Record<string, LocalResponse>>({});
@@ -185,9 +193,13 @@ export default function AssessmentClient({ token }: { token: string }) {
   const isManagerEvaluation = relationship === "manager";
   const isInterview = relationship === "interviewer";
   const isVectorConductual = data?.template.assessment_type === "psychometric_vector";
+  const isNeedsAssessment = data?.template.assessment_type === "psychometric_needs";
+  const isPsychometric = Boolean(data?.template.assessment_type?.startsWith("psychometric_"));
   const scaleLabels = isVectorConductual
     ? vectorScaleLabels
-    : isManagerEvaluation
+    : isNeedsAssessment
+      ? needsScaleLabels
+      : isManagerEvaluation
       ? managerScaleLabels
       : isInterview
         ? interviewScaleLabels
@@ -427,7 +439,9 @@ export default function AssessmentClient({ token }: { token: string }) {
                 <p className="mt-2 text-neutral-600">
                   {isVectorConductual
                     ? "No hay respuestas correctas o incorrectas. Responde pensando en cómo actúas habitualmente en el trabajo, no en cómo crees que deberías actuar. Procura usar toda la escala cuando corresponda y contesta de manera espontánea."
-                    : isManagerEvaluation
+                    : isNeedsAssessment
+                      ? "No hay respuestas buenas o malas. Responde según qué tan importante es cada condición para mantenerte motivado en el trabajo, no según lo que creas que una empresa espera escuchar."
+                      : isManagerEvaluation
                       ? "Califica únicamente conductas que hayas observado directamente o sobre las que tengas evidencia suficiente. Evita valorar simpatía o afinidad personal; concéntrate en conductas de liderazgo y gestión."
                       : isInterview
                         ? "Registra ejemplos reales y recientes. Profundiza en qué ocurrió, qué hizo la persona, qué resultado obtuvo y qué haría diferente. Separa los hechos observados de tu interpretación y califica al final de cada dimensión."
@@ -468,15 +482,23 @@ export default function AssessmentClient({ token }: { token: string }) {
     (question) => question.dimension_id === null,
   );
 
-  const displaySections = isVectorConductual
-    ? Array.from({ length: Math.ceil(scaleQuestions.length / 16) }, (_, index) => ({
-        id: `vector-block-${index + 1}`,
-        sort_order: index + 1,
-        name: `Bloque ${index + 1} de ${Math.ceil(scaleQuestions.length / 16)}`,
-        description:
-          "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar.",
-        questions: scaleQuestions.slice(index * 16, index * 16 + 16),
-      }))
+  const psychometricBlockSize = isNeedsAssessment ? 15 : 16;
+  const displaySections = isPsychometric
+    ? Array.from(
+        { length: Math.ceil(scaleQuestions.length / psychometricBlockSize) },
+        (_, index) => ({
+          id: `psychometric-block-${index + 1}`,
+          sort_order: index + 1,
+          name: `Bloque ${index + 1} de ${Math.ceil(scaleQuestions.length / psychometricBlockSize)}`,
+          description: isNeedsAssessment
+            ? "Marca qué tan importante es cada condición para tu motivación laboral."
+            : "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar.",
+          questions: scaleQuestions.slice(
+            index * psychometricBlockSize,
+            index * psychometricBlockSize + psychometricBlockSize,
+          ),
+        }),
+      )
     : data.dimensions.map((dimension) => ({
         ...dimension,
         questions: data.questions.filter(
