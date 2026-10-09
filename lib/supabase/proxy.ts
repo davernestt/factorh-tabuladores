@@ -2,8 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
-
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
@@ -16,13 +14,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/api/360/") ||
     pathname.startsWith("/api/auth/");
 
-  if (isPublicAssessment) {
-    return supabaseResponse;
-  }
-
-  if (!hasEnvVars) {
-    return supabaseResponse;
-  }
+  if (isPublicAssessment) return supabaseResponse;
+  if (!hasEnvVars) return supabaseResponse;
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,17 +40,47 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
-  const email = String(user?.email ?? "").trim().toLowerCase();
-  const isAdmin = ADMIN_EMAILS.includes(email);
 
   if (pathname.startsWith("/protected")) {
-    if (!user) {
+    if (!user?.sub) {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
       return NextResponse.redirect(url);
     }
 
-    if (!isAdmin) {
+    const { data: appUser } = await supabase
+      .from("app_users")
+      .select("role,organization_id,active")
+      .eq("user_id", String(user.sub))
+      .maybeSingle();
+
+    if (!appUser?.active) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("error", "unauthorized");
+      return NextResponse.redirect(url);
+    }
+
+    if (appUser.role === "client") {
+      if (!appUser.organization_id) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/login";
+        url.searchParams.set("error", "unauthorized");
+        return NextResponse.redirect(url);
+      }
+
+      if (pathname === "/protected") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/protected/psicometrias";
+        return NextResponse.redirect(url);
+      }
+
+      if (!pathname.startsWith("/protected/psicometrias")) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/protected/psicometrias";
+        return NextResponse.redirect(url);
+      }
+    } else if (appUser.role !== "super_admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
       url.searchParams.set("error", "unauthorized");

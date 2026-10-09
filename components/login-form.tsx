@@ -24,7 +24,7 @@ export function LoginForm({
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
     if (error === "unauthorized") {
-      setMessage("Esta cuenta no tiene autorización para entrar al panel.");
+      setMessage("Esta cuenta no tiene autorización activa para entrar a la plataforma.");
     } else if (error === "invalid_credentials") {
       setMessage("Correo o contraseña incorrectos.");
     } else if (error === "login_failed") {
@@ -39,15 +39,15 @@ export function LoginForm({
           Factor<span className="text-orange-500">RH</span>
         </div>
         <div className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-          Administración
+          Plataforma de evaluaciones
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Acceso administrativo</CardTitle>
+          <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
           <CardDescription>
-            Ingresa con la cuenta autorizada de FactorRH.
+            Ingresa con tu cuenta autorizada de FactorRH o de tu empresa.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -65,7 +65,7 @@ export function LoginForm({
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="david@factorh.com.mx"
+                  placeholder="tu@empresa.com"
                   autoComplete="email"
                   required
                 />
@@ -95,14 +95,8 @@ export function LoginForm({
               </Button>
             </div>
 
-            <div className="mt-4 text-center text-sm text-neutral-500">
-              ¿Primera vez?{" "}
-              <Link
-                href="/auth/sign-up"
-                className="font-semibold text-orange-600 underline-offset-4 hover:underline"
-              >
-                Crear cuenta administrativa
-              </Link>
+            <div className="mt-4 text-center text-xs leading-5 text-neutral-500">
+              Las cuentas de empresa son creadas e invitadas por FactorRH.
             </div>
           </form>
         </CardContent>
