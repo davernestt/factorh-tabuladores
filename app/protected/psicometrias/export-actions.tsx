@@ -648,6 +648,85 @@ function buildWordHtml(data: PsychometricExportData, imageNames: string[], integ
       (instrument.watchouts && instrument.watchouts.length ? "<div class='watch'><h2>Puntos para profundizar</h2>" + instrument.watchouts.map(function (p) { return "<p>• " + esc(p) + "</p>"; }).join("") + "</div>" : "");
   }).join("");
 
+  const jobContextHtml =
+    (data.objectiveText
+      ? "<div class='page-break'></div><div class='eyebrow'>OBJETIVO DE LA EVALUACIÓN</div><h1 class='dark'>Contexto del proceso</h1><p>" +
+        esc(data.objectiveText) +
+        "</p>"
+      : "") +
+    (data.battery && data.battery.length
+      ? "<h2>Batería aplicada</h2><table class='results'><tr><th>Prueba</th><th>Qué evalúa</th></tr>" +
+        data.battery
+          .map(function (item) {
+            return "<tr><td><b>" + esc(item.name) + "</b></td><td>" + esc(item.description) + "</td></tr>";
+          })
+          .join("") +
+        "</table>"
+      : "") +
+    (data.jobComparison && data.jobComparison.length
+      ? "<div class='page-break'></div><div class='eyebrow'>COMPARACIÓN CONTRA PERFIL OBJETIVO</div><h1 class='dark'>Mapa de competencias de referencia</h1><p class='lead'>La comparación organiza evidencia psicométrica frente a rangos definidos para el perfil objetivo. No constituye una recomendación automática de contratación.</p><table class='results'><tr><th>Competencia</th><th>Referencia</th><th>Evidencia</th><th>Lectura</th></tr>" +
+        data.jobComparison
+          .map(function (item) {
+            return (
+              "<tr><td><b>" +
+              esc(item.name) +
+              "</b><br/><span class='muted'>" +
+              esc(item.importance) +
+              "</span></td><td>" +
+              String(Math.round(item.referenceMin)) +
+              "–" +
+              String(Math.round(item.referenceMax)) +
+              "</td><td>" +
+              (item.observed === null ? "—" : String(Math.round(item.observed))) +
+              "</td><td>" +
+              esc(item.status) +
+              "</td></tr>"
+            );
+          })
+          .join("") +
+        "</table>"
+      : "") +
+    (data.managerGuidance
+      ? "<div class='page-break'></div><div class='eyebrow'>LECTURA PARA EL JEFE DE LA VACANTE</div><h1 class='dark'>Cómo gestionar e integrar este perfil</h1>" +
+        "<div class='summary'><p><b>Estilo de supervisión recomendado:</b> " +
+        esc(data.managerGuidance.supervision) +
+        "</p><p><b>Qué observar bajo presión:</b> " +
+        esc(data.managerGuidance.pressure) +
+        "</p><p><b>Integración con el equipo:</b> " +
+        esc(data.managerGuidance.team) +
+        "</p><p><b>Motivadores clave:</b> " +
+        esc(data.managerGuidance.motivators.join(" · ")) +
+        "</p></div>" +
+        (data.managerGuidance.coaching.length
+          ? "<h2>Retroalimentación / coaching</h2>" +
+            data.managerGuidance.coaching
+              .map(function (item) {
+                return "<p>• " + esc(item) + "</p>";
+              })
+              .join("")
+          : "")
+      : "") +
+    (data.onboardingPlan && data.onboardingPlan.length
+      ? "<div class='page-break'></div><div class='eyebrow'>INTEGRACIÓN SUGERIDA 30–60–90</div><h1 class='dark'>Primeros 90 días</h1>" +
+        data.onboardingPlan
+          .map(function (stage) {
+            return (
+              "<div class='summary'><div class='eyebrow'>" +
+              esc(stage.period) +
+              "</div><h2>" +
+              esc(stage.focus) +
+              "</h2>" +
+              stage.actions
+                .map(function (item) {
+                  return "<p>• " + esc(item) + "</p>";
+                })
+                .join("") +
+              "</div>"
+            );
+          })
+          .join("")
+      : "");
+
   return "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'/>" +
     "<style>@page{size:A4;margin:1.35cm}body{font-family:Arial;color:#262626;font-size:10.5pt;line-height:1.45}table{border-collapse:collapse;width:100%}td{vertical-align:top}" +
     ".header{background:#171717;color:#fff}.header td{padding:22px}.brand{font-size:22pt;font-weight:bold}.orange{color:#f97316}.eyebrow{color:#ea580c;font-size:8pt;font-weight:bold;letter-spacing:1.1px}" +
@@ -659,6 +738,7 @@ function buildWordHtml(data: PsychometricExportData, imageNames: string[], integ
     "<div class='exec'><div class='eyebrow'>" + (integral ? "REPORTE INTEGRAL" : "LECTURA EJECUTIVA") + "</div><h2>Resumen ejecutivo</h2>" + data.executiveSummary.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("") + "</div>" +
     (data.keyFindings && data.keyFindings.length ? "<div class='good'><h2>Hallazgos principales</h2>" + data.keyFindings.map(function (p) { return "<p>• " + esc(p) + "</p>"; }).join("") + "</div>" : "") +
     (data.cautions && data.cautions.length ? "<div class='watch'><h2>Aspectos a validar</h2>" + data.cautions.map(function (p) { return "<p>• " + esc(p) + "</p>"; }).join("") + "</div>" : "") +
+    jobContextHtml +
     instruments +
     (data.interviewQuestions && data.interviewQuestions.length ? "<div class='page-break'></div><div class='eyebrow'>GUÍA PARA ENTREVISTA</div><h1 class='dark'>Preguntas de profundización</h1>" + data.interviewQuestions.map(function (p, i) { return "<p><b>" + String(i + 1) + ".</b> " + esc(p) + "</p>"; }).join("") : "") +
     "<div class='page-break'></div><div class='eyebrow'>CIERRE EJECUTIVO</div><h1 class='dark'>Conclusión para toma de decisión</h1><p>" + esc(data.closing || "El resultado debe integrarse con entrevista, experiencia, evidencia de desempeño y requisitos reales del puesto.") + "</p></body></html>";
