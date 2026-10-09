@@ -139,7 +139,7 @@ async function PsychometricsContent() {
           </p>
         </div>
         <Link
-          href="/protected/nueva-evaluacion?fresh=1"
+          href="/protected/psicometrias/nueva?fresh=1"
           className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
         >
           + Asignar psicometría
@@ -195,7 +195,7 @@ async function PsychometricsContent() {
               </div>
               <div className="mt-5 border-t border-neutral-100 pt-5">
                 <Link
-                  href="/protected/nueva-evaluacion?fresh=1"
+                  href="/protected/psicometrias/nueva?fresh=1"
                   className="text-sm font-bold text-orange-600 hover:text-orange-700"
                 >
                   Asignar instrumento →
