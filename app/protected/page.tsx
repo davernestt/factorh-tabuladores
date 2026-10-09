@@ -76,6 +76,7 @@ type ParticipantAssignmentView = {
 type ParticipantGroup = {
   personId: string;
   person: Person | undefined;
+  organizationId: string | null;
   organizationName: string;
   assignments: ParticipantAssignmentView[];
   activeCount: number;
@@ -87,7 +88,13 @@ type ParticipantGroup = {
   latestActivity: string | null;
 };
 
-export default function AdminDashboard() {
+type DashboardSearchParams = Record<string, string | string[] | undefined>;
+
+type DashboardProps = {
+  searchParams: Promise<DashboardSearchParams>;
+};
+
+export default function AdminDashboard({ searchParams }: DashboardProps) {
   return (
     <Suspense
       fallback={
@@ -97,18 +104,29 @@ export default function AdminDashboard() {
         </div>
       }
     >
-      <AdminDashboardContent />
+      <AdminDashboardContent searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function AdminDashboardContent() {
+async function AdminDashboardContent({
+  searchParams,
+}: {
+  searchParams: Promise<DashboardSearchParams>;
+}) {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
   if (authError || !authData?.claims) {
     redirect("/auth/login");
   }
+
+  const params = await searchParams;
+  const query = normalizeSearch(paramValue(params.q));
+  const organizationFilter = paramValue(params.organization);
+  const statusFilter = paramValue(params.status);
+  const areaFilter = paramValue(params.area);
+  const templateFilter = paramValue(params.template);
 
   const db = createAdminClient();
 
@@ -336,6 +354,7 @@ async function AdminDashboardContent() {
       return {
         personId,
         person: sortedViews[0]?.person,
+        organizationId: sortedViews[0]?.process?.organization_id ?? null,
         organizationName: sortedViews[0]?.organization?.name ?? "—",
         assignments: sortedViews,
         activeCount,
@@ -359,6 +378,97 @@ async function AdminDashboardContent() {
 
   const participantCount = participantGroups.length;
 
+  const organizationOptions = Array.from(organizations.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, "es"),
+  );
+  const areaOptions = Array.from(
+    new Set(
+      participantGroups
+        .map((group) => group.person?.area?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).sort((a, b) => a.localeCompare(b, "es"));
+  const templateOptions = Array.from(templates.values()).sort((a, b) =>
+    a.name.localeCompare(b.name, "es"),
+  );
+
+  const filteredParticipantGroups = participantGroups.filter((group) => {
+    if (
+      organizationFilter &&
+      group.organizationId !== organizationFilter
+    ) {
+      return false;
+    }
+
+    if (areaFilter && group.person?.area?.trim() !== areaFilter) {
+      return false;
+    }
+
+    if (statusFilter === "active" && group.activeCount === 0) return false;
+    if (statusFilter === "pending" && group.pendingCount === 0) return false;
+    if (statusFilter === "in_progress" && group.inProgressCount === 0) return false;
+    if (statusFilter === "completed" && group.completedCount === 0) return false;
+    if (statusFilter === "cancelled" && group.cancelledCount === 0) return false;
+
+    if (
+      templateFilter &&
+      !group.assignments.some(
+        (view) => view.assignment.template_id === templateFilter,
+      )
+    ) {
+      return false;
+    }
+
+    if (query) {
+      const searchable = normalizeSearch(
+        [
+          group.person?.first_name,
+          group.person?.last_name,
+          group.person?.job_title,
+          group.person?.area,
+          group.organizationName,
+          ...group.assignments.map((view) => view.template?.name),
+          ...group.assignments.map((view) => view.process?.name),
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+      if (!searchable.includes(query)) return false;
+    }
+
+    return true;
+  });
+
+  const filteredViews = filteredParticipantGroups.flatMap(
+    (group) => group.assignments,
+  );
+  const filteredTotal = filteredViews.length;
+  const filteredCompleted = filteredViews.filter(
+    (view) => view.assignment.status === "completed",
+  ).length;
+  const filteredInProgress = filteredViews.filter(
+    (view) => view.assignment.status === "in_progress",
+  ).length;
+  const filteredPending = filteredViews.filter(
+    (view) => view.assignment.status === "pending",
+  ).length;
+  const filteredCompletedAverages = filteredViews
+    .filter((view) => view.assignment.status === "completed")
+    .map((view) => view.average)
+    .filter((value): value is number => value !== null);
+  const filteredGlobalAverage = filteredCompletedAverages.length
+    ? filteredCompletedAverages.reduce((sum, value) => sum + value, 0) /
+      filteredCompletedAverages.length
+    : null;
+
+  const hasFilters = Boolean(
+    query ||
+      organizationFilter ||
+      statusFilter ||
+      areaFilter ||
+      templateFilter,
+  );
+
   return (
     <div>
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -375,7 +485,7 @@ async function AdminDashboardContent() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm text-neutral-500 shadow-sm">
-            {participantCount} {participantCount === 1 ? "persona" : "personas"} · {total} {total === 1 ? "evaluación" : "evaluaciones"}
+            {filteredParticipantGroups.length} {filteredParticipantGroups.length === 1 ? "persona" : "personas"} · {filteredTotal} {filteredTotal === 1 ? "evaluación" : "evaluaciones"}
           </div>
           <a
             href="/protected/nueva-evaluacion?fresh=1"
@@ -386,15 +496,138 @@ async function AdminDashboardContent() {
         </div>
       </div>
 
+      <form
+        method="get"
+        className="mt-7 rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm"
+      >
+        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-[0.16em] text-orange-600">
+              Buscar y filtrar
+            </div>
+            <h2 className="mt-1 text-lg font-black text-neutral-900">
+              Encuentra personas rápido
+            </h2>
+          </div>
+          <div className="text-xs text-neutral-500">
+            Mostrando {filteredParticipantGroups.length} de {participantCount} personas
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(260px,1.5fr)_minmax(180px,1fr)_minmax(170px,.85fr)_minmax(170px,.85fr)_minmax(220px,1.2fr)_auto]">
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Buscar persona
+            </span>
+            <input
+              type="search"
+              name="q"
+              defaultValue={paramValue(params.q)}
+              placeholder="Nombre, puesto, área o prueba..."
+              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Empresa
+            </span>
+            <select
+              name="organization"
+              defaultValue={organizationFilter}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            >
+              <option value="">Todas</option>
+              {organizationOptions.map((organization) => (
+                <option key={organization.id} value={organization.id}>
+                  {organization.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Estado
+            </span>
+            <select
+              name="status"
+              defaultValue={statusFilter}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            >
+              <option value="">Todos</option>
+              <option value="active">Con pruebas activas</option>
+              <option value="pending">Con pendientes</option>
+              <option value="in_progress">En proceso</option>
+              <option value="completed">Con completadas</option>
+              <option value="cancelled">Con canceladas</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Área
+            </span>
+            <select
+              name="area"
+              defaultValue={areaFilter}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            >
+              <option value="">Todas</option>
+              {areaOptions.map((area) => (
+                <option key={area} value={area}>
+                  {area}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Prueba
+            </span>
+            <select
+              name="template"
+              defaultValue={templateFilter}
+              className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+            >
+              <option value="">Todas</option>
+              {templateOptions.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex items-end gap-2">
+            <button
+              type="submit"
+              className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-800"
+            >
+              Filtrar
+            </button>
+            {hasFilters && (
+              <Link
+                href="/protected"
+                className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
+              >
+                Limpiar
+              </Link>
+            )}
+          </div>
+        </div>
+      </form>
+
       <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <Metric label="Total" value={String(total)} />
-        <Metric label="Pendientes" value={String(pending)} />
-        <Metric label="En proceso" value={String(inProgress)} />
-        <Metric label="Completadas" value={String(completed)} />
+        <Metric label="Total" value={String(filteredTotal)} />
+        <Metric label="Pendientes" value={String(filteredPending)} />
+        <Metric label="En proceso" value={String(filteredInProgress)} />
+        <Metric label="Completadas" value={String(filteredCompleted)} />
         <Metric
           label="Promedio general"
-          value={globalAverage === null ? "—" : globalAverage.toFixed(2)}
-          suffix={globalAverage === null ? undefined : "/ 5"}
+          value={filteredGlobalAverage === null ? "—" : filteredGlobalAverage.toFixed(2)}
+          suffix={filteredGlobalAverage === null ? undefined : "/ 5"}
         />
       </div>
 
@@ -406,13 +639,15 @@ async function AdminDashboardContent() {
           </p>
         </div>
 
-        {participantGroups.length === 0 ? (
+        {filteredParticipantGroups.length === 0 ? (
           <div className="p-10 text-center text-neutral-500">
-            Aún no hay evaluaciones asignadas.
+            {hasFilters
+              ? "No encontré personas con los filtros seleccionados."
+              : "Aún no hay evaluaciones asignadas."}
           </div>
         ) : (
           <div className="divide-y divide-neutral-100">
-            {participantGroups.map((group) => {
+            {filteredParticipantGroups.map((group) => {
               const personName = group.person
                 ? `${group.person.first_name.trim()} ${group.person.last_name ?? ""}`.trim()
                 : "Sin participante";
@@ -544,6 +779,18 @@ async function AdminDashboardContent() {
   );
 }
 
+
+function paramValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function normalizeSearch(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 function AssessmentCard({
   view,
