@@ -3,6 +3,7 @@ import { LoginForm } from "@/components/login-form";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import Link from "next/link";
 
 export default function ClientPortalPage({
   params,
@@ -59,7 +60,24 @@ async function ClientPortalContent({
           )}
         </div>
 
-        {organization.active && <LoginForm />}
+        {organization.active && (
+          <>
+            <div className="mb-4 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-neutral-700">
+              <strong>¿Es tu primera vez?</strong> Tu correo de acceso debe haber sido
+              autorizado previamente por FactoRH. Si todavía no creaste contraseña o
+              cerraste la liga de activación, puedes generar una nueva desde aquí.
+              <div className="mt-3">
+                <Link
+                  href="/auth/forgot-password"
+                  className="inline-flex rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-600"
+                >
+                  Crear o restablecer contraseña
+                </Link>
+              </div>
+            </div>
+            <LoginForm />
+          </>
+        )}
       </div>
     </main>
   );
