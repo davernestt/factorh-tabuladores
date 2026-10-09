@@ -187,7 +187,9 @@ async function CatalogContent() {
           const representative = group.variants[0];
           const isActive = group.variants.some((template) => template.active);
           const canAssign = group.variants.some(
-            (template) => template.assessment_type === "leadership",
+            (template) =>
+              template.assessment_type === "leadership" ||
+              template.assessment_type.startsWith("psychometric_"),
           );
 
           const description =
