@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { getPsychometricCatalogItem } from "@/lib/psychometric-catalog";
+import CopyAssessmentLink from "../copy-assessment-link";
 
 type Template = {
   id: string;
@@ -29,12 +30,15 @@ type ProcessRow = {
   person_id: string;
   organization_id: string;
   name: string;
+  public_token: string;
 };
 
 type Person = {
   id: string;
   first_name: string;
   last_name: string | null;
+  email: string | null;
+  phone: string | null;
   job_title: string | null;
   area: string | null;
 };
@@ -156,7 +160,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     processIds.length
       ? db
           .from("assessment_processes")
-          .select("id,person_id,organization_id,name")
+          .select("id,person_id,organization_id,name,public_token")
           .in("id", processIds)
       : Promise.resolve({ data: [], error: null }),
     assignmentIds.length
@@ -179,7 +183,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     personIds.length
       ? db
           .from("people")
-          .select("id,first_name,last_name,job_title,area")
+          .select("id,first_name,last_name,email,phone,job_title,area")
           .in("id", personIds)
       : Promise.resolve({ data: [], error: null }),
     organizationIds.length
@@ -560,8 +564,20 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                                     Ver reporte integral
                                   </Link>
                                 ) : (
-                                  <div className="rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700">
-                                    Integral disponible al concluir {processGroup.total - processGroup.completed}
+                                  <div className="flex flex-col items-start gap-2 md:items-end">
+                                    <div className="rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700">
+                                      Integral disponible al concluir {processGroup.total - processGroup.completed}
+                                    </div>
+                                    {processGroup.publicToken && group.person && group.organization && (
+                                      <CopyAssessmentLink
+                                        path={`/p/${processGroup.publicToken}`}
+                                        personName={personName}
+                                        templateName={processGroup.name}
+                                        organizationName={group.organization.name}
+                                        email={group.person.email}
+                                        phone={group.person.phone}
+                                      />
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -693,6 +709,7 @@ function groupApplicationsByProcess(applications: ApplicationView[]) {
     {
       processId: string;
       name: string;
+      publicToken: string | null;
       applications: ApplicationView[];
       total: number;
       completed: number;
@@ -704,6 +721,7 @@ function groupApplicationsByProcess(applications: ApplicationView[]) {
     const current = map.get(processId) ?? {
       processId,
       name: application.process?.name ?? "Proceso psicométrico",
+      publicToken: application.process?.public_token ?? null,
       applications: [],
       total: 0,
       completed: 0,
@@ -768,20 +786,9 @@ function ApplicationCard({ application }: { application: ApplicationView }) {
               Ver reporte
             </Link>
           ) : (
-            <>
-              <Link
-                href={`/protected/evaluaciones/${assignment.id}`}
-                className="text-sm font-bold text-orange-600 hover:text-orange-700"
-              >
-                Ver avance
-              </Link>
-              <Link
-                href={`/e/${assignment.id}`}
-                className="hidden text-xs text-neutral-400"
-              >
-                Abrir
-              </Link>
-            </>
+            <span className="text-xs font-semibold text-neutral-400">
+              Seguimiento en proceso
+            </span>
           )}
         </div>
       </div>
