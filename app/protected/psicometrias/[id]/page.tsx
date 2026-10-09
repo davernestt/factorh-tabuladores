@@ -105,6 +105,10 @@ async function PsychometricReportContent({ params }: PageProps) {
 
   if (firstError) return <ErrorCard message={firstError.message} />;
 
+  if (templateR.data.assessment_type === "psychometric_needs") {
+    redirect(`/protected/psicometrias/${id}/necesidades`);
+  }
+
   if (templateR.data.assessment_type !== "psychometric_vector") {
     notFound();
   }
