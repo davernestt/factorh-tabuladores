@@ -9,6 +9,7 @@ import {
   type VectorFacetInput,
 } from "@/lib/vector-conductual";
 import { PsychometricTestInfo } from "../report-ui";
+import PsychometricExportActions, { type PsychometricExportData } from "../export-actions";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -219,15 +220,61 @@ async function PsychometricReportContent({ params }: PageProps) {
       }).format(new Date(assignment.completed_at))
     : "—";
 
+  const exportData: PsychometricExportData = {
+    title: templateR.data.name,
+    subtitle: "Perfil conductual y lectura ejecutiva de tendencias laborales",
+    personName,
+    jobTitle: person.job_title,
+    area: person.area,
+    organizationName: organization.name,
+    processName: processR.data.name,
+    reportDate: completedAt,
+    executiveSummary: analysis.executiveSummary,
+    keyFindings: analysis.strengths,
+    cautions: analysis.watchouts,
+    interviewQuestions: analysis.managementSuggestions.map((item) =>
+      "Profundizar con un ejemplo conductual: " + item,
+    ),
+    closing:
+      "El perfil conductual aporta hipótesis sobre la manera habitual de ejecutar, relacionarse y responder a las exigencias del trabajo. Conviene contrastarlo con entrevista, experiencia y evidencia de desempeño.",
+    instruments: [
+      {
+        name: templateR.data.name,
+        subtitle: "Impulso, Vinculación, Constancia y Estructura.",
+        chart: "radar",
+        overallLabel: "Configuración predominante",
+        overallDisplay: analysis.profileTitle,
+        summary: analysis.executiveSummary,
+        highlights: analysis.strengths,
+        watchouts: analysis.watchouts,
+        dimensions: analysis.dimensions.map((item) => ({
+          name: item.name,
+          value: item.index,
+          displayValue: String(item.index),
+          band: item.band,
+          narrative: item.summary,
+          potential: item.strength,
+          watchout: item.watchout,
+        })),
+      },
+    ],
+  };
+
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/protected/psicometrias" className="text-sm font-bold text-neutral-500 hover:text-orange-600">
           ← Volver a Psicometrías
         </Link>
-        <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-          Reporte FactorRH
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <PsychometricExportActions
+            fileName={`Reporte-${templateR.data.name}-${personName}`}
+            data={exportData}
+          />
+          <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
+            Reporte FactorRH
+          </span>
+        </div>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
