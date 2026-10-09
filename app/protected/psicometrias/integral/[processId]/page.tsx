@@ -8,6 +8,11 @@ import {
   type IntegralInstrument,
 } from "@/lib/psychometric-integral";
 import {
+  analyzeJobProfileAlignment,
+  type JobProfileCompetency,
+} from "@/lib/psychometric-job-profile";
+import { getPsychometricCatalogItem } from "@/lib/psychometric-catalog";
+import {
   ScoreColumnChart,
   ScoreDotPlot,
   ScoreRadarChart,
@@ -71,7 +76,7 @@ async function IntegralReportContent({ params }: PageProps) {
 
   const processR = await db
     .from("assessment_processes")
-    .select("id,name,person_id,organization_id,created_at")
+    .select("id,name,person_id,organization_id,created_at,evaluation_purpose,target_job_title,target_job_profile_id")
     .eq("id", processId)
     .maybeSingle();
 
@@ -204,6 +209,59 @@ async function IntegralReportContent({ params }: PageProps) {
   });
 
   const analysis = analyzeIntegralPsychometrics(instruments);
+
+  let jobProfile:
+    | {
+        id: string;
+        name: string;
+        family: string;
+        level: string;
+        description: string | null;
+      }
+    | null = null;
+  let jobCompetencies: JobProfileCompetency[] = [];
+
+  if (processR.data.target_job_profile_id) {
+    const [jobProfileR, jobCompetenciesR] = await Promise.all([
+      db
+        .from("psychometric_job_profiles")
+        .select("id,name,family,level,description")
+        .eq("id", processR.data.target_job_profile_id)
+        .maybeSingle(),
+      db
+        .from("psychometric_job_profile_competencies")
+        .select("competency_key,competency_name,reference_min,reference_max,importance,sort_order")
+        .eq("profile_id", processR.data.target_job_profile_id)
+        .order("sort_order"),
+    ]);
+
+    if (jobProfileR.error || jobCompetenciesR.error) {
+      return (
+        <ErrorCard
+          message={
+            jobProfileR.error?.message ??
+            jobCompetenciesR.error?.message ??
+            "No fue posible cargar el perfil objetivo."
+          }
+        />
+      );
+    }
+
+    jobProfile = jobProfileR.data;
+    jobCompetencies = (jobCompetenciesR.data ?? []) as JobProfileCompetency[];
+  }
+
+  const jobAlignment =
+    jobProfile && jobCompetencies.length
+      ? analyzeJobProfileAlignment(
+          jobProfile.name,
+          processR.data.target_job_title,
+          processR.data.evaluation_purpose,
+          jobCompetencies,
+          instruments,
+        )
+      : null;
+
   const person = personR.data;
   const personName = `${person.first_name.trim()} ${person.last_name ?? ""}`.trim();
   const completedAt = psychometricAssignments
