@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeScaleProfile } from "@/lib/psychometric-scale-profiles";
 import { PsychometricTestInfo, ScoreColumnChart, ScoreRadarChart } from "../../report-ui";
+import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -136,15 +137,72 @@ async function ProfileContent({ params }: PageProps) {
     assignment.completed_at,
   );
 
+  const chartType =
+    ["psychometric_social_leadership", "psychometric_integrity", "psychometric_bigfive"].includes(
+      templateR.data.assessment_type,
+    )
+      ? "radar"
+      : "columns";
+
+  const exportData: PsychometricExportData = {
+    title: templateR.data.name,
+    subtitle: analysis.config.subtitle,
+    personName,
+    jobTitle: person.job_title,
+    area: person.area,
+    organizationName: organizationR.data.name,
+    processName: processR.data.name,
+    reportDate: completedAt,
+    executiveSummary: analysis.executiveSummary,
+    keyFindings: analysis.top.map(
+      (item) => item.name + ": " + item.potential,
+    ),
+    cautions: analysis.lower.map(
+      (item) => item.name + ": " + item.watchout,
+    ),
+    interviewQuestions: analysis.interviewPrompts,
+    closing:
+      "Este perfil aporta una lectura estructurada de tendencias laborales. Para una decisión completa conviene integrarlo con entrevista, experiencia, referencias y evidencia de desempeño.",
+    instruments: [
+      {
+        name: templateR.data.name,
+        subtitle: analysis.config.subtitle,
+        chart: chartType,
+        summary: analysis.executiveSummary,
+        highlights: analysis.top.map(
+          (item) => item.name + ": " + item.potential,
+        ),
+        watchouts: analysis.lower.map(
+          (item) => item.name + ": " + item.watchout,
+        ),
+        dimensions: analysis.dimensions.map((item) => ({
+          name: item.name,
+          value: item.index,
+          displayValue: String(item.index),
+          band: item.band,
+          narrative: item.meaning,
+          potential: item.potential,
+          watchout: item.watchout,
+        })),
+      },
+    ],
+  };
+
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/protected/psicometrias" className="text-sm font-bold text-neutral-500 hover:text-orange-600">
           ← Volver a Psicometrías
         </Link>
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          Reporte FactorRH
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <PsychometricExportActions
+            fileName={`Reporte-${templateR.data.name}-${personName}`}
+            data={exportData}
+          />
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+            Reporte FactorRH
+          </span>
+        </div>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
