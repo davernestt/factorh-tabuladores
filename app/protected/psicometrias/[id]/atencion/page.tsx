@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { PsychometricTestInfo, ScoreDotPlot, ScoreRing } from "../../report-ui";
 
 type PageProps = { params: Promise<{ id: string }> };
 type ResultRow = { dimension_id: string; percentage: number | string };
@@ -119,6 +120,20 @@ async function AttentionReportContent({ params }: PageProps) {
         <Metric label="Exactitud global" value={overall + "%"} />
         <Metric label="Tiempo total" value={duration ? duration + " min" : "—"} compact />
         <Metric label="Reactivos" value={String(total)} />
+      </section>
+
+      <PsychometricTestInfo assessmentType={templateR.data.assessment_type} />
+
+      <section className="grid gap-5 xl:grid-cols-[.7fr_1.3fr]">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <ScoreRing value={overall} label="Exactitud global" caption="Aciertos sobre el total de reactivos" />
+        </div>
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <ScoreDotPlot
+            title="Mapa de precisión por dimensión"
+            items={dimensions.map((item) => ({ label: item.name, value: item.percentage }))}
+          />
+        </div>
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
