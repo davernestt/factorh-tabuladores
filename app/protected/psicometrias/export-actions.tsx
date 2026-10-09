@@ -139,7 +139,7 @@ export default function PsychometricExportActions({ fileName, data, integral = f
 function buildPages(data: PsychometricExportData, integral: boolean) {
   const out: Uint8Array[] = [];
   let page = 1;
-  const pageBottom = H - 118;
+  const pageBottom = H - 105;
 
   let canvas = makePage();
   let ctx = mustContext(canvas);
@@ -155,47 +155,40 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
     header(ctx, data, title);
   }
 
-  // Portada
+  // 1. Portada
   ctx.fillStyle = "#111111";
-  ctx.fillRect(0, 0, W, 535);
+  ctx.fillRect(0, 0, W, 505);
   brand(ctx, 74, 92);
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "700 14px Arial";
   ctx.fillText("EVALUACIONES PSICOMÉTRICAS", 74, 128);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "800 48px Arial";
-  wrap(
-    ctx,
-    data.title,
-    74,
-    238,
-    710,
-    54,
-    3,
-  );
+  ctx.font = "800 50px Arial";
+  wrap(ctx, data.title, 74, 235, 700, 56, 3);
+
   ctx.fillStyle = "#d4d4d4";
   ctx.font = "20px Arial";
   wrap(
     ctx,
     data.subtitle ||
       (integral
-        ? "Síntesis ejecutiva y resultados individuales"
+        ? "Síntesis ejecutiva, lectura para el puesto y resultados individuales"
         : "Reporte ejecutivo de resultados"),
     74,
-    407,
+    397,
     710,
     30,
     3,
   );
 
-  box(ctx, 850, 90, 320, 286, "#1f1f1f", "#404040");
+  box(ctx, 852, 88, 316, 282, "#1f1f1f", "#404040");
   ctx.fillStyle = "#fb923c";
-  ctx.font = "700 12px Arial";
-  ctx.fillText("PERSONA EVALUADA", 880, 130);
+  ctx.font = "700 11px Arial";
+  ctx.fillText("PERSONA EVALUADA", 880, 128);
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 24px Arial";
-  wrap(ctx, data.personName, 880, 170, 260, 29, 3);
+  wrap(ctx, data.personName, 880, 168, 258, 29, 3);
   ctx.fillStyle = "#d4d4d4";
   ctx.font = "15px Arial";
   wrap(
@@ -203,39 +196,39 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
     [data.jobTitle, data.area].filter(Boolean).join(" · ") ||
       "Sin puesto registrado",
     880,
-    248,
-    260,
+    245,
+    258,
     22,
     3,
   );
-  ctx.fillText(data.organizationName, 880, 322);
+  ctx.fillText(data.organizationName, 880, 315);
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "13px Arial";
-  ctx.fillText(data.reportDate, 880, 354);
+  ctx.fillText(data.reportDate, 880, 347);
 
-  metric(ctx, M, 620, 330, "Pruebas incluidas", String(data.instruments.length));
+  metric(ctx, M, 592, 330, "Pruebas incluidas", String(data.instruments.length));
   metric(
     ctx,
     M + 350,
-    620,
+    592,
     430,
     "Proceso",
     data.processName || "Evaluación psicométrica",
   );
-  metric(ctx, M + 800, 620, 312, "Fecha", data.reportDate);
+  metric(ctx, M + 800, 592, 312, "Fecha", data.reportDate);
 
-  box(ctx, M, 795, CW, 330, "#fff7ed", "#fed7aa");
+  box(ctx, M, 770, CW, 315, "#fff7ed", "#fed7aa");
   ctx.fillStyle = "#c2410c";
-  ctx.font = "700 13px Arial";
-  ctx.fillText(integral ? "REPORTE INTEGRAL" : "LECTURA EJECUTIVA", M + 28, 840);
+  ctx.font = "700 12px Arial";
+  ctx.fillText(integral ? "REPORTE INTEGRAL" : "LECTURA EJECUTIVA", M + 28, 812);
   ctx.fillStyle = "#171717";
-  ctx.font = "800 28px Arial";
+  ctx.font = "800 29px Arial";
   ctx.fillText(
     integral
-      ? "Síntesis ejecutiva + anexo por prueba"
+      ? "Lectura ejecutiva + evidencia por instrumento"
       : "Interpretación del instrumento",
     M + 28,
-    892,
+    864,
   );
   ctx.fillStyle = "#404040";
   ctx.font = "17px Arial";
@@ -243,112 +236,152 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
     ctx,
     data.executiveSummary[0] || "Resumen del proceso psicométrico.",
     M + 28,
-    945,
+    920,
     CW - 56,
     27,
     6,
   );
   commitPage();
 
-  // Resumen ejecutivo compacto
-  beginPage(integral ? "Síntesis ejecutiva integral" : "Lectura ejecutiva");
-  let y = sectionTitle(ctx, "Resumen ejecutivo", 210);
+  // 2. Snapshot ejecutivo: una página con más densidad y mejor jerarquía.
+  beginPage(integral ? "Resumen ejecutivo integral" : "Resumen ejecutivo");
+  let y = 165;
+  ctx.fillStyle = "#f97316";
+  ctx.font = "700 11px Arial";
+  ctx.fillText("LECTURA EJECUTIVA", M, y);
+  y += 34;
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 34px Arial";
+  ctx.fillText("Lo más importante del perfil", M, y);
+  y += 42;
+
+  const lead = data.executiveSummary.slice(0, 3);
+  box(ctx, M, y, CW, 245, "#fafafa", "#e5e5e5");
   ctx.fillStyle = "#404040";
   ctx.font = "15px Arial";
-  data.executiveSummary.slice(0, 6).forEach(function (paragraph) {
-    y = wrap(ctx, paragraph, M, y, CW, 23, 7) + 15;
+  let ly = y + 36;
+  lead.forEach(function (paragraph) {
+    ly = wrap(ctx, paragraph, M + 24, ly, CW - 48, 23, 5) + 12;
   });
+  y += 268;
 
-  const findingItems = data.keyFindings?.slice(0, 6) ?? [];
-  const cautionItems = data.cautions?.slice(0, 6) ?? [];
-  if (findingItems.length || cautionItems.length) {
-    y += 12;
-    const gap = 18;
-    const colW = (CW - gap) / 2;
-    const leftH = findingItems.length
-      ? compactListBoxHeight(ctx, findingItems, colW, 13, 19)
-      : 0;
-    const rightH = cautionItems.length
-      ? compactListBoxHeight(ctx, cautionItems, colW, 13, 19)
-      : 0;
-    const maxH = Math.max(leftH, rightH);
-    if (y + maxH > pageBottom) {
-      commitPage();
-      beginPage("Síntesis ejecutiva · hallazgos");
-      y = 205;
-    }
-    if (findingItems.length) {
-      drawCompactListBox(
-        ctx,
-        M,
-        y,
-        colW,
-        "Hallazgos principales",
-        findingItems,
-        "#ecfdf5",
-        "#065f46",
-      );
-    }
-    if (cautionItems.length) {
-      drawCompactListBox(
-        ctx,
-        M + colW + gap,
-        y,
-        colW,
-        "Aspectos a validar",
-        cautionItems,
-        "#fffbeb",
-        "#92400e",
-      );
-    }
+  const findings = data.keyFindings?.slice(0, 5) ?? [];
+  const cautions = data.cautions?.slice(0, 5) ?? [];
+  const gap = 18;
+  const colW = (CW - gap) / 2;
+  const fh = findings.length
+    ? compactListBoxHeight(ctx, findings, colW, 13, 19)
+    : 0;
+  const ch = cautions.length
+    ? compactListBoxHeight(ctx, cautions, colW, 13, 19)
+    : 0;
+  const summaryBoxH = Math.max(fh, ch, 165);
+
+  if (findings.length) {
+    drawCompactListBox(
+      ctx,
+      M,
+      y,
+      colW,
+      "Fortalezas / señales favorables",
+      findings,
+      "#ecfdf5",
+      "#065f46",
+      13,
+      19,
+    );
   }
+  if (cautions.length) {
+    drawCompactListBox(
+      ctx,
+      M + colW + gap,
+      y,
+      colW,
+      "Aspectos para validar",
+      cautions,
+      "#fff7ed",
+      "#92400e",
+      13,
+      19,
+    );
+  }
+  y += summaryBoxH + 22;
+
+  const quickItems = [
+    ["OBJETIVO", data.objectiveText || "Comprender el patrón de resultados para apoyar entrevista y toma de decisiones."],
+    ["LECTURA PARA EL JEFE", data.managerGuidance?.supervision || "Interpretar el perfil frente a las exigencias reales del puesto y el contexto del equipo."],
+  ];
+  const quickH = 150;
+  quickItems.forEach(function (item, index) {
+    const x = index === 0 ? M : M + colW + gap;
+    box(ctx, x, y, colW, quickH, "#ffffff", "#e5e5e5");
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 10px Arial";
+    ctx.fillText(item[0], x + 18, y + 28);
+    ctx.fillStyle = "#404040";
+    ctx.font = "13px Arial";
+    wrap(ctx, item[1], x + 18, y + 58, colW - 36, 19, 4);
+  });
   commitPage();
 
-  // Objetivo + batería, con alturas reales para evitar empalmes
+  // 3. Objetivo y batería
   if (data.objectiveText || (data.battery && data.battery.length)) {
     beginPage("Objetivo y batería aplicada");
-    let oy = 205;
+    let oy = 165;
 
     if (data.objectiveText) {
-      oy = sectionTitle(ctx, "Objetivo de la evaluación", oy);
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 11px Arial";
+      ctx.fillText("OBJETIVO DE LA EVALUACIÓN", M, oy);
+      oy += 32;
+      ctx.fillStyle = "#171717";
+      ctx.font = "800 27px Arial";
+      ctx.fillText("Contexto del proceso", M, oy);
+      oy += 38;
       ctx.fillStyle = "#404040";
       ctx.font = "15px Arial";
-      oy = wrap(ctx, data.objectiveText, M, oy, CW, 23, 10) + 26;
+      oy = wrap(ctx, data.objectiveText, M, oy, CW, 23, 8) + 26;
     }
 
     if (data.battery && data.battery.length) {
       ctx.fillStyle = "#f97316";
-      ctx.font = "700 12px Arial";
+      ctx.font = "700 11px Arial";
       ctx.fillText("BATERÍA APLICADA", M, oy);
       oy += 28;
 
       for (let index = 0; index < data.battery.length; index += 1) {
         const item = data.battery[index];
-        const rowH = batteryRowHeight(ctx, item, CW);
-
+        const rowH = Math.max(64, batteryRowHeight(ctx, item, CW) - 8);
         if (oy + rowH > pageBottom) {
           commitPage();
           beginPage("Batería aplicada · continuación");
-          oy = 205;
+          oy = 165;
         }
-
         drawBatteryRow(ctx, item, oy, CW, index + 1);
-        oy += rowH + 10;
+        oy += rowH + 7;
       }
     }
     commitPage();
   }
 
-  // Comparación con puesto
+  // 4. Comparación con puesto (si existe)
   if (data.jobComparison && data.jobComparison.length) {
-    beginPage("Comparación contra perfil objetivo");
-    let jy = sectionTitle(ctx, "Mapa de competencias de referencia", 205);
+    beginPage("Alineación con el perfil objetivo");
+    let jy = 165;
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 11px Arial";
+    ctx.fillText("REFERENCIA DEL PUESTO", M, jy);
+    jy += 32;
+    ctx.fillStyle = "#171717";
+    ctx.font = "800 28px Arial";
+    ctx.fillText("Dónde coincide y dónde conviene profundizar", M, jy);
+    jy += 42;
     ctx.fillStyle = "#737373";
     ctx.font = "14px Arial";
     jy =
       wrap(
         ctx,
-        "La comparación organiza evidencia psicométrica frente a rangos definidos para el perfil objetivo. No constituye una recomendación automática de contratación.",
+        "La comparación organiza evidencia psicométrica frente a rangos definidos para el perfil objetivo. Es una ayuda para la decisión; no representa una recomendación automática de contratación.",
         M,
         jy,
         CW,
@@ -358,296 +391,436 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
 
     for (let index = 0; index < data.jobComparison.length; index += 1) {
       const item = data.jobComparison[index];
-      const rowH = 116;
+      const rowH = 105;
       if (jy + rowH > pageBottom) {
         commitPage();
-        beginPage("Comparación contra perfil objetivo · continuación");
-        jy = 205;
+        beginPage("Alineación con el perfil objetivo · continuación");
+        jy = 165;
       }
       drawJobComparisonRow(ctx, item, jy);
-      jy += rowH + 10;
+      jy += rowH + 8;
     }
     commitPage();
   }
 
-  // Lectura para el jefe de la vacante
-  if (data.managerGuidance) {
+  // 5. Lectura para el jefe + 30/60/90 en un bloque editorial compacto.
+  if (data.managerGuidance || (data.onboardingPlan && data.onboardingPlan.length)) {
     beginPage("Lectura para el jefe de la vacante");
-    let my = sectionTitle(ctx, "Cómo gestionar e integrar este perfil", 205);
-    const gap = 18;
-    const colW = (CW - gap) / 2;
+    let my = 165;
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 11px Arial";
+    ctx.fillText("GESTIÓN E INTEGRACIÓN", M, my);
+    my += 32;
+    ctx.fillStyle = "#171717";
+    ctx.font = "800 28px Arial";
+    ctx.fillText("Cómo aprovechar y acompañar este perfil", M, my);
+    my += 38;
 
-    const supervisionH = guidanceBoxHeight(
-      ctx,
-      data.managerGuidance.supervision,
-      colW,
-    );
-    const pressureH = guidanceBoxHeight(
-      ctx,
-      data.managerGuidance.pressure,
-      colW,
-    );
-    const topH = Math.max(supervisionH, pressureH);
+    if (data.managerGuidance) {
+      const topGap = 16;
+      const half = (CW - topGap) / 2;
+      const topH = 175;
+      drawGuidanceBox(ctx, M, my, half, topH, "SUPERVISIÓN RECOMENDADA", data.managerGuidance.supervision);
+      drawGuidanceBox(ctx, M + half + topGap, my, half, topH, "BAJO PRESIÓN", data.managerGuidance.pressure);
+      my += topH + 14;
 
-    drawGuidanceBox(
-      ctx,
-      M,
-      my,
-      colW,
-      topH,
-      "SUPERVISIÓN RECOMENDADA",
-      data.managerGuidance.supervision,
-    );
-    drawGuidanceBox(
-      ctx,
-      M + colW + gap,
-      my,
-      colW,
-      topH,
-      "BAJO PRESIÓN",
-      data.managerGuidance.pressure,
-    );
-    my += topH + 18;
+      const teamH = 145;
+      drawGuidanceBox(ctx, M, my, CW, teamH, "INTEGRACIÓN CON EL EQUIPO", data.managerGuidance.team);
+      my += teamH + 14;
 
-    const teamH = guidanceBoxHeight(ctx, data.managerGuidance.team, CW);
-    drawGuidanceBox(
-      ctx,
-      M,
-      my,
-      CW,
-      teamH,
-      "INTEGRACIÓN CON EL EQUIPO",
-      data.managerGuidance.team,
-    );
-    my += teamH + 18;
+      if (data.managerGuidance.motivators.length) {
+        box(ctx, M, my, CW, 100, "#fff7ed", "#fed7aa");
+        ctx.fillStyle = "#9a3412";
+        ctx.font = "700 10px Arial";
+        ctx.fillText("MOTIVADORES CLAVE", M + 18, my + 26);
+        ctx.fillStyle = "#404040";
+        ctx.font = "14px Arial";
+        wrap(ctx, data.managerGuidance.motivators.join(" · "), M + 18, my + 54, CW - 36, 20, 3);
+        my += 114;
+      }
+    }
 
-    if (data.managerGuidance.motivators.length) {
-      const motivatorText = data.managerGuidance.motivators.join(" · ");
-      const motivatorLines = countLines(ctx, motivatorText, CW - 40, "15px Arial");
-      const motivatorH = 76 + motivatorLines * 22;
-      box(ctx, M, my, CW, motivatorH, "#fff7ed", "#fed7aa");
-      ctx.fillStyle = "#9a3412";
+    if (data.onboardingPlan && data.onboardingPlan.length && my < 980) {
+      ctx.fillStyle = "#f97316";
       ctx.font = "700 11px Arial";
-      ctx.fillText("MOTIVADORES CLAVE", M + 20, my + 28);
-      ctx.fillStyle = "#404040";
-      ctx.font = "15px Arial";
-      wrap(ctx, motivatorText, M + 20, my + 58, CW - 40, 22, 5);
-      my += motivatorH + 18;
+      ctx.fillText("PRIMEROS 90 DÍAS", M, my);
+      my += 28;
+      const stageGap = 14;
+      const stageW = (CW - stageGap * 2) / 3;
+      data.onboardingPlan.slice(0, 3).forEach(function (stage, index) {
+        drawOnboardingColumn(ctx, stage, M + index * (stageW + stageGap), my, stageW, 300);
+      });
     }
+    commitPage();
 
-    if (data.managerGuidance.coaching.length) {
-      const coachingH = compactListBoxHeight(
+    if (data.managerGuidance?.coaching.length) {
+      beginPage("Retroalimentación y coaching");
+      let cy = 165;
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 11px Arial";
+      ctx.fillText("GUÍA DE ACOMPAÑAMIENTO", M, cy);
+      cy += 32;
+      ctx.fillStyle = "#171717";
+      ctx.font = "800 28px Arial";
+      ctx.fillText("Temas para trabajar durante la integración", M, cy);
+      cy += 42;
+      drawCompactListBox(
         ctx,
-        data.managerGuidance.coaching.slice(0, 5),
+        M,
+        cy,
         CW,
-        13,
-        19,
+        "Sugerencias de retroalimentación",
+        data.managerGuidance.coaching.slice(0, 7),
+        "#fafafa",
+        "#525252",
+        14,
+        21,
       );
-      if (my + coachingH <= pageBottom) {
-        drawCompactListBox(
-          ctx,
-          M,
-          my,
-          CW,
-          "Retroalimentación / coaching",
-          data.managerGuidance.coaching.slice(0, 5),
-          "#fafafa",
-          "#525252",
-        );
-      }
+      commitPage();
     }
-    commitPage();
   }
 
-  // 30-60-90 más compacto
-  if (data.onboardingPlan && data.onboardingPlan.length) {
-    beginPage("Integración sugerida 30-60-90");
-    let py = sectionTitle(ctx, "Primeros 90 días", 205);
-
-    data.onboardingPlan.forEach(function (stage) {
-      const stageH = onboardingBoxHeight(ctx, stage, CW);
-      if (py + stageH > pageBottom) {
-        commitPage();
-        beginPage("Integración sugerida 30-60-90 · continuación");
-        py = 205;
-      }
-      drawOnboardingBox(ctx, stage, py, CW, stageH);
-      py += stageH + 16;
-    });
-    commitPage();
-  }
-
-  // Resultados por instrumento
+  // 6. Una página principal por prueba. El detalle deja de ser un listado enorme.
   data.instruments.forEach(function (instrument, instrumentIndex) {
     beginPage(instrument.name);
 
-    let iy = 205;
+    let iy = 160;
     ctx.fillStyle = "#f97316";
-    ctx.font = "700 11px Arial";
+    ctx.font = "700 10px Arial";
     ctx.fillText(
-      "RESULTADO INDIVIDUAL " + String(instrumentIndex + 1) + " DE " + String(data.instruments.length),
+      "PRUEBA " + String(instrumentIndex + 1) + " DE " + String(data.instruments.length),
       M,
       iy,
     );
-    iy += 32;
+    iy += 30;
 
     ctx.fillStyle = "#171717";
-    ctx.font = "800 28px Arial";
-    iy = wrap(ctx, instrument.name, M, iy, CW, 33, 2) + 7;
+    ctx.font = "800 29px Arial";
+    iy = wrap(ctx, instrument.name, M, iy, CW, 33, 2) + 5;
 
     if (instrument.subtitle) {
       ctx.fillStyle = "#737373";
       ctx.font = "14px Arial";
-      iy = wrap(ctx, instrument.subtitle, M, iy, CW, 21, 3) + 12;
+      iy = wrap(ctx, instrument.subtitle, M, iy, CW, 20, 2) + 10;
     }
 
-    const chartY = Math.max(330, iy + 8);
+    const topY = Math.max(270, iy + 6);
+    const leftW = 585;
+    const rightX = M + leftW + 26;
+    const rightW = CW - leftW - 26;
+
+    box(ctx, M, topY, leftW, 435, "#ffffff", "#e5e5e5");
+    ctx.drawImage(buildChart(instrument, 540, 360), M + 22, topY + 38, 540, 360);
+
+    box(ctx, rightX, topY, rightW, 435, "#fafafa", "#e5e5e5");
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 10px Arial";
+    ctx.fillText("LECTURA EJECUTIVA", rightX + 20, topY + 30);
+
+    let ry = topY + 64;
     if (instrument.overallDisplay) {
-      box(ctx, M, chartY + 20, 285, 112, "#fff7ed", "#fed7aa");
-      ctx.fillStyle = "#9a3412";
-      ctx.font = "700 11px Arial";
-      ctx.fillText(
-        (instrument.overallLabel || "Resultado global").toUpperCase(),
-        M + 20,
-        chartY + 50,
-      );
       ctx.fillStyle = "#171717";
       ctx.font = "800 27px Arial";
-      wrap(ctx, instrument.overallDisplay, M + 20, chartY + 88, 245, 30, 2);
-      ctx.drawImage(buildChart(instrument, 780, 500), M + 315, chartY, 780, 500);
-    } else {
-      ctx.drawImage(buildChart(instrument, 820, 500), 210, chartY, 820, 500);
+      ry = wrap(ctx, instrument.overallDisplay, rightX + 20, ry, rightW - 40, 30, 2) + 10;
+      ctx.fillStyle = "#737373";
+      ctx.font = "700 10px Arial";
+      ctx.fillText((instrument.overallLabel || "RESULTADO GLOBAL").toUpperCase(), rightX + 20, ry);
+      ry += 28;
     }
 
-    let sy = chartY + 525;
-    if (instrument.summary && instrument.summary.length) {
+    ctx.fillStyle = "#404040";
+    ctx.font = "13px Arial";
+    (instrument.summary ?? []).slice(0, 3).forEach(function (paragraph) {
+      ry = wrap(ctx, paragraph, rightX + 20, ry, rightW - 40, 19, 4) + 10;
+    });
+
+    const dimStart = topY + 465;
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 10px Arial";
+    ctx.fillText("RESULTADOS POR DIMENSIÓN", M, dimStart);
+
+    const maxOnFirstPage = 6;
+    const firstDims = instrument.dimensions.slice(0, maxOnFirstPage);
+    const gridTop = dimStart + 26;
+    const gridGap = 14;
+    const gridW = (CW - gridGap) / 2;
+    const rowH = 112;
+
+    firstDims.forEach(function (item, index) {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      drawDimensionTile(
+        ctx,
+        item,
+        M + col * (gridW + gridGap),
+        gridTop + row * (rowH + 10),
+        gridW,
+        rowH,
+      );
+    });
+
+    const usedRows = Math.ceil(firstDims.length / 2);
+    let insightY = gridTop + usedRows * (rowH + 10) + 6;
+    const highlights = instrument.highlights?.slice(0, 3) ?? [];
+    const watchouts = instrument.watchouts?.slice(0, 3) ?? [];
+
+    if ((highlights.length || watchouts.length) && insightY < pageBottom - 125) {
+      const miniH = 118;
+      if (highlights.length) {
+        drawInlineInsight(
+          ctx,
+          M,
+          insightY,
+          gridW,
+          miniH,
+          "Elementos destacados",
+          highlights,
+          "#ecfdf5",
+          "#065f46",
+        );
+      }
+      if (watchouts.length) {
+        drawInlineInsight(
+          ctx,
+          M + gridW + gridGap,
+          insightY,
+          gridW,
+          miniH,
+          "Puntos para profundizar",
+          watchouts,
+          "#fff7ed",
+          "#92400e",
+        );
+      }
+    }
+
+    commitPage();
+
+    const remaining = instrument.dimensions.slice(maxOnFirstPage);
+    if (remaining.length) {
+      beginPage(instrument.name + " · dimensiones adicionales");
+      let dy = 165;
       ctx.fillStyle = "#f97316";
-      ctx.font = "700 11px Arial";
-      ctx.fillText("INTERPRETACIÓN GENERAL", M, sy);
-      sy += 32;
-      ctx.fillStyle = "#404040";
-      ctx.font = "14px Arial";
-      instrument.summary.slice(0, 3).forEach(function (paragraph) {
-        sy = wrap(ctx, paragraph, M, sy, CW, 21, 4) + 10;
-      });
-    }
+      ctx.font = "700 10px Arial";
+      ctx.fillText("DETALLE COMPLEMENTARIO", M, dy);
+      dy += 30;
+      ctx.fillStyle = "#171717";
+      ctx.font = "800 27px Arial";
+      ctx.fillText("Dimensiones adicionales", M, dy);
+      dy += 42;
 
-    const highlights = instrument.highlights?.slice(0, 4) ?? [];
-    const watchouts = instrument.watchouts?.slice(0, 4) ?? [];
-    if (highlights.length || watchouts.length) {
-      sy += 4;
-      const gap = 18;
-      const colW = (CW - gap) / 2;
-      const h1 = highlights.length
-        ? compactListBoxHeight(ctx, highlights, colW, 12, 18)
-        : 0;
-      const h2 = watchouts.length
-        ? compactListBoxHeight(ctx, watchouts, colW, 12, 18)
-        : 0;
-      const boxH = Math.max(h1, h2);
-      if (sy + boxH <= pageBottom) {
+      const detailGap = 14;
+      const detailW = (CW - detailGap) / 2;
+      const detailH = 135;
+      remaining.forEach(function (item, index) {
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        drawDimensionTile(
+          ctx,
+          item,
+          M + col * (detailW + detailGap),
+          dy + row * (detailH + 12),
+          detailW,
+          detailH,
+          true,
+        );
+      });
+
+      const rows = Math.ceil(remaining.length / 2);
+      let extraY = dy + rows * (detailH + 12) + 8;
+      if (highlights.length || watchouts.length) {
         if (highlights.length) {
-          drawCompactListBox(
+          extraY += drawWideInsight(
             ctx,
             M,
-            sy,
-            colW,
-            "Elementos destacados",
+            extraY,
+            CW,
+            "Qué puede aportar",
             highlights,
             "#ecfdf5",
             "#065f46",
-            12,
-            18,
-          );
+          ) + 12;
         }
-        if (watchouts.length) {
-          drawCompactListBox(
+        if (watchouts.length && extraY < pageBottom - 130) {
+          drawWideInsight(
             ctx,
-            M + colW + gap,
-            sy,
-            colW,
-            "Puntos para profundizar",
+            M,
+            extraY,
+            CW,
+            "Qué conviene validar",
             watchouts,
             "#fff7ed",
             "#92400e",
-            12,
-            18,
           );
         }
-      }
-    }
-    commitPage();
-
-    // Detalle por dimensión con paginación dinámica.
-    if (instrument.dimensions.length) {
-      beginPage(instrument.name + " · detalle");
-      let dy = 205;
-      ctx.fillStyle = "#f97316";
-      ctx.font = "700 11px Arial";
-      ctx.fillText("RESULTADOS POR DIMENSIÓN", M, dy);
-      dy += 30;
-
-      for (let index = 0; index < instrument.dimensions.length; index += 1) {
-        const item = instrument.dimensions[index];
-        const rowH = compactDimensionHeight(ctx, item, CW);
-
-        if (dy + rowH > pageBottom) {
-          commitPage();
-          beginPage(instrument.name + " · detalle");
-          dy = 205;
-          ctx.fillStyle = "#f97316";
-          ctx.font = "700 11px Arial";
-          ctx.fillText("RESULTADOS POR DIMENSIÓN · CONTINUACIÓN", M, dy);
-          dy += 30;
-        }
-
-        drawCompactDimension(ctx, item, dy, CW, rowH);
-        dy += rowH + 12;
       }
       commitPage();
     }
   });
 
-  // Entrevista y cierre, aprovechando la misma página cuando existe espacio.
-  if (data.interviewQuestions && data.interviewQuestions.length) {
-    beginPage("Guía para entrevista");
-    let qy = sectionTitle(ctx, "Preguntas de profundización", 205);
+  // 7. Entrevista + cierre
+  beginPage("Guía para entrevista y cierre");
+  let qy = 165;
+  ctx.fillStyle = "#f97316";
+  ctx.font = "700 10px Arial";
+  ctx.fillText("PROFUNDIZACIÓN", M, qy);
+  qy += 30;
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 28px Arial";
+  ctx.fillText("Preguntas para entrevista", M, qy);
+  qy += 38;
+
+  const questions = data.interviewQuestions?.slice(0, 8) ?? [];
+  ctx.fillStyle = "#404040";
+  ctx.font = "14px Arial";
+  questions.forEach(function (item, index) {
+    const lines = countLines(ctx, item, CW - 54, "14px Arial");
+    const itemH = Math.max(46, lines * 20 + 18);
+    if (qy + itemH > 1030) return;
+    ctx.fillStyle = "#f97316";
+    ctx.font = "800 13px Arial";
+    ctx.fillText(String(index + 1).padStart(2, "0"), M, qy);
     ctx.fillStyle = "#404040";
     ctx.font = "14px Arial";
+    qy = wrap(ctx, item, M + 38, qy, CW - 38, 20, 5) + 15;
+  });
 
-    data.interviewQuestions.slice(0, 12).forEach(function (item, index) {
-      const lines = countLines(ctx, item, CW - 52, "14px Arial");
-      const itemH = Math.max(42, lines * 21 + 18);
-      if (qy + itemH > pageBottom - 250) {
-        commitPage();
-        beginPage("Guía para entrevista · continuación");
-        qy = 210;
-      }
-
-      ctx.fillStyle = "#171717";
-      ctx.font = "800 13px Arial";
-      ctx.fillText(String(index + 1) + ".", M, qy);
-      ctx.fillStyle = "#404040";
-      ctx.font = "14px Arial";
-      qy = wrap(ctx, item, M + 34, qy, CW - 34, 21, 6) + 15;
-    });
-
-    if (qy + 230 <= pageBottom) {
-      drawCompactClosing(ctx, data, qy + 18);
-      commitPage();
-    } else {
-      commitPage();
-      beginPage("Cierre del reporte");
-      drawCompactClosing(ctx, data, 245);
-      commitPage();
-    }
-  } else {
-    beginPage("Cierre del reporte");
-    drawCompactClosing(ctx, data, 245);
-    commitPage();
-  }
+  drawCompactClosing(ctx, data, Math.max(qy + 22, 1080));
+  commitPage();
 
   return out;
+}
+
+function drawDimensionTile(
+  ctx: CanvasRenderingContext2D,
+  item: PsychometricExportDimension,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  showNarrative = false,
+) {
+  box(ctx, x, y, width, height, "#ffffff", "#e5e5e5");
+
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 14px Arial";
+  ctx.fillText(clip(ctx, item.name, width - 92), x + 16, y + 27);
+
+  ctx.textAlign = "right";
+  ctx.font = "800 17px Arial";
+  ctx.fillText(
+    item.displayValue || String(Math.round(item.value)),
+    x + width - 16,
+    y + 27,
+  );
+  ctx.textAlign = "left";
+
+  const barY = y + 47;
+  ctx.fillStyle = "#f1f5f9";
+  ctx.fillRect(x + 16, barY, width - 32, 8);
+  ctx.fillStyle = "#f97316";
+  ctx.fillRect(x + 16, barY, (width - 32) * clamp(item.value) / 100, 8);
+
+  if (item.band) {
+    ctx.fillStyle = "#9a3412";
+    ctx.font = "700 9px Arial";
+    ctx.fillText(item.band.toUpperCase(), x + 16, y + 77);
+  }
+
+  const text = showNarrative
+    ? item.narrative || item.potential || item.watchout
+    : item.narrative;
+  if (text) {
+    ctx.fillStyle = "#666666";
+    ctx.font = showNarrative ? "12px Arial" : "11px Arial";
+    wrap(
+      ctx,
+      text,
+      x + 16,
+      y + (item.band ? 97 : 82),
+      width - 32,
+      showNarrative ? 17 : 16,
+      showNarrative ? 3 : 2,
+    );
+  }
+}
+
+function drawInlineInsight(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  title: string,
+  items: string[],
+  bg: string,
+  fg: string,
+) {
+  box(ctx, x, y, width, height, bg);
+  ctx.fillStyle = fg;
+  ctx.font = "800 13px Arial";
+  ctx.fillText(title, x + 16, y + 28);
+
+  let ty = y + 54;
+  items.slice(0, 3).forEach(function (item) {
+    ctx.fillStyle = fg;
+    ctx.font = "800 10px Arial";
+    ctx.fillText("•", x + 16, ty);
+    ctx.fillStyle = "#404040";
+    ctx.font = "11px Arial";
+    ty = wrap(ctx, item, x + 31, ty, width - 47, 16, 2) + 5;
+  });
+}
+
+function drawWideInsight(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  title: string,
+  items: string[],
+  bg: string,
+  fg: string,
+) {
+  const height = Math.max(100, 56 + items.slice(0, 4).length * 34);
+  box(ctx, x, y, width, height, bg);
+  ctx.fillStyle = fg;
+  ctx.font = "800 13px Arial";
+  ctx.fillText(title, x + 18, y + 30);
+  let ty = y + 56;
+  items.slice(0, 4).forEach(function (item) {
+    ctx.fillStyle = "#404040";
+    ctx.font = "12px Arial";
+    ty = wrap(ctx, "• " + item, x + 18, ty, width - 36, 18, 2) + 6;
+  });
+  return height;
+}
+
+function drawOnboardingColumn(
+  ctx: CanvasRenderingContext2D,
+  stage: { period: string; focus: string; actions: string[] },
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  box(ctx, x, y, width, height, "#fafafa", "#e5e5e5");
+  ctx.fillStyle = "#f97316";
+  ctx.font = "700 10px Arial";
+  ctx.fillText(stage.period.toUpperCase(), x + 16, y + 27);
+  ctx.fillStyle = "#171717";
+  ctx.font = "800 15px Arial";
+  wrap(ctx, stage.focus, x + 16, y + 55, width - 32, 19, 3);
+
+  let ay = y + 118;
+  stage.actions.slice(0, 4).forEach(function (action) {
+    ctx.fillStyle = "#f97316";
+    ctx.font = "800 10px Arial";
+    ctx.fillText("•", x + 16, ay);
+    ctx.fillStyle = "#404040";
+    ctx.font = "11px Arial";
+    ay = wrap(ctx, action, x + 31, ay, width - 47, 16, 3) + 7;
+  });
 }
 
 function compactListBoxHeight(
@@ -1346,11 +1519,24 @@ function brand(ctx: CanvasRenderingContext2D, x: number, y: number) {
   const w = ctx.measureText("Factor").width; ctx.fillStyle = "#f97316"; ctx.fillText("RH", x + w, y);
 }
 function header(ctx: CanvasRenderingContext2D, data: PsychometricExportData, title: string) {
-  ctx.fillStyle = "#111111"; ctx.fillRect(0, 0, W, 150); brand(ctx, M, 62);
-  ctx.fillStyle = "#ffffff"; ctx.font = "800 22px Arial"; ctx.fillText(clip(ctx, title, 540), M, 112);
-  ctx.fillStyle = "#a3a3a3"; ctx.font = "14px Arial"; ctx.textAlign = "right";
-  ctx.fillText(clip(ctx, data.personName, 420), W - M, 70);
-  ctx.fillText(clip(ctx, data.organizationName + " · " + data.reportDate, 420), W - M, 104);
+  ctx.fillStyle = "#111111";
+  ctx.fillRect(0, 0, W, 112);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 26px Arial";
+  ctx.fillText("Factor", M, 48);
+  const brandWidth = ctx.measureText("Factor").width;
+  ctx.fillStyle = "#f97316";
+  ctx.fillText("RH", M + brandWidth, 48);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 17px Arial";
+  ctx.fillText(clip(ctx, title, 590), M, 88);
+
+  ctx.fillStyle = "#a3a3a3";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "right";
+  ctx.fillText(clip(ctx, data.personName, 390), W - M, 47);
+  ctx.fillText(clip(ctx, data.organizationName + " · " + data.reportDate, 390), W - M, 80);
   ctx.textAlign = "left";
 }
 function footer(ctx: CanvasRenderingContext2D, page: number) {
