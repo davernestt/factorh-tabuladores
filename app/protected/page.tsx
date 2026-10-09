@@ -907,6 +907,15 @@ function AssessmentCard({
                 Ver reporte
               </Link>
             )}
+          {assignment.status === "completed" &&
+            template?.assessment_type?.startsWith("psychometric_") && (
+              <Link
+                href={`/protected/psicometrias/${assignment.id}`}
+                className="text-xs font-bold text-neutral-900 hover:text-orange-600"
+              >
+                Ver reporte psicométrico
+              </Link>
+            )}
           {assignment.status !== "completed" &&
             assignment.status !== "cancelled" && (
               <Link
