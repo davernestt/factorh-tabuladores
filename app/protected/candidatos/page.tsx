@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import EditCandidate from "./edit-candidate";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -98,9 +99,8 @@ async function CandidatesContent() {
   }
 
   const people = (peopleResult.data ?? []) as Person[];
-  const organizations = new Map(
-    ((organizationsResult.data ?? []) as Organization[]).map((item) => [item.id, item]),
-  );
+  const organizationList = (organizationsResult.data ?? []) as Organization[];
+  const organizations = new Map(organizationList.map((item) => [item.id, item]));
   const processes = (processesResult.data ?? []) as ProcessRow[];
   const assignments = (assignmentsResult.data ?? []) as Assignment[];
   const templates = new Map(
@@ -181,9 +181,12 @@ async function CandidatesContent() {
                     </div>
                   </div>
 
-                  <div className="text-sm font-semibold text-neutral-500">
-                    {personAssignments.length}{" "}
-                    {personAssignments.length === 1 ? "evaluación" : "evaluaciones"}
+                  <div className="flex flex-col items-start gap-3 lg:items-end">
+                    <div className="text-sm font-semibold text-neutral-500">
+                      {personAssignments.length}{" "}
+                      {personAssignments.length === 1 ? "evaluación" : "evaluaciones"}
+                    </div>
+                    <EditCandidate candidate={person} organizations={organizationList} locked={personAssignments.some((a) => a.status !== "pending")} />
                   </div>
                 </div>
 
