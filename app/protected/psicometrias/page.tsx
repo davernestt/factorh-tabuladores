@@ -499,9 +499,43 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                       </summary>
 
                       <div className="border-t border-neutral-100 bg-neutral-50/70 p-6">
-                        <div className="grid gap-4">
-                          {group.applications.map((application) => (
-                            <ApplicationCard key={application.assignment.id} application={application} />
+                        <div className="space-y-6">
+                          {groupApplicationsByProcess(group.applications).map((processGroup) => (
+                            <section
+                              key={processGroup.processId}
+                              className="overflow-hidden rounded-3xl border border-neutral-200 bg-white"
+                            >
+                              <div className="flex flex-col gap-3 border-b border-neutral-100 px-5 py-4 md:flex-row md:items-center md:justify-between">
+                                <div>
+                                  <div className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+                                    Proceso psicométrico
+                                  </div>
+                                  <div className="mt-1 font-black text-neutral-900">
+                                    {processGroup.name}
+                                  </div>
+                                  <div className="mt-1 text-xs text-neutral-500">
+                                    {processGroup.completed} de {processGroup.total} pruebas concluidas
+                                  </div>
+                                </div>
+                                {processGroup.completed === processGroup.total ? (
+                                  <Link
+                                    href={`/protected/psicometrias/integral/${processGroup.processId}`}
+                                    className="rounded-xl bg-neutral-900 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-neutral-800"
+                                  >
+                                    Ver reporte integral
+                                  </Link>
+                                ) : (
+                                  <div className="rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700">
+                                    Integral disponible al concluir {processGroup.total - processGroup.completed}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="grid gap-4 p-4">
+                                {processGroup.applications.map((application) => (
+                                  <ApplicationCard key={application.assignment.id} application={application} />
+                                ))}
+                              </div>
+                            </section>
                           ))}
                         </div>
                       </div>
@@ -616,6 +650,41 @@ async function PsychometricsContent({ searchParams }: PageProps) {
       )}
     </div>
   );
+}
+
+function groupApplicationsByProcess(applications: ApplicationView[]) {
+  const map = new Map<
+    string,
+    {
+      processId: string;
+      name: string;
+      applications: ApplicationView[];
+      total: number;
+      completed: number;
+    }
+  >();
+
+  for (const application of applications) {
+    const processId = application.process?.id ?? application.assignment.process_id;
+    const current = map.get(processId) ?? {
+      processId,
+      name: application.process?.name ?? "Proceso psicométrico",
+      applications: [],
+      total: 0,
+      completed: 0,
+    };
+
+    current.applications.push(application);
+    current.total += 1;
+    if (application.assignment.status === "completed") current.completed += 1;
+    map.set(processId, current);
+  }
+
+  return Array.from(map.values()).sort((a, b) => {
+    const aDate = a.applications[0]?.assignment.created_at ?? "";
+    const bDate = b.applications[0]?.assignment.created_at ?? "";
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
 }
 
 function ApplicationCard({ application }: { application: ApplicationView }) {
