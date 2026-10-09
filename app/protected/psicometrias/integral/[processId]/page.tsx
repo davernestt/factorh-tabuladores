@@ -322,6 +322,62 @@ async function IntegralReportContent({ params }: PageProps) {
     };
   });
 
+  const purposeLabels: Record<string, string> = {
+    selection: "Selección",
+    promotion: "Promoción",
+    development: "Desarrollo",
+    profile: "Conocimiento de perfil",
+  };
+  const purposeLabel =
+    purposeLabels[processR.data.evaluation_purpose ?? ""] ??
+    "Evaluación psicométrica";
+  const targetRole =
+    processR.data.target_job_title?.trim() ||
+    jobProfile?.name ||
+    null;
+
+  const objectiveText = jobAlignment
+    ? jobAlignment.objectiveText
+    : targetRole
+      ? "Describir e integrar el perfil psicométrico de la persona y aportar evidencia relevante para " +
+        purposeLabel.toLowerCase() +
+        " en relación con el puesto " +
+        targetRole +
+        ". El reporte funciona como apoyo para entrevista y toma de decisiones, sin emitir una recomendación automática."
+      : "Describir e integrar el perfil psicométrico de la persona para apoyar " +
+        purposeLabel.toLowerCase() +
+        ", entrevista y toma de decisiones. Al no existir un perfil objetivo asociado, la lectura se concentra en el patrón de resultados de las pruebas aplicadas.";
+
+  const batteryRows = instrumentViews.map((instrument) => {
+    const meta = getPsychometricCatalogItem(instrument.assessmentType);
+    return {
+      name: instrument.name,
+      description:
+        meta?.publicDescription ??
+        "Instrumento psicométrico FactorRH aplicado dentro de este proceso.",
+    };
+  });
+
+  const exportFindings = [
+    ...analysis.convergences,
+    ...(jobAlignment?.strongestMatches.map(
+      (item) =>
+        item.name +
+        ": evidencia dentro del rango de referencia del perfil objetivo.",
+    ) ?? []),
+  ];
+
+  const exportCautions = [
+    ...analysis.tensions,
+    ...(jobAlignment?.criticalToValidate.map(
+      (item) =>
+        item.name +
+        ": " +
+        item.status +
+        ". Conviene profundizar antes de concluir el proceso.",
+    ) ?? []),
+  ];
+
   const exportData: PsychometricExportData = {
     title: "Reporte Psicométrico Integral",
     subtitle:
@@ -332,9 +388,15 @@ async function IntegralReportContent({ params }: PageProps) {
     organizationName: organizationR.data.name,
     processName: processR.data.name,
     reportDate: completedDate,
-    executiveSummary: analysis.executiveSummary,
-    keyFindings: analysis.convergences,
-    cautions: analysis.tensions,
+    executiveSummary: [
+      objectiveText,
+      ...analysis.executiveSummary,
+      ...(jobAlignment?.snapshot ?? []),
+      "Para el jefe de la vacante: " + analysis.managerGuidance.supervision,
+      "Bajo presión: " + analysis.managerGuidance.pressure,
+    ],
+    keyFindings: exportFindings,
+    cautions: exportCautions,
     interviewQuestions: analysis.interviewQuestions,
     closing: analysis.closing,
     instruments: instrumentViews.map((instrument) => ({
