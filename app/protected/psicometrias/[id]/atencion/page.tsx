@@ -95,7 +95,7 @@ async function AttentionReportContent({ params }: PageProps) {
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/protected/psicometrias" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Psicometrías</Link>
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Versión experimental 1.0</span>
+        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Reporte FactorRH</span>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
@@ -125,7 +125,7 @@ async function AttentionReportContent({ params }: PageProps) {
         <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Lectura ejecutiva</div>
         <h2 className="mt-2 text-3xl font-black text-neutral-900">Atención y precisión</h2>
         <div className="mt-5 space-y-3 text-sm leading-7 text-neutral-700">
-          <p>El resultado global muestra el porcentaje de respuestas correctas en 30 tareas breves. No equivale a un percentil, diagnóstico neuropsicológico ni medida normativa de velocidad.</p>
+          <p>El resultado global muestra el porcentaje de respuestas correctas en 30 tareas breves de atención y precisión.</p>
           <p>Las diferencias por dimensión permiten identificar dónde hubo mayor y menor exactitud relativa. Su importancia debe contrastarse con las demandas reales del puesto y, cuando sea crítico, con una muestra de trabajo.</p>
         </div>
       </section>
@@ -168,7 +168,7 @@ async function AttentionReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Nota metodológica.</strong> Atención y Precisión FactorRH v1.0 es un instrumento experimental con reactivos originales. El tiempo total se muestra sólo como dato contextual; todavía no existe baremo de velocidad ni punto de corte. No debe utilizarse como criterio único de contratación y no sustituye pruebas clínicas, neuropsicológicas o de seguridad certificadas cuando éstas sean requeridas.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Atención y Precisión FactorRH v1.0 utiliza reactivos originales. El tiempo total se muestra como dato contextual y el resultado debe interpretarse junto con las exigencias del puesto, entrevista y evidencia de desempeño.
       </section>
     </div>
   );

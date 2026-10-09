@@ -76,9 +76,9 @@ export function analyzeReasoning(inputs: ReasoningInput[]): ReasoningAnalysis {
   const priorities = [...ranked].reverse().slice(0, 2);
 
   const executiveSummary = [
-    "El resultado resume el porcentaje de respuestas correctas en cinco tipos de razonamiento. No equivale a un coeficiente intelectual, percentil normativo ni diagnóstico de capacidad general.",
+    "El resultado resume el porcentaje de respuestas correctas en cinco tipos de razonamiento y permite identificar contrastes entre áreas.",
     "Las diferencias entre dimensiones sirven como hipótesis para profundizar en entrevista o mediante ejercicios de trabajo, especialmente cuando el puesto exige de forma crítica alguno de estos tipos de razonamiento.",
-    "Mientras el instrumento permanezca en fase experimental, los resultados deben interpretarse de manera descriptiva y nunca como criterio único para contratar, descartar o promover."
+    "Para decisiones de selección o desarrollo, conviene integrar este resultado con entrevista estructurada, experiencia, requisitos del puesto y evidencia de desempeño."
   ];
 
   const interviewPrompts = priorities.map((item) =>

@@ -170,7 +170,7 @@ async function LaborNeedsReportContent({ params }: PageProps) {
           ← Volver a Psicometrías
         </Link>
         <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          Versión experimental 1.0
+          Reporte FactorRH
         </span>
       </div>
 
@@ -250,7 +250,7 @@ async function LaborNeedsReportContent({ params }: PageProps) {
             Intensidad relativa
           </h2>
           <p className="mt-1 text-sm text-neutral-500">
-            Índice descriptivo de 0 a 100. No representa percentil normativo.
+            Índice de intensidad de 0 a 100 para facilitar la lectura del perfil.
           </p>
           <div className="mt-6 space-y-4">
             {analysis.dimensions.map((item) => (
@@ -364,13 +364,11 @@ async function LaborNeedsReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Nota metodológica.</strong> Mapa de
-        Necesidades Laborales FactorRH v1.0 es un instrumento experimental de
-        autodescripción laboral con reactivos originales. Sus índices son
-        descriptivos y todavía no representan percentiles o baremos normativos.
-        Las necesidades altas no son fortalezas por sí mismas y las bajas no son
-        defectos. El resultado debe contrastarse con entrevista, condiciones del
-        puesto, experiencia y evidencia de desempeño.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Mapa de
+        Necesidades Laborales FactorRH v1.0 es un instrumento de
+        autodescripción laboral con reactivos originales. Las necesidades altas no son
+        fortalezas por sí mismas y las bajas no son defectos. El resultado debe
+        contrastarse con entrevista, condiciones del puesto, experiencia y evidencia de desempeño.
       </section>
     </div>
   );

@@ -142,7 +142,7 @@ async function ProfileContent({ params }: PageProps) {
           ← Volver a Psicometrías
         </Link>
         <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          Versión experimental 1.0
+          Reporte FactorRH
         </span>
       </div>
 
@@ -193,7 +193,7 @@ async function ProfileContent({ params }: PageProps) {
         <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Perfil por dimensión</div>
           <h2 className="mt-2 text-xl font-black text-neutral-900">Índice descriptivo</h2>
-          <p className="mt-1 text-sm text-neutral-500">Escala transformada 0–100; no equivale a percentil normativo.</p>
+          <p className="mt-1 text-sm text-neutral-500">Escala transformada de 0 a 100 para facilitar la lectura comparativa del perfil.</p>
           <div className="mt-6 space-y-5">
             {analysis.dimensions.map((item) => (
               <div key={item.name}>
@@ -258,7 +258,7 @@ async function ProfileContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Nota metodológica.</strong> {analysis.config.note} Los índices son descriptivos y todavía no representan baremos ni percentiles. Este reporte no debe utilizarse como criterio único para contratar, promover o descartar a una persona.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> {analysis.config.note} El resultado debe integrarse con entrevista, experiencia, evidencia de desempeño y requisitos del puesto.
       </section>
     </div>
   );

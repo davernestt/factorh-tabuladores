@@ -383,7 +383,7 @@ export function analyzeScaleProfile(
   const top = ranked.slice(0, 2);
   const lower = [...ranked].reverse().slice(0, 2);
   const executiveSummary = [
-    "El perfil muestra diferencias relativas entre dimensiones, no etiquetas rígidas. Los puntajes describen la intensidad de respuestas dentro del instrumento y todavía no representan percentiles normativos.",
+    "El perfil muestra diferencias relativas entre dimensiones, no etiquetas rígidas. Los puntajes permiten comparar la intensidad de respuestas dentro del propio perfil.",
     top.length
       ? "Las dimensiones relativamente más altas son " +
         top.map((item) => item.name).join(" y ") +

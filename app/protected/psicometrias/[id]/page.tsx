@@ -225,7 +225,7 @@ async function PsychometricReportContent({ params }: PageProps) {
           ← Volver a Psicometrías
         </Link>
         <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-          Versión experimental 1.0
+          Reporte FactorRH
         </span>
       </div>
 
@@ -284,7 +284,7 @@ async function PsychometricReportContent({ params }: PageProps) {
           <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Mapa conductual</div>
           <h2 className="mt-2 text-xl font-black text-neutral-900">Radar de tendencias</h2>
           <p className="mt-1 text-sm leading-6 text-neutral-500">
-            Índice descriptivo de 0 a 100. No equivale a percentil normativo.
+            Índice conductual de 0 a 100 para facilitar la lectura del perfil.
           </p>
           <div className="mt-6">
             <VectorRadar dimensions={analysis.dimensions} />
@@ -350,7 +350,7 @@ async function PsychometricReportContent({ params }: PageProps) {
         <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Facetas internas</div>
         <h2 className="mt-2 text-2xl font-black text-neutral-900">Dónde aparecen los contrastes más claros</h2>
         <p className="mt-2 max-w-4xl text-sm leading-6 text-neutral-500">
-          Estas facetas ayudan a profundizar la entrevista. Son promedios descriptivos de grupos de reactivos y todavía no cuentan con baremos poblacionales.
+          Estas facetas ayudan a profundizar la entrevista y muestran contrastes internos entre grupos de reactivos.
         </p>
         <div className="mt-6 grid gap-5 lg:grid-cols-2">
           <FacetPanel title="Facetas relativamente más altas" items={analysis.topFacets} />
@@ -369,7 +369,7 @@ async function PsychometricReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Nota metodológica.</strong> Vector Conductual FactorRH v1.0 es un instrumento experimental de autodescripción laboral con reactivos originales. Los índices son descriptivos y todavía no representan percentiles ni baremos normativos. No debe utilizarse como diagnóstico clínico ni como criterio único para contratar, promover o descartar a una persona. El resultado debe integrarse con entrevista estructurada, experiencia, evidencia de desempeño y requisitos reales del puesto.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Vector Conductual FactorRH v1.0 es un instrumento de autodescripción laboral con reactivos originales. El resultado debe integrarse con entrevista estructurada, experiencia, evidencia de desempeño y requisitos reales del puesto.
       </section>
     </div>
   );

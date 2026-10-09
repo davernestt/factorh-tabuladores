@@ -183,7 +183,7 @@ async function ReasoningReportContent({ params }: PageProps) {
           ← Volver a Psicometrías
         </Link>
         <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          Versión experimental 1.0
+          Reporte FactorRH
         </span>
       </div>
 
@@ -312,7 +312,7 @@ async function ReasoningReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Nota metodológica.</strong> Razonamiento Laboral General FactorRH v1.0 es un instrumento experimental con reactivos originales. El porcentaje de aciertos no equivale a IQ, coeficiente intelectual, percentil ni nivel de inteligencia. Todavía no cuenta con baremos normativos, evidencia suficiente de validez predictiva ni puntos de corte para selección. Debe complementarse con entrevista estructurada, experiencia, requisitos del puesto y, cuando sea pertinente, una muestra de trabajo.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Razonamiento Laboral General FactorRH v1.0 utiliza reactivos originales y reporta el porcentaje de aciertos por área. Para una decisión completa conviene integrarlo con entrevista estructurada, experiencia, requisitos del puesto y, cuando sea pertinente, una muestra de trabajo.
       </section>
     </div>
   );
