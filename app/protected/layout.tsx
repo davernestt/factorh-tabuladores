@@ -89,18 +89,16 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-neutral-100">
       <nav className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-4 px-5 py-3">
+        <div className="mx-auto flex min-h-24 max-w-7xl flex-wrap items-center justify-between gap-5 px-5 py-3">
           <Link
             href={isClient ? "/protected/psicometrias" : "/protected/evaluaciones"}
-            className="flex items-center gap-3"
+            className="flex shrink-0 items-center rounded-2xl px-2 py-1 transition-colors hover:bg-orange-50"
           >
-            <div>
-              <FactoRHLogo className="h-9 w-auto" priority />
-              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[.2em] text-neutral-500">
-                {isClient
-                  ? appUser.organizationName ?? "Portal Empresa"
-                  : "Administración"}
-              </div>
+            <div className="flex flex-col">
+              <FactoRHLogo full className="h-[74px] w-auto max-w-[290px] object-contain object-left sm:h-[82px] sm:max-w-[340px]" priority />
+              <span className="mt-1 text-[10px] font-medium tracking-wide text-neutral-500">
+                {isClient ? appUser.organizationName ?? "Portal de empresa" : "Panel administrativo"}
+              </span>
             </div>
           </Link>
 
