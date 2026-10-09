@@ -168,11 +168,12 @@ async function PsychometricReportContent({ params }: PageProps) {
     const adjusted = question.reverse_scored ? 6 - raw : raw;
     const dimension = dimensionName.get(question.dimension_id) ?? "Dimensión";
     const key = dimension + "|" + question.facet;
-    const bucket = facetBuckets.get(key) ?? {
-      dimension,
-      facet: question.facet,
-      values: [],
-    };
+    const bucket: { dimension: string; facet: string; values: number[] } =
+      facetBuckets.get(key) ?? {
+        dimension,
+        facet: question.facet,
+        values: [],
+      };
     bucket.values.push(adjusted);
     facetBuckets.set(key, bucket);
   }
