@@ -54,7 +54,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       db
         .from("assessment_questions")
         .select(
-          "id,dimension_id,prompt,question_type,sort_order,required,allow_evidence,min_value,max_value,allow_not_observed",
+          "id,dimension_id,prompt,question_type,sort_order,required,allow_evidence,min_value,max_value,allow_not_observed,options",
         )
         .eq("template_id", assignment.template_id)
         .order("sort_order"),
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const { data: question, error: questionError } = await db
       .from("assessment_questions")
       .select(
-        "id,question_type,required,allow_evidence,min_value,max_value,allow_not_observed",
+        "id,question_type,required,allow_evidence,min_value,max_value,allow_not_observed,options",
       )
       .eq("id", body.question_id)
       .eq("template_id", assignment.template_id)
@@ -217,6 +217,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     }
 
+    if (question.question_type === "choice") {
+      numericValue = Number(body.numeric_value);
+      const optionCount = Array.isArray(question.options)
+        ? question.options.length
+        : 0;
+
+      if (
+        !Number.isInteger(numericValue) ||
+        numericValue < 1 ||
+        numericValue > optionCount
+      ) {
+        return errorResponse("Selecciona una opción válida.", 400);
+      }
+    }
+
     if (question.question_type === "text" && question.required && !textValue) {
       return errorResponse("Esta respuesta es obligatoria.", 400);
     }
@@ -238,7 +253,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         assignment_id: assignment.id,
         question_id: question.id,
         numeric_value:
-          question.question_type === "scale" && !isNotObserved
+          ["scale", "choice"].includes(question.question_type) && !isNotObserved
             ? numericValue
             : null,
         text_value: question.question_type === "text" ? textValue : null,
@@ -304,6 +319,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
           response.numeric_value !== null ||
           (response.is_not_observed && question.allow_not_observed)
         );
+      }
+
+      if (question.question_type === "choice") {
+        return response.numeric_value === null;
       }
 
       return !(

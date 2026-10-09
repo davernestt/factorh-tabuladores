@@ -109,6 +109,10 @@ async function PsychometricReportContent({ params }: PageProps) {
     redirect(`/protected/psicometrias/${id}/necesidades`);
   }
 
+  if (templateR.data.assessment_type === "psychometric_reasoning") {
+    redirect(`/protected/psicometrias/${id}/razonamiento`);
+  }
+
   if (templateR.data.assessment_type !== "psychometric_vector") {
     notFound();
   }

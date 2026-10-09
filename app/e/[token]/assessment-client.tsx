@@ -27,13 +27,14 @@ type Question = {
   id: string;
   dimension_id: string | null;
   prompt: string;
-  question_type: "scale" | "text";
+  question_type: "scale" | "text" | "choice";
   sort_order: number;
   required: boolean;
   allow_evidence: boolean;
   min_value: number | string | null;
   max_value: number | string | null;
   allow_not_observed: boolean;
+  options: string[] | null;
 };
 
 type StoredResponse = {
@@ -173,20 +174,23 @@ export default function AssessmentClient({ token }: { token: string }) {
     void loadAssessment();
   }, [token]);
 
-  const scaleQuestions = useMemo(
-    () => data?.questions.filter((question) => question.question_type === "scale") ?? [],
+  const scoredQuestions = useMemo(
+    () =>
+      data?.questions.filter((question) =>
+        ["scale", "choice"].includes(question.question_type),
+      ) ?? [],
     [data],
   );
 
-  const answeredScale = useMemo(
-    () => scaleQuestions.filter((question) => savedQuestionIds.has(question.id)).length,
-    [savedQuestionIds, scaleQuestions],
+  const answeredScored = useMemo(
+    () => scoredQuestions.filter((question) => savedQuestionIds.has(question.id)).length,
+    [savedQuestionIds, scoredQuestions],
   );
 
   const progress =
-    scaleQuestions.length === 0
+    scoredQuestions.length === 0
       ? 0
-      : Math.round((answeredScale / scaleQuestions.length) * 100);
+      : Math.round((answeredScored / scoredQuestions.length) * 100);
 
   const relationship = data?.assignment.relationship_type ?? "self";
   const isExternalEvaluator = relationship !== "self";
@@ -194,6 +198,8 @@ export default function AssessmentClient({ token }: { token: string }) {
   const isInterview = relationship === "interviewer";
   const isVectorConductual = data?.template.assessment_type === "psychometric_vector";
   const isNeedsAssessment = data?.template.assessment_type === "psychometric_needs";
+  const isReasoningAssessment =
+    data?.template.assessment_type === "psychometric_reasoning";
   const isPsychometric = Boolean(data?.template.assessment_type?.startsWith("psychometric_"));
   const scaleLabels = isVectorConductual
     ? vectorScaleLabels
@@ -275,9 +281,9 @@ export default function AssessmentClient({ token }: { token: string }) {
       return;
     }
 
-    if (answeredScale < scaleQuestions.length) {
+    if (answeredScored < scoredQuestions.length) {
       setMessage(
-        `Aún faltan ${scaleQuestions.length - answeredScale} respuestas guardadas.`,
+        `Aún faltan ${scoredQuestions.length - answeredScored} respuestas guardadas.`,
       );
       return;
     }
@@ -429,7 +435,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                 <Info label={isExternalEvaluator ? "Persona evaluada" : "Participante"} value={evaluatedName} />
                 <Info label="Puesto" value={data.person.job_title ?? "No especificado"} />
                 <Info label="Área" value={data.person.area ?? "No especificada"} />
-                <Info label="Reactivos calificables" value={String(scaleQuestions.length)} />
+                <Info label="Reactivos calificables" value={String(scoredQuestions.length)} />
               </div>
 
               <div className="mt-8">
@@ -441,7 +447,9 @@ export default function AssessmentClient({ token }: { token: string }) {
                     ? "No hay respuestas correctas o incorrectas. Responde pensando en cómo actúas habitualmente en el trabajo, no en cómo crees que deberías actuar. Procura usar toda la escala cuando corresponda y contesta de manera espontánea."
                     : isNeedsAssessment
                       ? "No hay respuestas buenas o malas. Responde según qué tan importante es cada condición para mantenerte motivado en el trabajo, no según lo que creas que una empresa espera escuchar."
-                      : isManagerEvaluation
+                      : isReasoningAssessment
+                        ? "Cada reactivo tiene una sola respuesta correcta. Responde sin apoyo externo y elige la opción que consideres más lógica. Si una pregunta te toma demasiado tiempo, selecciona tu mejor respuesta y continúa. Tiempo sugerido: 30 minutos."
+                        : isManagerEvaluation
                       ? "Califica únicamente conductas que hayas observado directamente o sobre las que tengas evidencia suficiente. Evita valorar simpatía o afinidad personal; concéntrate en conductas de liderazgo y gestión."
                       : isInterview
                         ? "Registra ejemplos reales y recientes. Profundiza en qué ocurrió, qué hizo la persona, qué resultado obtuvo y qué haría diferente. Separa los hechos observados de tu interpretación y califica al final de cada dimensión."
@@ -449,19 +457,25 @@ export default function AssessmentClient({ token }: { token: string }) {
                 </p>
               </div>
 
-              <div className="mt-6 grid gap-2">
-                {scaleLabels.map((label, index) => (
-                  <div
-                    key={label}
-                    className="flex gap-3 rounded-xl border border-neutral-200 px-4 py-3"
-                  >
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-sm font-bold text-white">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm text-neutral-700">{label}</span>
-                  </div>
-                ))}
-              </div>
+              {isReasoningAssessment ? (
+                <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">
+                  <strong className="text-neutral-900">Formato:</strong> 30 reactivos de opción múltiple · 5 áreas de razonamiento · tiempo sugerido 30 minutos.
+                </div>
+              ) : (
+                <div className="mt-6 grid gap-2">
+                  {scaleLabels.map((label, index) => (
+                    <div
+                      key={label}
+                      className="flex gap-3 rounded-xl border border-neutral-200 px-4 py-3"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-sm font-bold text-white">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm text-neutral-700">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <button
                 onClick={() => setStarted(true)}
@@ -482,18 +496,24 @@ export default function AssessmentClient({ token }: { token: string }) {
     (question) => question.dimension_id === null,
   );
 
-  const psychometricBlockSize = isNeedsAssessment ? 15 : 16;
+  const psychometricBlockSize = isReasoningAssessment
+    ? 10
+    : isNeedsAssessment
+      ? 15
+      : 16;
   const displaySections = isPsychometric
     ? Array.from(
-        { length: Math.ceil(scaleQuestions.length / psychometricBlockSize) },
+        { length: Math.ceil(scoredQuestions.length / psychometricBlockSize) },
         (_, index) => ({
           id: `psychometric-block-${index + 1}`,
           sort_order: index + 1,
-          name: `Bloque ${index + 1} de ${Math.ceil(scaleQuestions.length / psychometricBlockSize)}`,
-          description: isNeedsAssessment
-            ? "Marca qué tan importante es cada condición para tu motivación laboral."
-            : "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar.",
-          questions: scaleQuestions.slice(
+          name: `Bloque ${index + 1} de ${Math.ceil(scoredQuestions.length / psychometricBlockSize)}`,
+          description: isReasoningAssessment
+            ? "Selecciona una sola respuesta en cada reactivo."
+            : isNeedsAssessment
+              ? "Marca qué tan importante es cada condición para tu motivación laboral."
+              : "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar.",
+          questions: scoredQuestions.slice(
             index * psychometricBlockSize,
             index * psychometricBlockSize + psychometricBlockSize,
           ),
@@ -523,7 +543,7 @@ export default function AssessmentClient({ token }: { token: string }) {
             </div>
             <div className="text-right">
               <div className="text-sm font-bold text-neutral-900">
-                {answeredScale}/{scaleQuestions.length}
+                {answeredScored}/{scoredQuestions.length}
               </div>
               <div className="text-xs text-neutral-500">{progress}% completado</div>
             </div>
@@ -615,6 +635,52 @@ export default function AssessmentClient({ token }: { token: string }) {
                               Guardando...
                             </div>
                           )}
+                        </div>
+                      );
+                    }
+
+                    if (question.question_type === "choice") {
+                      const options = question.options ?? [];
+                      return (
+                        <div
+                          key={question.id}
+                          className="border-b border-neutral-100 pb-6 last:border-0 last:pb-0"
+                        >
+                          <p className="font-medium leading-relaxed text-neutral-900">
+                            {question.prompt}
+                          </p>
+                          <div className="mt-4 grid gap-2">
+                            {options.map((option, index) => {
+                              const value = index + 1;
+                              const selected = response.numeric_value === value;
+                              return (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  onClick={() =>
+                                    void saveAnswer(question, {
+                                      numeric_value: value,
+                                      text_value: "",
+                                      is_not_observed: false,
+                                    })
+                                  }
+                                  className={
+                                    selected
+                                      ? "rounded-xl border border-orange-500 bg-orange-50 px-4 py-3 text-left text-sm font-bold text-orange-800"
+                                      : "rounded-xl border border-neutral-300 bg-white px-4 py-3 text-left text-sm font-medium text-neutral-700 transition hover:border-orange-400 hover:bg-orange-50"
+                                  }
+                                >
+                                  <span className="mr-2 text-neutral-400">
+                                    {String.fromCharCode(65 + index)}.
+                                  </span>
+                                  {option}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-2 text-right text-xs text-neutral-400">
+                            {savingQuestion === question.id ? "Guardando..." : " "}
+                          </div>
                         </div>
                       );
                     }
@@ -731,12 +797,12 @@ export default function AssessmentClient({ token }: { token: string }) {
             <div>
               <h2 className="text-xl font-bold">Finalizar evaluación</h2>
               <p className="mt-1 text-sm text-neutral-300">
-                Debes responder y guardar los {scaleQuestions.length} reactivos calificables.
+                Debes responder y guardar los {scoredQuestions.length} reactivos calificables.
               </p>
             </div>
             <button
               type="button"
-              disabled={finishing || Boolean(savingQuestion) || answeredScale < scaleQuestions.length}
+              disabled={finishing || Boolean(savingQuestion) || answeredScored < scoredQuestions.length}
               onClick={() => void completeAssessment()}
               className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white transition enabled:hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
