@@ -9,8 +9,11 @@ import {
 } from "@/lib/psychometric-integral";
 import {
   ScoreColumnChart,
+  ScoreDotPlot,
+  ScoreRadarChart,
   ScoreRing,
 } from "../../report-ui";
+import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
 
 type PageProps = { params: Promise<{ processId: string }> };
 
@@ -231,15 +234,106 @@ async function IntegralReportContent({ params }: PageProps) {
     .sort((a, b) => b.value - a.value)
     .slice(0, 7);
 
+  const instrumentViews = instruments.map((instrument, index) => {
+    const ranked = [...instrument.dimensions].sort((a, b) => b.value - a.value);
+    const top = ranked.slice(0, 2);
+    const low = [...ranked].reverse().slice(0, 2);
+    const chart =
+      ["psychometric_vector", "psychometric_social_leadership", "psychometric_integrity", "psychometric_bigfive"].includes(
+        instrument.assessmentType,
+      )
+        ? "radar"
+        : instrument.assessmentType === "psychometric_attention"
+          ? "dots"
+          : "columns";
+
+    return {
+      ...instrument,
+      assignmentId: psychometricAssignments[index]?.id ?? "",
+      chart,
+      top,
+      low,
+      summary: [
+        "Dentro de esta prueba, las dimensiones relativamente más altas son " +
+          top.map((item) => item.name).join(" y ") +
+          ".",
+        "Las dimensiones relativamente más bajas son " +
+          low.map((item) => item.name).join(" y ") +
+          ". Su relevancia depende de las exigencias reales del puesto y debe contrastarse con entrevista.",
+      ],
+    };
+  });
+
+  const exportData: PsychometricExportData = {
+    title: "Reporte Psicométrico Integral",
+    subtitle:
+      "Síntesis ejecutiva y acumulado de resultados individuales del proceso",
+    personName,
+    jobTitle: person.job_title,
+    area: person.area,
+    organizationName: organizationR.data.name,
+    processName: processR.data.name,
+    reportDate: completedDate,
+    executiveSummary: analysis.executiveSummary,
+    keyFindings: analysis.convergences,
+    cautions: analysis.tensions,
+    interviewQuestions: analysis.interviewQuestions,
+    closing: analysis.closing,
+    instruments: instrumentViews.map((instrument) => ({
+      name: instrument.name,
+      subtitle:
+        "Resultado individual incluido dentro del reporte psicométrico integral.",
+      chart: instrument.chart,
+      overallLabel:
+        ["psychometric_reasoning", "psychometric_attention"].includes(
+          instrument.assessmentType,
+        )
+          ? "Resultado global"
+          : undefined,
+      overallDisplay:
+        ["psychometric_reasoning", "psychometric_attention"].includes(
+          instrument.assessmentType,
+        ) && instrument.overall !== null && instrument.overall !== undefined
+          ? Math.round(instrument.overall) + "%"
+          : undefined,
+      summary: instrument.summary,
+      highlights: instrument.top.map(
+        (item) => item.name + ": " + Math.round(item.value),
+      ),
+      watchouts: instrument.low.map(
+        (item) => item.name + ": " + Math.round(item.value),
+      ),
+      dimensions: instrument.dimensions.map((item) => ({
+        name: item.name,
+        value: item.value,
+        displayValue:
+          ["psychometric_reasoning", "psychometric_attention"].includes(
+            instrument.assessmentType,
+          )
+            ? Math.round(item.value) + "%"
+            : String(Math.round(item.value)),
+        narrative:
+          "Este resultado muestra la posición de la dimensión dentro de la prueba y debe interpretarse junto con el patrón general del instrumento.",
+      })),
+    })),
+  };
+
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/protected/psicometrias?view=personas" className="text-sm font-bold text-neutral-500 hover:text-orange-600">
           ← Volver a Personas y resultados
         </Link>
-        <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-bold text-white">
-          Reporte psicométrico integral
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <PsychometricExportActions
+            fileName={`Reporte-Psicometrico-Integral-${personName}`}
+            data={exportData}
+            integral
+          />
+          <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-bold text-white">
+            Reporte psicométrico integral
+          </span>
+        </div>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
@@ -362,6 +456,110 @@ async function IntegralReportContent({ params }: PageProps) {
                   {section.watchouts.map((item) => <p key={item} className="text-sm leading-6 text-neutral-700">• {item}</p>)}
                 </div>
               </div>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="space-y-5">
+        <div>
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+            Anexo de resultados individuales
+          </div>
+          <h2 className="mt-2 text-3xl font-black text-neutral-900">
+            Reportes de cada prueba aplicada
+          </h2>
+          <p className="mt-2 max-w-4xl text-sm leading-6 text-neutral-500">
+            Después de la síntesis integral se presentan los resultados de cada instrumento para que el reclutador o gerente pueda revisar el detalle sin salir de este reporte.
+          </p>
+        </div>
+
+        {instrumentViews.map((instrument, index) => (
+          <article
+            key={instrument.assignmentId || instrument.name}
+            className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+                  Prueba {index + 1} de {instrumentViews.length}
+                </div>
+                <h3 className="mt-2 text-2xl font-black text-neutral-900">
+                  {instrument.name}
+                </h3>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
+                  {instrument.summary[0]}
+                </p>
+              </div>
+              {instrument.assignmentId && (
+                <Link
+                  href={`/protected/psicometrias/${instrument.assignmentId}`}
+                  className="rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-bold text-neutral-700 hover:bg-neutral-50"
+                >
+                  Abrir reporte individual
+                </Link>
+              )}
+            </div>
+
+            <div className="mt-6 grid gap-5 xl:grid-cols-[1.1fr_.9fr]">
+              <div className="rounded-2xl bg-neutral-50 p-5">
+                {instrument.chart === "radar" ? (
+                  <ScoreRadarChart
+                    title="Mapa visual"
+                    items={instrument.dimensions.map((item) => ({ label: item.name, value: item.value }))}
+                  />
+                ) : instrument.chart === "dots" ? (
+                  <ScoreDotPlot
+                    title="Perfil por dimensión"
+                    items={instrument.dimensions.map((item) => ({ label: item.name, value: item.value }))}
+                  />
+                ) : (
+                  <ScoreColumnChart
+                    title="Resultado por dimensión"
+                    items={instrument.dimensions.map((item) => ({ label: item.name, value: item.value }))}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl bg-emerald-50 p-5">
+                  <div className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                    Resultados relativamente más altos
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {instrument.top.map((item) => (
+                      <p key={item.name} className="text-sm leading-6 text-neutral-700">
+                        • {item.name}: <strong>{Math.round(item.value)}</strong>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-amber-50 p-5">
+                  <div className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                    Puntos para profundizar
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {instrument.low.map((item) => (
+                      <p key={item.name} className="text-sm leading-6 text-neutral-700">
+                        • {item.name}: <strong>{Math.round(item.value)}</strong>
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {instrument.dimensions.map((item) => (
+                <div key={item.name} className="rounded-2xl border border-neutral-200 p-4">
+                  <div className="text-sm font-black text-neutral-900">{item.name}</div>
+                  <div className="mt-1 text-2xl font-black text-orange-600">
+                    {["psychometric_reasoning", "psychometric_attention"].includes(instrument.assessmentType)
+                      ? Math.round(item.value) + "%"
+                      : Math.round(item.value)}
+                  </div>
+                </div>
+              ))}
             </div>
           </article>
         ))}
