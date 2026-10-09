@@ -1,0 +1,410 @@
+import Link from "next/link";
+import { Suspense } from "react";
+import { notFound, redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import {
+  analyzeIntegralPsychometrics,
+  type IntegralInstrument,
+} from "@/lib/psychometric-integral";
+import {
+  ScoreColumnChart,
+  ScoreRing,
+} from "../../report-ui";
+
+type PageProps = { params: Promise<{ processId: string }> };
+
+type Assignment = {
+  id: string;
+  status: string;
+  template_id: string;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+};
+
+type Template = {
+  id: string;
+  name: string;
+  assessment_type: string;
+};
+
+type ResultRow = {
+  assignment_id: string;
+  dimension_id: string;
+  score: number | string;
+  percentage: number | string;
+};
+
+type Dimension = {
+  id: string;
+  template_id: string;
+  name: string;
+  sort_order: number;
+};
+
+export default function IntegralPsychometricReportPage(props: PageProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
+          <p className="text-neutral-600">Integrando resultados psicométricos...</p>
+        </div>
+      }
+    >
+      <IntegralReportContent {...props} />
+    </Suspense>
+  );
+}
+
+async function IntegralReportContent({ params }: PageProps) {
+  const auth = await createClient();
+  const { data: authData, error: authError } = await auth.auth.getClaims();
+  if (authError || !authData?.claims) redirect("/auth/login");
+
+  const { processId } = await params;
+  const db = createAdminClient();
+
+  const processR = await db
+    .from("assessment_processes")
+    .select("id,name,person_id,organization_id,created_at")
+    .eq("id", processId)
+    .maybeSingle();
+
+  if (processR.error) return <ErrorCard message={processR.error.message} />;
+  if (!processR.data) notFound();
+
+  const assignmentsR = await db
+    .from("assessment_assignments")
+    .select("id,status,template_id,created_at,started_at,completed_at")
+    .eq("process_id", processId)
+    .order("created_at");
+
+  if (assignmentsR.error) return <ErrorCard message={assignmentsR.error.message} />;
+
+  const assignments = (assignmentsR.data ?? []) as Assignment[];
+  const templateIds = Array.from(new Set(assignments.map((item) => item.template_id)));
+
+  const templatesR = templateIds.length
+    ? await db
+        .from("assessment_templates")
+        .select("id,name,assessment_type")
+        .in("id", templateIds)
+    : { data: [], error: null };
+
+  if (templatesR.error) return <ErrorCard message={templatesR.error.message} />;
+
+  const templates = (templatesR.data ?? []) as Template[];
+  const templateById = new Map(templates.map((item) => [item.id, item]));
+  const psychometricAssignments = assignments.filter((assignment) =>
+    templateById.get(assignment.template_id)?.assessment_type.startsWith("psychometric_"),
+  );
+
+  if (!psychometricAssignments.length) notFound();
+
+  const [personR, organizationR] = await Promise.all([
+    db
+      .from("people")
+      .select("id,first_name,last_name,job_title,area")
+      .eq("id", processR.data.person_id)
+      .single(),
+    db
+      .from("organizations")
+      .select("id,name")
+      .eq("id", processR.data.organization_id)
+      .single(),
+  ]);
+
+  if (personR.error || organizationR.error) {
+    return <ErrorCard message={personR.error?.message ?? organizationR.error?.message ?? "Error"} />;
+  }
+
+  const completedCount = psychometricAssignments.filter((item) => item.status === "completed").length;
+  const allCompleted = completedCount === psychometricAssignments.length;
+
+  if (!allCompleted) {
+    const personName = `${personR.data.first_name.trim()} ${personR.data.last_name ?? ""}`.trim();
+    return (
+      <div className="space-y-7">
+        <Link href="/protected/psicometrias?view=personas" className="text-sm font-bold text-neutral-500 hover:text-orange-600">
+          ← Volver a Personas y resultados
+        </Link>
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-8">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">Reporte integral</div>
+          <h1 className="mt-2 text-2xl font-black text-amber-900">{personName}</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-amber-900">
+            El reporte integral estará disponible cuando finalicen todas las psicometrías de este proceso.
+            Actualmente hay {completedCount} de {psychometricAssignments.length} concluidas.
+          </p>
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-amber-100">
+            <div
+              className="h-full rounded-full bg-amber-500"
+              style={{ width: `${Math.round((completedCount / psychometricAssignments.length) * 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const assignmentIds = psychometricAssignments.map((item) => item.id);
+  const psychometricTemplateIds = Array.from(new Set(psychometricAssignments.map((item) => item.template_id)));
+
+  const [resultsR, dimensionsR] = await Promise.all([
+    db
+      .from("assessment_results")
+      .select("assignment_id,dimension_id,score,percentage")
+      .in("assignment_id", assignmentIds),
+    db
+      .from("assessment_dimensions")
+      .select("id,template_id,name,sort_order")
+      .in("template_id", psychometricTemplateIds)
+      .order("sort_order"),
+  ]);
+
+  if (resultsR.error || dimensionsR.error) {
+    return <ErrorCard message={resultsR.error?.message ?? dimensionsR.error?.message ?? "Error"} />;
+  }
+
+  const results = (resultsR.data ?? []) as ResultRow[];
+  const dimensions = (dimensionsR.data ?? []) as Dimension[];
+  const dimensionById = new Map(dimensions.map((item) => [item.id, item]));
+
+  const instruments: IntegralInstrument[] = psychometricAssignments.map((assignment) => {
+    const template = templateById.get(assignment.template_id);
+    const objective = ["psychometric_reasoning", "psychometric_attention"].includes(
+      template?.assessment_type ?? "",
+    );
+
+    const dimensionResults = results
+      .filter((row) => row.assignment_id === assignment.id)
+      .map((row) => {
+        const dimension = dimensionById.get(row.dimension_id);
+        const value = objective
+          ? Number(row.percentage)
+          : scaleIndex(Number(row.score));
+        return {
+          name: dimension?.name ?? "Dimensión",
+          value,
+        };
+      });
+
+    return {
+      assessmentType: template?.assessment_type ?? "psychometric",
+      name: template?.name ?? "Psicometría",
+      dimensions: dimensionResults,
+      overall: dimensionResults.length
+        ? dimensionResults.reduce((sum, item) => sum + item.value, 0) / dimensionResults.length
+        : null,
+    };
+  });
+
+  const analysis = analyzeIntegralPsychometrics(instruments);
+  const person = personR.data;
+  const personName = `${person.first_name.trim()} ${person.last_name ?? ""}`.trim();
+  const completedAt = psychometricAssignments
+    .map((item) => item.completed_at)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  const completedDate = completedAt
+    ? new Intl.DateTimeFormat("es-MX", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(completedAt))
+    : "—";
+
+  const performance = instruments.filter((item) =>
+    ["psychometric_reasoning", "psychometric_attention"].includes(item.assessmentType),
+  );
+  const scaleSignals = instruments
+    .filter((item) => !["psychometric_reasoning", "psychometric_attention"].includes(item.assessmentType))
+    .flatMap((instrument) =>
+      instrument.dimensions.map((item) => ({
+        label: item.name,
+        value: item.value,
+        source: instrument.name,
+      })),
+    )
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 7);
+
+  return (
+    <div className="space-y-7">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/protected/psicometrias?view=personas" className="text-sm font-bold text-neutral-500 hover:text-orange-600">
+          ← Volver a Personas y resultados
+        </Link>
+        <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-bold text-white">
+          Reporte psicométrico integral
+        </span>
+      </div>
+
+      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
+        <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">
+          FactorRH · Síntesis ejecutiva
+        </div>
+        <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
+          <div>
+            <h1 className="text-3xl font-black md:text-4xl">{analysis.headline}</h1>
+            <p className="mt-3 max-w-3xl text-neutral-300">
+              Integración de los resultados obtenidos en {instruments.length} {instruments.length === 1 ? "instrumento" : "instrumentos"} del proceso {processR.data.name}.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-neutral-700 bg-neutral-800 p-5">
+            <div className="text-xs font-bold uppercase tracking-wide text-orange-300">Persona evaluada</div>
+            <div className="mt-2 text-xl font-black">{personName}</div>
+            <div className="mt-1 text-sm text-neutral-300">
+              {[person.job_title, person.area].filter(Boolean).join(" · ") || "Sin puesto registrado"}
+            </div>
+            <div className="mt-1 text-sm text-neutral-400">{organizationR.data.name}</div>
+          </div>
+        </div>
+      </header>
+
+      <section className="grid gap-4 sm:grid-cols-3">
+        <Metric label="Pruebas integradas" value={String(instruments.length)} />
+        <Metric label="Proceso" value={processR.data.name} compact />
+        <Metric label="Cierre" value={completedDate} compact />
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Resumen ejecutivo</div>
+        <h2 className="mt-2 text-3xl font-black text-neutral-900">Lectura integrada del perfil</h2>
+        <div className="mt-5 space-y-4 text-sm leading-7 text-neutral-700">
+          {analysis.executiveSummary.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        </div>
+      </section>
+
+      {(performance.length > 0 || scaleSignals.length > 0) && (
+        <section className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
+          {performance.length > 0 ? (
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Pruebas de desempeño</div>
+              <h2 className="mt-2 text-xl font-black text-neutral-900">Resultados objetivos</h2>
+              <div className="mt-5 grid gap-6 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                {performance.map((instrument) => (
+                  <ScoreRing
+                    key={instrument.assessmentType}
+                    value={instrument.overall ?? 0}
+                    label={instrument.assessmentType === "psychometric_reasoning" ? "Razonamiento" : "Atención"}
+                    caption={instrument.name}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="hidden xl:block" />
+          )}
+
+          {scaleSignals.length > 0 && (
+            <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <ScoreColumnChart
+                title="Tendencias relativamente más marcadas"
+                items={scaleSignals.map((item) => ({ label: item.label, value: item.value }))}
+              />
+              <p className="mt-3 text-xs leading-5 text-neutral-400">
+                Los índices pertenecen a instrumentos distintos y se muestran para facilitar la lectura de intensidad relativa; no constituyen una calificación global.
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {analysis.convergences.length > 0 && (
+        <section className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 md:p-8">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-emerald-700">Convergencias entre pruebas</div>
+          <h2 className="mt-2 text-2xl font-black text-emerald-950">Patrones que se repiten</h2>
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {analysis.convergences.map((item) => (
+              <div key={item} className="rounded-2xl bg-white/75 p-4 text-sm leading-6 text-emerald-950">{item}</div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {analysis.tensions.length > 0 && (
+        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 md:p-8">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">Contrastes a explorar</div>
+          <h2 className="mt-2 text-2xl font-black text-amber-950">Dónde conviene profundizar</h2>
+          <div className="mt-5 grid gap-3 lg:grid-cols-2">
+            {analysis.tensions.map((item) => (
+              <div key={item} className="rounded-2xl bg-white/75 p-4 text-sm leading-6 text-amber-950">{item}</div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-5">
+        {analysis.sections.map((section, index) => (
+          <article key={section.title} className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+                  Lectura {String(index + 1).padStart(2, "0")}
+                </div>
+                <h2 className="mt-2 text-2xl font-black text-neutral-900">{section.title}</h2>
+              </div>
+            </div>
+            <p className="mt-4 max-w-5xl text-sm leading-7 text-neutral-700">{section.summary}</p>
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl bg-emerald-50 p-5">
+                <div className="text-xs font-bold uppercase tracking-wide text-emerald-700">Elementos destacados</div>
+                <div className="mt-3 space-y-2">
+                  {section.highlights.map((item) => <p key={item} className="text-sm leading-6 text-neutral-700">• {item}</p>)}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-neutral-50 p-5">
+                <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">Puntos para validar</div>
+                <div className="mt-3 space-y-2">
+                  {section.watchouts.map((item) => <p key={item} className="text-sm leading-6 text-neutral-700">• {item}</p>)}
+                </div>
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Guía para entrevista</div>
+        <h2 className="mt-2 text-2xl font-black text-neutral-900">Preguntas de profundización sugeridas</h2>
+        <p className="mt-2 max-w-4xl text-sm leading-6 text-neutral-500">
+          Estas preguntas convierten los hallazgos psicométricos en evidencia conductual: el objetivo es pedir ejemplos, decisiones y resultados reales.
+        </p>
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {analysis.interviewQuestions.map((item) => (
+            <div key={item} className="rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">{item}</div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
+        <strong className="text-neutral-800">Cierre ejecutivo.</strong> {analysis.closing}
+      </section>
+    </div>
+  );
+}
+
+function scaleIndex(score: number) {
+  return Math.max(0, Math.min(100, Math.round(((score - 1) / 4) * 100)));
+}
+
+function Metric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+      <div className="text-xs font-bold uppercase tracking-wide text-neutral-400">{label}</div>
+      <div className={compact ? "mt-2 text-lg font-black leading-tight text-neutral-900" : "mt-2 text-3xl font-black text-neutral-900"}>{value}</div>
+    </div>
+  );
+}
+
+function ErrorCard({ message }: { message: string }) {
+  return (
+    <div className="rounded-3xl border border-red-200 bg-red-50 p-7">
+      <h1 className="font-bold text-red-800">No fue posible generar el reporte integral</h1>
+      <p className="mt-2 text-sm text-red-700">{message}</p>
+    </div>
+  );
+}
