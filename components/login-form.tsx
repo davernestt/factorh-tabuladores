@@ -20,15 +20,24 @@ export function LoginForm({
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
   const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<"error" | "success">("error");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const error = params.get("error");
-    if (error === "unauthorized") {
+    const setup = params.get("setup");
+
+    if (setup === "success") {
+      setMessageType("success");
+      setMessage("Contraseña creada correctamente. Ya puedes iniciar sesión con tu cuenta.");
+    } else if (error === "unauthorized") {
+      setMessageType("error");
       setMessage("Esta cuenta no tiene autorización activa para entrar a la plataforma.");
     } else if (error === "invalid_credentials") {
+      setMessageType("error");
       setMessage("Correo o contraseña incorrectos.");
     } else if (error === "login_failed") {
+      setMessageType("error");
       setMessage("No fue posible iniciar sesión. Intenta nuevamente.");
     }
   }, []);
@@ -53,7 +62,13 @@ export function LoginForm({
           <form action="/api/auth/login" method="post">
             <div className="flex flex-col gap-6">
               {message && (
-                <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                <p
+                  className={
+                    messageType === "success"
+                      ? "rounded-lg bg-emerald-50 p-3 text-sm font-medium text-emerald-700"
+                      : "rounded-lg bg-red-50 p-3 text-sm text-red-700"
+                  }
+                >
                   {message}
                 </p>
               )}
