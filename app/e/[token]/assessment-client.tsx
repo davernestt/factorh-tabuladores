@@ -122,6 +122,14 @@ const needsScaleLabels = [
   "Es muy importante para mí",
 ];
 
+const psychometricAgreementLabels = [
+  "Totalmente en desacuerdo",
+  "En desacuerdo",
+  "Ni de acuerdo ni en desacuerdo",
+  "De acuerdo",
+  "Totalmente de acuerdo",
+];
+
 export default function AssessmentClient({ token }: { token: string }) {
   const [data, setData] = useState<AssessmentData | null>(null);
   const [responses, setResponses] = useState<Record<string, LocalResponse>>({});
@@ -200,12 +208,23 @@ export default function AssessmentClient({ token }: { token: string }) {
   const isNeedsAssessment = data?.template.assessment_type === "psychometric_needs";
   const isReasoningAssessment =
     data?.template.assessment_type === "psychometric_reasoning";
+  const isAttentionAssessment =
+    data?.template.assessment_type === "psychometric_attention";
+  const isObjectiveAssessment =
+    isReasoningAssessment || isAttentionAssessment;
   const isPsychometric = Boolean(data?.template.assessment_type?.startsWith("psychometric_"));
+  const isGenericPsychometricScale =
+    isPsychometric &&
+    !isVectorConductual &&
+    !isNeedsAssessment &&
+    !isObjectiveAssessment;
   const scaleLabels = isVectorConductual
     ? vectorScaleLabels
     : isNeedsAssessment
       ? needsScaleLabels
-      : isManagerEvaluation
+      : isGenericPsychometricScale
+        ? psychometricAgreementLabels
+        : isManagerEvaluation
       ? managerScaleLabels
       : isInterview
         ? interviewScaleLabels
@@ -449,7 +468,13 @@ export default function AssessmentClient({ token }: { token: string }) {
                       ? "No hay respuestas buenas o malas. Responde según qué tan importante es cada condición para mantenerte motivado en el trabajo, no según lo que creas que una empresa espera escuchar."
                       : isReasoningAssessment
                         ? "Cada reactivo tiene una sola respuesta correcta. Responde sin apoyo externo y elige la opción que consideres más lógica. Si una pregunta te toma demasiado tiempo, selecciona tu mejor respuesta y continúa. Tiempo sugerido: 30 minutos."
-                        : isManagerEvaluation
+                        : isAttentionAssessment
+                          ? "Cada reactivo tiene una sola respuesta correcta. Trabaja con atención, evita responder por impulso y verifica bien códigos, reglas y datos antes de elegir. El tiempo total se registra como referencia, pero no es todavía una puntuación normativa de velocidad."
+                          : isGenericPsychometricScale
+                            ? data?.template.assessment_type === "psychometric_integrity"
+                              ? "No hay una respuesta ideal. Contesta según lo que realmente haces o consideras defendible en el trabajo. Este instrumento no detecta mentiras ni sustituye una entrevista de integridad."
+                              : "No hay respuestas correctas o incorrectas. Indica qué tan de acuerdo estás con cada afirmación pensando en tu comportamiento y preferencias habituales en el trabajo."
+                            : isManagerEvaluation
                       ? "Califica únicamente conductas que hayas observado directamente o sobre las que tengas evidencia suficiente. Evita valorar simpatía o afinidad personal; concéntrate en conductas de liderazgo y gestión."
                       : isInterview
                         ? "Registra ejemplos reales y recientes. Profundiza en qué ocurrió, qué hizo la persona, qué resultado obtuvo y qué haría diferente. Separa los hechos observados de tu interpretación y califica al final de cada dimensión."
@@ -457,9 +482,12 @@ export default function AssessmentClient({ token }: { token: string }) {
                 </p>
               </div>
 
-              {isReasoningAssessment ? (
+              {isObjectiveAssessment ? (
                 <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">
-                  <strong className="text-neutral-900">Formato:</strong> 30 reactivos de opción múltiple · 5 áreas de razonamiento · tiempo sugerido 30 minutos.
+                  <strong className="text-neutral-900">Formato:</strong>{" "}
+                  {isReasoningAssessment
+                    ? "30 reactivos de opción múltiple · 5 áreas de razonamiento · tiempo sugerido 30 minutos."
+                    : "30 reactivos de opción múltiple · 5 áreas de atención y precisión."}
                 </div>
               ) : (
                 <div className="mt-6 grid gap-2">
@@ -496,11 +524,13 @@ export default function AssessmentClient({ token }: { token: string }) {
     (question) => question.dimension_id === null,
   );
 
-  const psychometricBlockSize = isReasoningAssessment
+  const psychometricBlockSize = isObjectiveAssessment
     ? 10
     : isNeedsAssessment
       ? 15
-      : 16;
+      : isVectorConductual
+        ? 16
+        : 10;
   const displaySections = isPsychometric
     ? Array.from(
         { length: Math.ceil(scoredQuestions.length / psychometricBlockSize) },
@@ -508,11 +538,13 @@ export default function AssessmentClient({ token }: { token: string }) {
           id: `psychometric-block-${index + 1}`,
           sort_order: index + 1,
           name: `Bloque ${index + 1} de ${Math.ceil(scoredQuestions.length / psychometricBlockSize)}`,
-          description: isReasoningAssessment
+          description: isObjectiveAssessment
             ? "Selecciona una sola respuesta en cada reactivo."
             : isNeedsAssessment
               ? "Marca qué tan importante es cada condición para tu motivación laboral."
-              : "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar.",
+              : isVectorConductual
+                ? "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar."
+                : "Marca qué tan de acuerdo estás con cada afirmación.",
           questions: scoredQuestions.slice(
             index * psychometricBlockSize,
             index * psychometricBlockSize + psychometricBlockSize,

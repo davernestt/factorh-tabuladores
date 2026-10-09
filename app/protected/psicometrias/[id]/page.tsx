@@ -113,6 +113,22 @@ async function PsychometricReportContent({ params }: PageProps) {
     redirect(`/protected/psicometrias/${id}/razonamiento`);
   }
 
+  if (templateR.data.assessment_type === "psychometric_attention") {
+    redirect(`/protected/psicometrias/${id}/atencion`);
+  }
+
+  if (
+    [
+      "psychometric_social_leadership",
+      "psychometric_values",
+      "psychometric_integrity",
+      "psychometric_bigfive",
+      "psychometric_sales",
+    ].includes(templateR.data.assessment_type)
+  ) {
+    redirect(`/protected/psicometrias/${id}/perfil`);
+  }
+
   if (templateR.data.assessment_type !== "psychometric_vector") {
     notFound();
   }

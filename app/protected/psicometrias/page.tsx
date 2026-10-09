@@ -275,10 +275,10 @@ async function PsychometricsContent() {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6">
-        <div className="text-xs font-bold uppercase tracking-[.16em] text-neutral-500">Ruta de desarrollo</div>
-        <h2 className="mt-2 text-xl font-black text-neutral-900">Siguientes instrumentos</h2>
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-neutral-500">Suite inicial FactorRH</div>
+        <h2 className="mt-2 text-xl font-black text-neutral-900">Batería psicométrica en construcción y validación</h2>
         <p className="mt-2 text-sm leading-6 text-neutral-600">
-          Después de Vector Conductual construiremos Mapa de Necesidades Laborales, Razonamiento Laboral General, Adaptabilidad Social y Liderazgo, Valores y Motivadores, Integridad y Criterio Laboral y Personalidad Laboral Big Five.
+          La suite inicial ya contempla conducta, necesidades laborales, razonamiento, adaptabilidad social y liderazgo, valores y motivadores, integridad y criterio, personalidad Big Five, perfil comercial y atención y precisión. Todos los instrumentos propios se mantienen como experimentales hasta contar con evidencia suficiente de confiabilidad, validez y baremos.
         </p>
       </section>
     </div>
