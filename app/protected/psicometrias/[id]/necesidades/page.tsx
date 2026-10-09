@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeNeeds } from "@/lib/necesidades-laborales";
 import { PsychometricTestInfo, ScoreColumnChart } from "../../report-ui";
+import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -161,6 +162,45 @@ async function LaborNeedsReportContent({ params }: PageProps) {
     assignment.completed_at,
   );
 
+  const exportData: PsychometricExportData = {
+    title: templateR.data.name,
+    subtitle: "Perfil motivacional laboral y condiciones que favorecen compromiso",
+    personName,
+    jobTitle: person.job_title,
+    area: person.area,
+    organizationName: organizationR.data.name,
+    processName: processR.data.name,
+    reportDate: completedAt,
+    executiveSummary: analysis.executiveSummary,
+    keyFindings: analysis.topMotivators.map(
+      (item) => item.name + ": " + item.energizes,
+    ),
+    cautions: analysis.retentionRisks,
+    interviewQuestions: analysis.interviewPrompts,
+    closing:
+      "El mapa de necesidades laborales ayuda a comprender qué condiciones pueden sostener energía, compromiso y permanencia. Su utilidad aumenta cuando se contrasta con el diseño real del puesto, el estilo de liderazgo y la entrevista.",
+    instruments: [
+      {
+        name: templateR.data.name,
+        subtitle:
+          "Necesidades y fuentes de motivación relevantes para el contexto de trabajo.",
+        chart: "columns",
+        summary: analysis.executiveSummary,
+        highlights: analysis.managementSuggestions,
+        watchouts: analysis.retentionRisks,
+        dimensions: analysis.dimensions.map((item) => ({
+          name: item.name,
+          value: item.index,
+          displayValue: String(item.index),
+          band: item.band,
+          narrative: item.meaning,
+          potential: item.energizes,
+          watchout: item.frustrates,
+        })),
+      },
+    ],
+  };
+
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -170,9 +210,15 @@ async function LaborNeedsReportContent({ params }: PageProps) {
         >
           ← Volver a Psicometrías
         </Link>
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          Reporte FactorRH
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <PsychometricExportActions
+            fileName={`Reporte-${templateR.data.name}-${personName}`}
+            data={exportData}
+          />
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+            Reporte FactorRH
+          </span>
+        </div>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
