@@ -40,6 +40,7 @@ async function NewPsychometricAssessmentContent() {
     accessResult,
     batteriesResult,
     batteryItemsResult,
+    jobProfilesResult,
   ] = await Promise.all([
     db
       .from("organizations")
@@ -71,6 +72,13 @@ async function NewPsychometricAssessmentContent() {
       .from("assessment_battery_items")
       .select("battery_id,template_id,sort_order")
       .order("sort_order"),
+    db
+      .from("psychometric_job_profiles")
+      .select("id,organization_id,name,family,level,description")
+      .eq("active", true)
+      .order("family")
+      .order("level")
+      .order("name"),
   ]);
 
   const firstError =
@@ -79,7 +87,8 @@ async function NewPsychometricAssessmentContent() {
     templatesResult.error ||
     accessResult.error ||
     batteriesResult.error ||
-    batteryItemsResult.error;
+    batteryItemsResult.error ||
+    jobProfilesResult.error;
 
   if (firstError) {
     return (
@@ -153,6 +162,7 @@ async function NewPsychometricAssessmentContent() {
           templateAccess={psychometricAccess}
           batteries={psychometricBatteries}
           batteryItems={psychometricBatteryItems}
+          jobProfiles={jobProfilesResult.data ?? []}
           scope="psychometrics"
         />
       </div>
