@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeScaleProfile } from "@/lib/psychometric-scale-profiles";
+import { PsychometricTestInfo, ScoreColumnChart, ScoreRadarChart } from "../../report-ui";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -171,6 +172,8 @@ async function ProfileContent({ params }: PageProps) {
         <Metric label="Calidad técnica básica" value={quality.label} compact />
       </section>
 
+      <PsychometricTestInfo assessmentType={templateR.data.assessment_type} />
+
       {quality.flags.length > 0 && (
         <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
           <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">Indicadores de respuesta</div>
@@ -187,6 +190,20 @@ async function ProfileContent({ params }: PageProps) {
         <div className="mt-5 space-y-3 text-sm leading-7 text-neutral-700">
           {analysis.executiveSummary.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
         </div>
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        {["psychometric_social_leadership", "psychometric_integrity", "psychometric_bigfive"].includes(templateR.data.assessment_type) ? (
+          <ScoreRadarChart
+            title="Mapa visual del perfil"
+            items={analysis.dimensions.map((item) => ({ label: item.name, value: item.index }))}
+          />
+        ) : (
+          <ScoreColumnChart
+            title={templateR.data.assessment_type === "psychometric_sales" ? "Perfil comercial visual" : "Prioridades del perfil"}
+            items={analysis.dimensions.map((item) => ({ label: item.name, value: item.index }))}
+          />
+        )}
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
