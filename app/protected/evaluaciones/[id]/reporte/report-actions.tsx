@@ -161,7 +161,7 @@ function buildBrandedPdfPages(data: ReportData, brandLogo: HTMLImageElement) {
     const page = createPdfPage();
     const pageCtx = page.getContext("2d");
     if (!pageCtx) throw new Error("Canvas no disponible.");
-    drawSectionPageHeader(pageCtx, data, "Interpretación por dimensión");
+    drawSectionPageHeader(pageCtx, data, "Interpretación por dimensión", brandLogo);
     let y = 210;
     for (const item of data.dimensions.slice(index, index + 1)) {
       y = drawDimensionCard(pageCtx, item, y);
@@ -174,7 +174,7 @@ function buildBrandedPdfPages(data: ReportData, brandLogo: HTMLImageElement) {
   const strengthsPage = createPdfPage();
   const strengthsCtx = strengthsPage.getContext("2d");
   if (!strengthsCtx) throw new Error("Canvas no disponible.");
-  drawSectionPageHeader(strengthsCtx, data, "Fortalezas, prioridades y riesgos");
+  drawSectionPageHeader(strengthsCtx, data, "Fortalezas, prioridades y riesgos", brandLogo);
   drawStrengthPriorityColumns(strengthsCtx, data, 220);
   drawRisks(strengthsCtx, data.risks, 930);
   drawFooter(strengthsCtx, pageNumber++);
@@ -185,7 +185,7 @@ function buildBrandedPdfPages(data: ReportData, brandLogo: HTMLImageElement) {
       const page = createPdfPage();
       const pageCtx = page.getContext("2d");
       if (!pageCtx) throw new Error("Canvas no disponible.");
-      drawSectionPageHeader(pageCtx, data, "Plan de acción 30 · 60 · 90 días");
+      drawSectionPageHeader(pageCtx, data, "Plan de acción 30 · 60 · 90 días", brandLogo);
       let y = 220;
       for (const item of data.plan.slice(index, index + 2)) {
         y = drawPlanCard(pageCtx, item, index + data.plan.slice(index, index + 2).indexOf(item) + 1, y);
