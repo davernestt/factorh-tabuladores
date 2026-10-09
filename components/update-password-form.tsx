@@ -46,7 +46,12 @@ export function UpdatePasswordForm({
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      router.push("/protected");
+
+      // La liga de invitación inicia sesión temporalmente con la cuenta invitada.
+      // Cerramos esa sesión para no sustituir accidentalmente una sesión
+      // administrativa abierta en el mismo navegador.
+      await supabase.auth.signOut();
+      router.push("/auth/login?setup=success");
       router.refresh();
     } catch (cause: unknown) {
       setError(
@@ -98,7 +103,7 @@ export function UpdatePasswordForm({
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Guardando..." : "Guardar contraseña y entrar"}
+                {isLoading ? "Guardando..." : "Guardar contraseña"}
               </Button>
             </div>
           </form>
