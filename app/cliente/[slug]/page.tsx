@@ -68,7 +68,10 @@ async function ClientPortalContent({
               cerraste la liga de activación, puedes generar una nueva desde aquí.
               <div className="mt-3">
                 <Link
-                  href="/auth/forgot-password"
+                  href={
+                    "/auth/forgot-password?return_to=" +
+                    encodeURIComponent("/cliente/" + organization.slug)
+                  }
                   className="inline-flex rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-600"
                 >
                   Crear o restablecer contraseña
