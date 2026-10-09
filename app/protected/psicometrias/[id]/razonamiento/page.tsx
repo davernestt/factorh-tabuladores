@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeReasoning } from "@/lib/razonamiento-laboral";
+import { PsychometricTestInfo, ScoreColumnChart, ScoreRing } from "../../report-ui";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -218,11 +219,25 @@ async function ReasoningReportContent({ params }: PageProps) {
         <Metric label="Fecha" value={completedAt} compact />
       </section>
 
+      <PsychometricTestInfo assessmentType={templateR.data.assessment_type} />
+
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Lectura ejecutiva</div>
         <h2 className="mt-2 text-3xl font-black text-neutral-900">{analysis.overallBand}</h2>
         <div className="mt-5 space-y-3 text-sm leading-7 text-neutral-700">
           {analysis.executiveSummary.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+        </div>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[.7fr_1.3fr]">
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <ScoreRing value={overallAccuracy} label="Resultado global" caption="Porcentaje total de respuestas correctas" />
+        </div>
+        <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+          <ScoreColumnChart
+            title="Rendimiento por tipo de razonamiento"
+            items={analysis.dimensions.map((item) => ({ label: item.name, value: item.percentage }))}
+          />
         </div>
       </section>
 
