@@ -257,7 +257,11 @@ async function CatalogContent() {
               <div className="mt-5 border-t border-neutral-100 pt-5">
                 {canAssign ? (
                   <Link
-                    href="/protected/nueva-evaluacion"
+                    href={
+                      representative.assessment_type.startsWith("psychometric_")
+                        ? "/protected/psicometrias/nueva?fresh=1"
+                        : "/protected/nueva-evaluacion?fresh=1"
+                    }
                     className="text-sm font-bold text-orange-600 hover:text-orange-700"
                   >
                     Asignar esta evaluación →
