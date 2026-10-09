@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { PsychometricTestInfo, ScoreDotPlot, ScoreRing } from "../../report-ui";
+import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
 
 type PageProps = { params: Promise<{ id: string }> };
 type ResultRow = { dimension_id: string; percentage: number | string };
@@ -91,12 +92,80 @@ async function AttentionReportContent({ params }: PageProps) {
   const ranked = [...dimensions].sort((a,b)=>b.percentage-a.percentage);
   const person = personR.data;
   const personName = (person.first_name.trim() + " " + (person.last_name ?? "")).trim();
+  const completedAt = assignment.completed_at
+    ? new Intl.DateTimeFormat("es-MX", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(assignment.completed_at))
+    : "—";
+
+  const exportData: PsychometricExportData = {
+    title: templateR.data.name,
+    subtitle:
+      "Exactitud en discriminación visual, atención selectiva, seguimiento de reglas, verificación y control de errores",
+    personName,
+    jobTitle: person.job_title,
+    area: person.area,
+    organizationName: organizationR.data.name,
+    processName: "Evaluación psicométrica",
+    reportDate: completedAt,
+    executiveSummary: [
+      "El resultado global muestra el porcentaje de respuestas correctas en tareas breves de atención y precisión.",
+      "Las diferencias por dimensión permiten identificar dónde hubo mayor y menor exactitud relativa y dónde conviene verificar el desempeño con tareas reales del puesto.",
+    ],
+    keyFindings: ranked.slice(0, 2).map(
+      (item) => item.name + ": " + Math.round(item.percentage) + "% de exactitud",
+    ),
+    cautions: [...ranked].reverse().slice(0, 2).map(
+      (item) => item.name + ": " + Math.round(item.percentage) + "%; conviene verificar",
+    ),
+    interviewQuestions: [
+      "Pedir un ejemplo de una tarea real donde un error pequeño pudiera generar una consecuencia importante y explorar cómo verifica su trabajo.",
+      "Preguntar qué método utiliza para revisar información cuando trabaja bajo presión o con alto volumen.",
+    ],
+    closing:
+      "La prueba aporta evidencia sobre exactitud en este formato. Para puestos donde la precisión es crítica conviene complementarla con una muestra de trabajo y revisión de desempeño previo.",
+    instruments: [
+      {
+        name: templateR.data.name,
+        subtitle:
+          "Discriminación visual, atención selectiva, reglas, verificación y control de errores.",
+        chart: "dots",
+        overallLabel: "Exactitud global",
+        overallDisplay: overall + "% · " + correct + "/" + total + " aciertos",
+        summary: [
+          "El resultado global muestra el porcentaje de respuestas correctas en 30 tareas breves de atención y precisión.",
+          "El perfil por dimensión permite observar en qué tipo de tarea existe mayor consistencia relativa.",
+        ],
+        highlights: ranked.slice(0, 2).map(
+          (item) => item.name + ": " + Math.round(item.percentage) + "%",
+        ),
+        watchouts: [...ranked].reverse().slice(0, 2).map(
+          (item) => item.name + ": " + Math.round(item.percentage) + "%",
+        ),
+        dimensions: dimensions.map((item) => ({
+          name: item.name,
+          value: item.percentage,
+          displayValue: Math.round(item.percentage) + "%",
+          narrative:
+            "El porcentaje representa la proporción de respuestas correctas obtenidas en esta dimensión durante la aplicación.",
+        })),
+      },
+    ],
+  };
 
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/protected/psicometrias" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Psicometrías</Link>
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Reporte FactorRH</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <PsychometricExportActions
+            fileName={`Reporte-${templateR.data.name}-${personName}`}
+            data={exportData}
+          />
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Reporte FactorRH</span>
+        </div>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
