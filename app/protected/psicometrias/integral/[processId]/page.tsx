@@ -391,11 +391,8 @@ async function IntegralReportContent({ params }: PageProps) {
     processName: processR.data.name,
     reportDate: completedDate,
     executiveSummary: [
-      objectiveText,
       ...analysis.executiveSummary,
       ...(jobAlignment?.snapshot ?? []),
-      "Para el jefe de la vacante: " + analysis.managerGuidance.supervision,
-      "Bajo presión: " + analysis.managerGuidance.pressure,
     ],
     objectiveText,
     battery: batteryRows,
