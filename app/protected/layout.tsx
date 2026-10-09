@@ -1,6 +1,7 @@
 import { AuthButton } from "@/components/auth-button";
 import FactoRHLogo from "@/components/factorh-logo";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -33,6 +34,38 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   if (!appUser) redirect("/auth/login");
 
   const isClient = appUser.role === "client";
+
+  let expiryNotices: Array<{
+    module_key: string;
+    ends_on: string;
+    days_remaining: number;
+  }> = [];
+  let moduleNameByKey = new Map<string, string>();
+
+  if (isClient && appUser.organizationId) {
+    const db = createAdminClient();
+    const [noticesR, modulesR] = await Promise.all([
+      db
+        .from("module_expiry_reminders")
+        .select("module_key,ends_on,days_remaining")
+        .eq("organization_id", appUser.organizationId)
+        .eq("client_visible", true)
+        .order("days_remaining"),
+      db
+        .from("platform_modules")
+        .select("module_key,name")
+        .eq("active", true),
+    ]);
+
+    if (!noticesR.error) {
+      expiryNotices = noticesR.data ?? [];
+    }
+    if (!modulesR.error) {
+      moduleNameByKey = new Map(
+        (modulesR.data ?? []).map((item) => [item.module_key, item.name]),
+      );
+    }
+  }
 
   const adminItems = [
     { href: "/protected/evaluaciones", name: "Evaluaciones" },
@@ -100,7 +133,34 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
         </div>
       </nav>
 
-      <div className="mx-auto max-w-7xl px-5 py-8">{children}</div>
+      <div className="mx-auto max-w-7xl px-5 py-8">
+        {isClient && expiryNotices.length > 0 && (
+          <div className="mb-6 space-y-3">
+            {expiryNotices.map((notice) => (
+              <div
+                key={notice.module_key}
+                className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4"
+              >
+                <div className="text-xs font-bold uppercase tracking-[.14em] text-amber-700">
+                  Aviso de vigencia
+                </div>
+                <div className="mt-1 text-sm font-bold text-neutral-900">
+                  {moduleNameByKey.get(notice.module_key) ?? notice.module_key}:{" "}
+                  {notice.days_remaining >= 0
+                    ? `quedan ${notice.days_remaining} días de acceso`
+                    : "la vigencia terminó"}
+                </div>
+                <div className="mt-1 text-xs text-neutral-600">
+                  Vigencia hasta{" "}
+                  {new Date(notice.ends_on + "T12:00:00").toLocaleDateString("es-MX")}.
+                  Contacta a FactoRH para renovar o ampliar tu servicio.
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {children}
+      </div>
     </main>
   );
 }

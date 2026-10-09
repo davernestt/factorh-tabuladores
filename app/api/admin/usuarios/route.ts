@@ -93,6 +93,30 @@ export async function POST(request: NextRequest) {
     if (trialError) {
       return NextResponse.json({ error: trialError.message }, { status: 500 });
     }
+
+    const { error: moduleError } = await db
+      .from("organization_module_subscriptions")
+      .upsert(
+        {
+          organization_id: organizationId,
+          module_key: "psychometrics",
+          status: "trial",
+          plan_name: "Prueba gratuita",
+          starts_on: new Date().toISOString().slice(0, 10),
+          ends_on: trialEnd.toISOString().slice(0, 10),
+          requested_on: new Date().toISOString().slice(0, 10),
+          reminder_days: 30,
+          client_notice: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "organization_id,module_key" },
+      );
+
+    if (moduleError) {
+      return NextResponse.json({ error: moduleError.message }, { status: 500 });
+    }
+
+    await db.rpc("refresh_module_expiry_reminders");
   }
 
   const origin = request.nextUrl.origin;

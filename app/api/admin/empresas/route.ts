@@ -133,6 +133,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { error: moduleError } = await db
+      .from("organization_module_subscriptions")
+      .upsert(
+        {
+          organization_id: insertResult.data.id,
+          module_key: "psychometrics",
+          status: "trial",
+          plan_name: "Prueba gratuita",
+          starts_on: new Date().toISOString().slice(0, 10),
+          ends_on: trialEnd.toISOString().slice(0, 10),
+          requested_on: new Date().toISOString().slice(0, 10),
+          reminder_days: 30,
+          client_notice: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "organization_id,module_key" },
+      );
+
+    if (moduleError) {
+      return NextResponse.json(
+        {
+          error:
+            "La empresa se creó, pero no fue posible registrar la vigencia del módulo: " +
+            moduleError.message,
+          company: insertResult.data,
+        },
+        { status: 500 },
+      );
+    }
+
+    await db.rpc("refresh_module_expiry_reminders");
+
 
     const templatesResult = await db
       .from("assessment_templates")

@@ -89,5 +89,36 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const { error: moduleError } = await db
+    .from("organization_module_subscriptions")
+    .upsert(
+      {
+        organization_id: id,
+        module_key: "psychometrics",
+        status: mode === "trial" ? "trial" : "active",
+        plan_name: planName,
+        starts_on: today.toISOString().slice(0, 10),
+        ends_on: validUntil,
+        requested_on: today.toISOString().slice(0, 10),
+        reminder_days: 30,
+        client_notice: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "organization_id,module_key" },
+    );
+
+  if (moduleError) {
+    return NextResponse.json(
+      {
+        error:
+          "El plan se actualizó, pero no fue posible sincronizar la vigencia del módulo: " +
+          moduleError.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  await db.rpc("refresh_module_expiry_reminders");
+
   return NextResponse.json({ ok: true, plan: data });
 }

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import CompanyTestSettings from "./company-test-settings";
@@ -32,6 +33,13 @@ type AccessRow = {
   participant_sendable: boolean;
 };
 
+type ReminderRow = {
+  organization_id: string;
+  module_key: string;
+  ends_on: string;
+  days_remaining: number;
+};
+
 export default function CompaniesPage() {
   return (
     <Suspense
@@ -56,7 +64,14 @@ async function CompaniesContent() {
   }
 
   const db = createAdminClient();
-  const [organizationsResult, templatesResult, accessResult, creditsResult] = await Promise.all([
+  const [
+    organizationsResult,
+    templatesResult,
+    accessResult,
+    creditsResult,
+    remindersResult,
+    modulesResult,
+  ] = await Promise.all([
     db
       .from("organizations")
       .select("id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes")
@@ -73,10 +88,23 @@ async function CompaniesContent() {
     db
       .from("organization_psychometric_credits")
       .select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only"),
+    db
+      .from("module_expiry_reminders")
+      .select("organization_id,module_key,ends_on,days_remaining")
+      .order("days_remaining"),
+    db
+      .from("platform_modules")
+      .select("module_key,name")
+      .eq("active", true),
   ]);
 
   const firstError =
-    organizationsResult.error || templatesResult.error || accessResult.error || creditsResult.error;
+    organizationsResult.error ||
+    templatesResult.error ||
+    accessResult.error ||
+    creditsResult.error ||
+    remindersResult.error ||
+    modulesResult.error;
 
   if (firstError) {
     return (
@@ -91,6 +119,14 @@ async function CompaniesContent() {
   const templates = (templatesResult.data ?? []) as Template[];
   const access = (accessResult.data ?? []) as AccessRow[];
   const creditPlans = (creditsResult.data ?? []) as CreditPlan[];
+  const reminders = (remindersResult.data ?? []) as ReminderRow[];
+
+  const organizationById = new Map(
+    organizations.map((organization) => [organization.id, organization]),
+  );
+  const moduleNameByKey = new Map(
+    (modulesResult.data ?? []).map((module) => [module.module_key, module.name]),
+  );
   const creditPlanByOrganization = new Map(
     creditPlans.map((plan) => [plan.organization_id, plan]),
   );
@@ -123,12 +159,51 @@ async function CompaniesContent() {
             Empresas y pruebas
           </h1>
           <p className="mt-2 max-w-3xl text-neutral-600">
-            Da de alta empresas, actualiza sus datos y decide qué instrumentos
-            puede utilizar cada una.
+            Administra accesos, demos, planes, módulos, vencimientos y pruebas disponibles por empresa.
           </p>
         </div>
         <CompanyManager />
       </div>
+
+      {reminders.length > 0 && (
+        <section className="mt-7 rounded-3xl border border-amber-200 bg-amber-50 p-6">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">
+            Seguimiento de renovación
+          </div>
+          <h2 className="mt-2 text-xl font-black text-neutral-900">
+            Servicios próximos a vencer
+          </h2>
+          <p className="mt-1 text-sm text-neutral-600">
+            Estos avisos se actualizan diariamente. El cliente también ve su cuenta regresiva cuando el aviso está habilitado.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {reminders.map((reminder) => {
+              const organization = organizationById.get(reminder.organization_id);
+              return (
+                <Link
+                  key={reminder.organization_id + ":" + reminder.module_key}
+                  href={`/protected/empresas/${reminder.organization_id}`}
+                  className="rounded-2xl bg-white p-4 ring-1 ring-amber-200 hover:ring-amber-400"
+                >
+                  <div className="font-black text-neutral-900">
+                    {organization?.name ?? "Empresa"}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-neutral-700">
+                    {moduleNameByKey.get(reminder.module_key) ?? reminder.module_key}
+                  </div>
+                  <div className="mt-2 text-xs font-bold text-amber-700">
+                    {reminder.days_remaining >= 0
+                      ? `Vence en ${reminder.days_remaining} días`
+                      : `Venció hace ${Math.abs(reminder.days_remaining)} días`}
+                    {" · "}
+                    {new Date(reminder.ends_on + "T12:00:00").toLocaleDateString("es-MX")}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <div className="mt-7 space-y-6">
         {organizations.map((organization) => (
@@ -168,6 +243,12 @@ async function CompaniesContent() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/protected/empresas/${organization.id}`}
+                  className="rounded-xl bg-[#4A4A4A] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#3F3F3F]"
+                >
+                  Abrir ficha
+                </Link>
                 <CompanyCreditManager
                   organizationId={organization.id}
                   organizationName={organization.name}

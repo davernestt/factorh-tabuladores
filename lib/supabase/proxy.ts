@@ -12,7 +12,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/360/") ||
     pathname.startsWith("/api/evaluacion/") ||
     pathname.startsWith("/api/360/") ||
-    pathname.startsWith("/api/auth/");
+    pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/cliente/");
 
   if (isPublicAssessment) return supabaseResponse;
   if (!hasEnvVars) return supabaseResponse;
