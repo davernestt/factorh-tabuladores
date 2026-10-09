@@ -105,6 +105,14 @@ const interviewScaleLabels = [
   "Es referente: además de ejecutar bien, desarrolla a otros y mejora el sistema",
 ];
 
+const vectorScaleLabels = [
+  "No me describe",
+  "Me describe poco",
+  "Me describe parcialmente",
+  "Me describe bastante",
+  "Me describe mucho",
+];
+
 export default function AssessmentClient({ token }: { token: string }) {
   const [data, setData] = useState<AssessmentData | null>(null);
   const [responses, setResponses] = useState<Record<string, LocalResponse>>({});
@@ -176,11 +184,14 @@ export default function AssessmentClient({ token }: { token: string }) {
   const isExternalEvaluator = relationship !== "self";
   const isManagerEvaluation = relationship === "manager";
   const isInterview = relationship === "interviewer";
-  const scaleLabels = isManagerEvaluation
-    ? managerScaleLabels
-    : isInterview
-      ? interviewScaleLabels
-      : selfScaleLabels;
+  const isVectorConductual = data?.template.assessment_type === "psychometric_vector";
+  const scaleLabels = isVectorConductual
+    ? vectorScaleLabels
+    : isManagerEvaluation
+      ? managerScaleLabels
+      : isInterview
+        ? interviewScaleLabels
+        : selfScaleLabels;
   const evaluatedName = data
     ? `${data.person.first_name.trim()} ${data.person.last_name ?? ""}`.trim()
     : "";
@@ -414,11 +425,13 @@ export default function AssessmentClient({ token }: { token: string }) {
                   Antes de comenzar
                 </h2>
                 <p className="mt-2 text-neutral-600">
-                  {isManagerEvaluation
-                    ? "Califica únicamente conductas que hayas observado directamente o sobre las que tengas evidencia suficiente. Evita valorar simpatía o afinidad personal; concéntrate en conductas de liderazgo y gestión."
-                    : isInterview
-                      ? "Registra ejemplos reales y recientes. Profundiza en qué ocurrió, qué hizo la persona, qué resultado obtuvo y qué haría diferente. Separa los hechos observados de tu interpretación y califica al final de cada dimensión."
-                      : "Responde con la opción que mejor describa tu comportamiento habitual. No busques la respuesta ideal; buscamos una lectura útil y honesta para tu desarrollo."}
+                  {isVectorConductual
+                    ? "No hay respuestas correctas o incorrectas. Responde pensando en cómo actúas habitualmente en el trabajo, no en cómo crees que deberías actuar. Procura usar toda la escala cuando corresponda y contesta de manera espontánea."
+                    : isManagerEvaluation
+                      ? "Califica únicamente conductas que hayas observado directamente o sobre las que tengas evidencia suficiente. Evita valorar simpatía o afinidad personal; concéntrate en conductas de liderazgo y gestión."
+                      : isInterview
+                        ? "Registra ejemplos reales y recientes. Profundiza en qué ocurrió, qué hizo la persona, qué resultado obtuvo y qué haría diferente. Separa los hechos observados de tu interpretación y califica al final de cada dimensión."
+                        : "Responde con la opción que mejor describa tu comportamiento habitual. No busques la respuesta ideal; buscamos una lectura útil y honesta para tu desarrollo."}
                 </p>
               </div>
 
@@ -454,6 +467,22 @@ export default function AssessmentClient({ token }: { token: string }) {
   const finalQuestions = data.questions.filter(
     (question) => question.dimension_id === null,
   );
+
+  const displaySections = isVectorConductual
+    ? Array.from({ length: Math.ceil(scaleQuestions.length / 16) }, (_, index) => ({
+        id: `vector-block-${index + 1}`,
+        sort_order: index + 1,
+        name: `Bloque ${index + 1} de ${Math.ceil(scaleQuestions.length / 16)}`,
+        description:
+          "Marca cuánto te describe cada afirmación en tu manera habitual de trabajar.",
+        questions: scaleQuestions.slice(index * 16, index * 16 + 16),
+      }))
+    : data.dimensions.map((dimension) => ({
+        ...dimension,
+        questions: data.questions.filter(
+          (question) => question.dimension_id === dimension.id,
+        ),
+      }));
 
   return (
     <main className="min-h-screen bg-neutral-100 px-4 py-7 md:px-6 md:py-10">
@@ -492,10 +521,8 @@ export default function AssessmentClient({ token }: { token: string }) {
         )}
 
         <div className="mt-6 space-y-6">
-          {data.dimensions.map((dimension) => {
-            const questions = data.questions.filter(
-              (question) => question.dimension_id === dimension.id,
-            );
+          {displaySections.map((dimension) => {
+            const questions = dimension.questions;
 
             return (
               <section
