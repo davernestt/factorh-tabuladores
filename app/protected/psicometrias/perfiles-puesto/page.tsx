@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 
 type Profile = {
   id: string;
@@ -38,19 +38,26 @@ export default function JobProfilesPage() {
 }
 
 async function JobProfilesContent() {
-  const auth = await createClient();
-  const { data: authData, error: authError } = await auth.auth.getClaims();
-  if (authError || !authData?.claims) redirect("/auth/login");
+  const currentUser = await getCurrentAppUser();
+  if (!currentUser) redirect("/auth/login");
 
   const db = createAdminClient();
+  let profilesQuery = db
+    .from("psychometric_job_profiles")
+    .select("id,name,family,level,description,organization_id")
+    .eq("active", true)
+    .order("family")
+    .order("level")
+    .order("name");
+
+  if (currentUser.role === "client" && currentUser.organizationId) {
+    profilesQuery = profilesQuery.or(
+      `organization_id.is.null,organization_id.eq.${currentUser.organizationId}`,
+    );
+  }
+
   const [profilesR, competenciesR] = await Promise.all([
-    db
-      .from("psychometric_job_profiles")
-      .select("id,name,family,level,description")
-      .eq("active", true)
-      .order("family")
-      .order("level")
-      .order("name"),
+    profilesQuery,
     db
       .from("psychometric_job_profile_competencies")
       .select("profile_id,competency_key,competency_name,reference_min,reference_max,importance,sort_order")

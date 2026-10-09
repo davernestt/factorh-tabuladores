@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 import { analyzeNeeds } from "@/lib/necesidades-laborales";
 import { PsychometricTestInfo, ScoreColumnChart } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
@@ -30,9 +30,8 @@ export default function LaborNeedsReportPage(props: PageProps) {
 }
 
 async function LaborNeedsReportContent({ params }: PageProps) {
-  const auth = await createClient();
-  const { data: authData, error: authError } = await auth.auth.getClaims();
-  if (authError || !authData?.claims) redirect("/auth/login");
+  const currentUser = await getCurrentAppUser();
+  if (!currentUser) redirect("/auth/login");
 
   const { id } = await params;
   const db = createAdminClient();
@@ -83,6 +82,13 @@ async function LaborNeedsReportContent({ params }: PageProps) {
     responsesR.error;
 
   if (firstError) return <ErrorCard message={firstError.message} />;
+
+  if (
+    currentUser.role === "client" &&
+    processR.data.organization_id !== currentUser.organizationId
+  ) {
+    notFound();
+  }
   if (templateR.data.assessment_type !== "psychometric_needs") notFound();
 
   const [personR, organizationR] = await Promise.all([

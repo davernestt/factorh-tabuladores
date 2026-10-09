@@ -1,11 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import NewAssessmentForm from "../../nueva-evaluacion/new-assessment-form";
-
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
 
 export default function NewPsychometricAssessmentPage() {
   return (
@@ -23,15 +21,59 @@ export default function NewPsychometricAssessmentPage() {
 }
 
 async function NewPsychometricAssessmentContent() {
-  const authClient = await createClient();
-  const { data: authData, error: authError } = await authClient.auth.getClaims();
-  const email = String(authData?.claims?.email ?? "").trim().toLowerCase();
+  const currentUser = await getCurrentAppUser();
+  if (!currentUser) redirect("/auth/login");
 
-  if (authError || !authData?.claims || !ADMIN_EMAILS.includes(email)) {
-    redirect("/auth/login");
+  const scopedOrganizationId =
+    currentUser.role === "client" ? currentUser.organizationId : null;
+
+  if (currentUser.role === "client" && !scopedOrganizationId) {
+    redirect("/auth/login?error=unauthorized");
   }
 
   const db = createAdminClient();
+
+  let organizationsQuery = db
+    .from("organizations")
+    .select("id,name")
+    .eq("active", true)
+    .order("name");
+
+  let peopleQuery = db
+    .from("people")
+    .select(
+      "id,organization_id,first_name,last_name,email,phone,job_title,area",
+    )
+    .eq("active", true)
+    .order("first_name");
+
+  let accessQuery = db
+    .from("organization_assessment_templates")
+    .select("organization_id,template_id,enabled,participant_sendable");
+
+  let batteriesQuery = db
+    .from("assessment_batteries")
+    .select("id,organization_id,name,description")
+    .eq("active", true)
+    .order("name");
+
+  let jobProfilesQuery = db
+    .from("psychometric_job_profiles")
+    .select("id,organization_id,name,family,level,description")
+    .eq("active", true)
+    .order("family")
+    .order("level")
+    .order("name");
+
+  if (scopedOrganizationId) {
+    organizationsQuery = organizationsQuery.eq("id", scopedOrganizationId);
+    peopleQuery = peopleQuery.eq("organization_id", scopedOrganizationId);
+    accessQuery = accessQuery.eq("organization_id", scopedOrganizationId);
+    batteriesQuery = batteriesQuery.eq("organization_id", scopedOrganizationId);
+    jobProfilesQuery = jobProfilesQuery.or(
+      `organization_id.is.null,organization_id.eq.${scopedOrganizationId}`,
+    );
+  }
 
   const [
     organizationsResult,
@@ -42,43 +84,21 @@ async function NewPsychometricAssessmentContent() {
     batteryItemsResult,
     jobProfilesResult,
   ] = await Promise.all([
-    db
-      .from("organizations")
-      .select("id,name")
-      .eq("active", true)
-      .order("name"),
-    db
-      .from("people")
-      .select(
-        "id,organization_id,first_name,last_name,email,phone,job_title,area",
-      )
-      .eq("active", true)
-      .order("first_name"),
+    organizationsQuery,
+    peopleQuery,
     db
       .from("assessment_templates")
       .select("id,organization_id,name,description,assessment_type")
       .eq("active", true)
       .like("assessment_type", "psychometric_%")
       .order("name"),
-    db
-      .from("organization_assessment_templates")
-      .select("organization_id,template_id,enabled,participant_sendable"),
-    db
-      .from("assessment_batteries")
-      .select("id,organization_id,name,description")
-      .eq("active", true)
-      .order("name"),
+    accessQuery,
+    batteriesQuery,
     db
       .from("assessment_battery_items")
       .select("battery_id,template_id,sort_order")
       .order("sort_order"),
-    db
-      .from("psychometric_job_profiles")
-      .select("id,organization_id,name,family,level,description")
-      .eq("active", true)
-      .order("family")
-      .order("level")
-      .order("name"),
+    jobProfilesQuery,
   ]);
 
   const firstError =
@@ -101,11 +121,23 @@ async function NewPsychometricAssessmentContent() {
     );
   }
 
-  const psychometricTemplates = templatesResult.data ?? [];
+  const accessRows = accessResult.data ?? [];
+  const enabledTemplateIds = scopedOrganizationId
+    ? new Set(
+        accessRows
+          .filter((row) => row.enabled && row.participant_sendable)
+          .map((row) => row.template_id),
+      )
+    : null;
+
+  const psychometricTemplates = (templatesResult.data ?? []).filter(
+    (template) => !enabledTemplateIds || enabledTemplateIds.has(template.id),
+  );
+
   const psychometricTemplateIds = new Set(
     psychometricTemplates.map((template) => template.id),
   );
-  const psychometricAccess = (accessResult.data ?? []).filter((row) =>
+  const psychometricAccess = accessRows.filter((row) =>
     psychometricTemplateIds.has(row.template_id),
   );
 
@@ -144,13 +176,13 @@ async function NewPsychometricAssessmentContent() {
 
       <div className="mt-5">
         <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-          Psicometrías · Administración
+          Psicometrías
         </div>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
           Asignar psicometrías
         </h1>
         <p className="mt-2 max-w-3xl text-neutral-600">
-          Aquí sólo aparecen los instrumentos psicométricos de FactorRH. Las herramientas del Programa de Desarrollo de Líderes se asignan desde el módulo PDL.
+          Crea el proceso, selecciona las pruebas habilitadas para la empresa y genera la liga que responderá el candidato o colaborador.
         </p>
       </div>
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 import { getPsychometricCatalogItem } from "@/lib/psychometric-catalog";
 
 type Template = {
@@ -86,12 +86,12 @@ export default function PsychometricsPage({ searchParams }: PageProps) {
 }
 
 async function PsychometricsContent({ searchParams }: PageProps) {
-  const auth = await createClient();
-  const { data: authData, error: authError } = await auth.auth.getClaims();
-  if (authError || !authData?.claims) redirect("/auth/login");
+  const currentUser = await getCurrentAppUser();
+  if (!currentUser) redirect("/auth/login");
 
-  const email = String(authData.claims.email ?? "").trim().toLowerCase();
-  const isOwner = email === "david@factorh.com.mx";
+  const isOwner = currentUser.role === "super_admin";
+  const scopedOrganizationId =
+    currentUser.role === "client" ? currentUser.organizationId : null;
   const params = await searchParams;
   const view = paramValue(params.view) === "pruebas" ? "pruebas" : "personas";
   const query = normalize(paramValue(params.q));
@@ -109,7 +109,22 @@ async function PsychometricsContent({ searchParams }: PageProps) {
 
   if (templatesR.error) return <ErrorCard message={templatesR.error.message} />;
 
-  const templates = (templatesR.data ?? []) as Template[];
+  let templates = (templatesR.data ?? []) as Template[];
+
+  if (scopedOrganizationId) {
+    const accessR = await db
+      .from("organization_assessment_templates")
+      .select("template_id,enabled")
+      .eq("organization_id", scopedOrganizationId)
+      .eq("enabled", true);
+
+    if (accessR.error) return <ErrorCard message={accessR.error.message} />;
+    const allowedTemplateIds = new Set(
+      (accessR.data ?? []).map((item) => item.template_id),
+    );
+    templates = templates.filter((item) => allowedTemplateIds.has(item.id));
+  }
+
   const templateIds = templates.map((item) => item.id);
 
   const [assignmentsR, questionsR] = await Promise.all([
@@ -213,8 +228,15 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     };
   });
 
+  const visibleApplications = scopedOrganizationId
+    ? applications.filter(
+        (application) =>
+          application.process?.organization_id === scopedOrganizationId,
+      )
+    : applications;
+
   const grouped = new Map<string, ApplicationView[]>();
-  for (const application of applications) {
+  for (const application of visibleApplications) {
     const key = application.process?.person_id ?? "assignment:" + application.assignment.id;
     const list = grouped.get(key) ?? [];
     list.push(application);
@@ -291,12 +313,19 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     return true;
   });
 
-  const completed = assignments.filter((item) => item.status === "completed").length;
-  const active = assignments.filter((item) => ["pending", "in_progress"].includes(item.status)).length;
+  const completed = visibleApplications.filter(
+    (item) => item.assignment.status === "completed",
+  ).length;
+  const active = visibleApplications.filter((item) =>
+    ["pending", "in_progress"].includes(item.assignment.status),
+  ).length;
 
-  const organizationOptions = Array.from(organizationById.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, "es"),
-  );
+  const organizationOptions = Array.from(organizationById.values())
+    .filter(
+      (organization) =>
+        !scopedOrganizationId || organization.id === scopedOrganizationId,
+    )
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
 
   const publicCatalog = templates.map((template) => ({
     template,

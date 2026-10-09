@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 import { relationshipForAssessmentType } from "@/lib/pdl-evaluation-role";
-
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
 
 type CreateBody = {
   organization_id?: string;
@@ -51,11 +49,12 @@ function addDays(value: string, days: number) {
 }
 
 export async function POST(request: NextRequest) {
-  const authClient = await createClient();
-  const { data: authData, error: authError } = await authClient.auth.getClaims();
-  const email = String(authData?.claims?.email ?? "").trim().toLowerCase();
+  const currentUser = await getCurrentAppUser();
 
-  if (authError || !authData?.claims || !ADMIN_EMAILS.includes(email)) {
+  if (
+    !currentUser ||
+    !["super_admin", "client"].includes(currentUser.role)
+  ) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
@@ -82,6 +81,16 @@ export async function POST(request: NextRequest) {
   const evaluationPurpose = clean(body.evaluation_purpose) || null;
   const targetJobTitle = clean(body.target_job_title) || null;
   const targetJobProfileId = clean(body.target_job_profile_id) || null;
+
+  if (
+    currentUser.role === "client" &&
+    organizationId !== currentUser.organizationId
+  ) {
+    return NextResponse.json(
+      { error: "No puedes crear evaluaciones para otra empresa." },
+      { status: 403 },
+    );
+  }
 
   if (!organizationId || templateIds.length === 0) {
     return NextResponse.json(
@@ -144,6 +153,19 @@ export async function POST(request: NextRequest) {
   }
 
   const templates = templatesResult.data ?? [];
+
+  if (
+    currentUser.role === "client" &&
+    templates.some(
+      (template) => !String(template.assessment_type ?? "").startsWith("psychometric_"),
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Tu cuenta sólo puede asignar instrumentos psicométricos." },
+      { status: 403 },
+    );
+  }
+
   if (templates.length !== templateIds.length) {
     return NextResponse.json({ error: "Una o más evaluaciones ya no están disponibles." }, { status: 400 });
   }

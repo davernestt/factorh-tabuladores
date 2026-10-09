@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 import {
   analyzeIntegralPsychometrics,
   type IntegralInstrument,
@@ -67,9 +67,8 @@ export default function IntegralPsychometricReportPage(props: PageProps) {
 }
 
 async function IntegralReportContent({ params }: PageProps) {
-  const auth = await createClient();
-  const { data: authData, error: authError } = await auth.auth.getClaims();
-  if (authError || !authData?.claims) redirect("/auth/login");
+  const currentUser = await getCurrentAppUser();
+  if (!currentUser) redirect("/auth/login");
 
   const { processId } = await params;
   const db = createAdminClient();
@@ -82,6 +81,13 @@ async function IntegralReportContent({ params }: PageProps) {
 
   if (processR.error) return <ErrorCard message={processR.error.message} />;
   if (!processR.data) notFound();
+
+  if (
+    currentUser.role === "client" &&
+    processR.data.organization_id !== currentUser.organizationId
+  ) {
+    notFound();
+  }
 
   const assignmentsR = await db
     .from("assessment_assignments")
