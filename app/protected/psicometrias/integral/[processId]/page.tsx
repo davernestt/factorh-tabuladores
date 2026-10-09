@@ -359,6 +359,7 @@ async function IntegralReportContent({ params }: PageProps) {
   });
 
   const exportFindings = [
+    ...analysis.strengths,
     ...analysis.convergences,
     ...(jobAlignment?.strongestMatches.map(
       (item) =>
@@ -368,6 +369,7 @@ async function IntegralReportContent({ params }: PageProps) {
   ];
 
   const exportCautions = [
+    ...analysis.opportunities,
     ...analysis.tensions,
     ...(jobAlignment?.criticalToValidate.map(
       (item) =>
@@ -753,6 +755,117 @@ async function IntegralReportContent({ params }: PageProps) {
         ))}
       </section>
 
+      <section className="grid gap-5 lg:grid-cols-2">
+        <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 md:p-8">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-emerald-700">
+            Fortalezas clave
+          </div>
+          <h2 className="mt-2 text-2xl font-black text-emerald-950">
+            Recursos que pueden aportar valor
+          </h2>
+          <div className="mt-5 space-y-3">
+            {analysis.strengths.map((item) => (
+              <p key={item} className="text-sm leading-6 text-neutral-700">• {item}</p>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-6 md:p-8">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">
+            Áreas de oportunidad / riesgos
+          </div>
+          <h2 className="mt-2 text-2xl font-black text-amber-950">
+            Aspectos que conviene monitorear
+          </h2>
+          <div className="mt-5 space-y-3">
+            {analysis.opportunities.map((item) => (
+              <p key={item} className="text-sm leading-6 text-neutral-700">• {item}</p>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+          Lectura para el jefe de la vacante
+        </div>
+        <h2 className="mt-2 text-3xl font-black text-neutral-900">
+          Cómo gestionar e integrar este perfil
+        </h2>
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <ManagerCard
+            title="Estilo de supervisión recomendado"
+            text={analysis.managerGuidance.supervision}
+          />
+          <ManagerCard
+            title="Qué observar bajo presión"
+            text={analysis.managerGuidance.pressure}
+          />
+          <ManagerCard
+            title="Integración con el equipo"
+            text={analysis.managerGuidance.team}
+          />
+          <div className="rounded-2xl bg-neutral-50 p-5">
+            <div className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Motivadores clave
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {analysis.managerGuidance.motivators.length ? (
+                analysis.managerGuidance.motivators.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full bg-white px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm"
+                  >
+                    {item}
+                  </span>
+                ))
+              ) : (
+                <p className="text-sm text-neutral-600">
+                  Profundizar motivadores durante entrevista y seguimiento.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {analysis.managerGuidance.coaching.length > 0 && (
+          <div className="mt-5 rounded-2xl border border-neutral-200 p-5">
+            <div className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Retroalimentación / coaching
+            </div>
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {analysis.managerGuidance.coaching.map((item) => (
+                <p key={item} className="text-sm leading-6 text-neutral-700">• {item}</p>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+          Integración sugerida 30–60–90
+        </div>
+        <h2 className="mt-2 text-2xl font-black text-neutral-900">
+          Primeros 90 días
+        </h2>
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          {analysis.onboardingPlan.map((stage) => (
+            <div key={stage.period} className="rounded-2xl bg-neutral-50 p-5">
+              <div className="text-xs font-bold uppercase tracking-wide text-orange-600">
+                {stage.period}
+              </div>
+              <h3 className="mt-2 font-black text-neutral-900">{stage.focus}</h3>
+              <div className="mt-3 space-y-2">
+                {stage.actions.map((item) => (
+                  <p key={item} className="text-sm leading-6 text-neutral-600">• {item}</p>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section className="space-y-5">
         <div>
           <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
@@ -879,6 +992,23 @@ async function IntegralReportContent({ params }: PageProps) {
 
 function scaleIndex(score: number) {
   return Math.max(0, Math.min(100, Math.round(((score - 1) / 4) * 100)));
+}
+
+function ManagerCard({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-neutral-50 p-5">
+      <div className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+        {title}
+      </div>
+      <p className="mt-3 text-sm leading-6 text-neutral-700">{text}</p>
+    </div>
+  );
 }
 
 function AlignmentStatus({
