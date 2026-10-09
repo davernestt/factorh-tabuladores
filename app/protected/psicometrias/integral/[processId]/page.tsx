@@ -238,7 +238,7 @@ async function IntegralReportContent({ params }: PageProps) {
     const ranked = [...instrument.dimensions].sort((a, b) => b.value - a.value);
     const top = ranked.slice(0, 2);
     const low = [...ranked].reverse().slice(0, 2);
-    const chart =
+    const chart: "radar" | "columns" | "dots" =
       ["psychometric_vector", "psychometric_social_leadership", "psychometric_integrity", "psychometric_bigfive"].includes(
         instrument.assessmentType,
       )
