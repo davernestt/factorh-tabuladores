@@ -8,6 +8,7 @@ import {
   vectorIndex,
   type VectorFacetInput,
 } from "@/lib/vector-conductual";
+import { PsychometricTestInfo } from "../report-ui";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -257,6 +258,8 @@ async function PsychometricReportContent({ params }: PageProps) {
         <Metric label="Fecha" value={completedAt} compact />
         <Metric label="Calidad técnica básica" value={quality.label} compact />
       </section>
+
+      <PsychometricTestInfo assessmentType={templateR.data.assessment_type} />
 
       {quality.flags.length > 0 && (
         <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
