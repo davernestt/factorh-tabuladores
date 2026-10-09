@@ -106,7 +106,12 @@ export default function CompanyAccessPanel({
                     {copied === "email:" + user.user_id ? "Correo copiado" : "Copiar usuario"}
                   </button>
                   <a
-                    href="/auth/forgot-password"
+                    href={
+                      "/auth/forgot-password?email=" +
+                      encodeURIComponent(user.email) +
+                      "&return_to=" +
+                      encodeURIComponent("/cliente/" + organizationSlug)
+                    }
                     target="_blank"
                     rel="noreferrer"
                     className="rounded-xl bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600"
