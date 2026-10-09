@@ -1,5 +1,6 @@
-import FactoRHLogo from "@/components/factorh-logo";
 'use client';
+
+import FactoRHLogo from "@/components/factorh-logo";
 import {useEffect,useMemo,useState} from 'react';
 import { ANSWER_SCALE, COMPETENCIES_360, FEEDBACK_ROLES, OPEN_QUESTIONS, type FeedbackRole } from '@/lib/feedback360';
 

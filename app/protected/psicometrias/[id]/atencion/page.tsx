@@ -1,3 +1,4 @@
+import FactoRHLogo from "@/components/factorh-logo";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
@@ -5,7 +6,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { PsychometricTestInfo, ScoreDotPlot, ScoreRing } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
-import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = { params: Promise<{ id: string }> };
 type ResultRow = { dimension_id: string; percentage: number | string };

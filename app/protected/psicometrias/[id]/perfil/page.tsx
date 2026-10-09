@@ -1,3 +1,4 @@
+import FactoRHLogo from "@/components/factorh-logo";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
@@ -6,7 +7,6 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 import { analyzeScaleProfile } from "@/lib/psychometric-scale-profiles";
 import { PsychometricTestInfo, ScoreColumnChart, ScoreRadarChart } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
-import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = { params: Promise<{ id: string }> };
 

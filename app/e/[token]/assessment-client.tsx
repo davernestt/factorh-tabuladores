@@ -1,5 +1,6 @@
-import FactoRHLogo from "@/components/factorh-logo";
 "use client";
+
+import FactoRHLogo from "@/components/factorh-logo";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";

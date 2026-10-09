@@ -1,7 +1,7 @@
+import FactoRHLogo from "@/components/factorh-logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { Suspense } from "react";
-import FactoRHLogo from "@/components/factorh-logo";
 
 type RouteContext = {
   params: Promise<{ token: string }>;

@@ -1,10 +1,10 @@
+import FactoRHLogo from "@/components/factorh-logo";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import {
-import FactoRHLogo from "@/components/factorh-logo";
   analyzeVectorConductual,
   vectorIndex,
   type VectorFacetInput,

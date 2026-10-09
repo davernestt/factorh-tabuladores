@@ -1,3 +1,4 @@
+import FactoRHLogo from "@/components/factorh-logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { buildLeadershipAnalysis } from "@/lib/leadership-analysis";
@@ -7,7 +8,6 @@ import { Suspense } from "react";
 import ReportActions from "./report-actions";
 import { DimensionBars, Heatmap, RadarChart } from "./report-charts";
 import { relationshipLabel } from "@/lib/pdl-evaluation-role";
-import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = {
   params: Promise<{ id: string }>;
