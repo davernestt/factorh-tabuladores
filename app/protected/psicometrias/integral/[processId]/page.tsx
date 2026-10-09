@@ -590,6 +590,80 @@ async function IntegralReportContent({ params }: PageProps) {
         </div>
       </section>
 
+      {jobAlignment && (
+        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+            Comparación contra perfil objetivo
+          </div>
+          <h2 className="mt-2 text-3xl font-black text-neutral-900">
+            Mapa de competencias de referencia
+          </h2>
+          <p className="mt-2 max-w-5xl text-sm leading-6 text-neutral-500">
+            La comparación se construye competencia por competencia utilizando únicamente
+            las pruebas incluidas en esta batería. Un resultado fuera del rango no equivale
+            a “bueno” o “malo”: señala una diferencia que debe contextualizarse con el
+            puesto y validarse en entrevista.
+          </p>
+
+          <div className="mt-6 overflow-hidden rounded-2xl border border-neutral-200">
+            <div className="grid grid-cols-[minmax(180px,1.2fr)_100px_110px_minmax(170px,1fr)] gap-3 bg-neutral-50 px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-neutral-400">
+              <div>Competencia</div>
+              <div>Referencia</div>
+              <div>Evidencia</div>
+              <div>Lectura</div>
+            </div>
+            <div className="divide-y divide-neutral-100">
+              {jobAlignment.rows.map((item) => (
+                <div
+                  key={item.key}
+                  className="grid grid-cols-[minmax(180px,1.2fr)_100px_110px_minmax(170px,1fr)] gap-3 px-4 py-4 text-sm"
+                >
+                  <div>
+                    <div className="font-black text-neutral-900">{item.name}</div>
+                    <div className="mt-1 text-xs text-neutral-400">
+                      {item.importance === "critical"
+                        ? "Importancia crítica"
+                        : item.importance === "high"
+                          ? "Importancia alta"
+                          : "Importancia media"}
+                    </div>
+                  </div>
+                  <div className="font-black text-neutral-700">
+                    {Math.round(item.referenceMin)}–{Math.round(item.referenceMax)}
+                  </div>
+                  <div className="font-black text-neutral-900">
+                    {item.observed === null ? "—" : Math.round(item.observed)}
+                  </div>
+                  <div>
+                    <AlignmentStatus status={item.status} />
+                    {item.evidence.length > 0 && (
+                      <div className="mt-2 text-[11px] leading-5 text-neutral-400">
+                        Basado en {item.evidence.length} indicador{item.evidence.length === 1 ? "" : "es"} de la batería.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {jobAlignment.criticalToValidate.length > 0 && (
+            <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+              <div className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                Competencias críticas para validar
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {jobAlignment.criticalToValidate.map((item) => (
+                  <p key={item.key} className="text-sm leading-6 text-neutral-700">
+                    • <strong>{item.name}:</strong> {item.status.toLowerCase()}.
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
       {(performance.length > 0 || scaleSignals.length > 0) && (
         <section className="grid gap-5 xl:grid-cols-[.8fr_1.2fr]">
           {performance.length > 0 ? (
@@ -805,6 +879,29 @@ async function IntegralReportContent({ params }: PageProps) {
 
 function scaleIndex(score: number) {
   return Math.max(0, Math.min(100, Math.round(((score - 1) / 4) * 100)));
+}
+
+function AlignmentStatus({
+  status,
+}: {
+  status:
+    | "Dentro del rango de referencia"
+    | "Por debajo del rango de referencia"
+    | "Por encima del rango de referencia"
+    | "Sin evidencia suficiente";
+}) {
+  const cls =
+    status === "Dentro del rango de referencia"
+      ? "bg-emerald-50 text-emerald-700"
+      : status === "Sin evidencia suficiente"
+        ? "bg-neutral-100 text-neutral-500"
+        : "bg-amber-50 text-amber-700";
+
+  return (
+    <span className={"inline-flex rounded-full px-2.5 py-1 text-xs font-bold " + cls}>
+      {status}
+    </span>
+  );
 }
 
 function Metric({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
