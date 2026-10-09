@@ -20,6 +20,9 @@ type CreateBody = {
   area?: string;
   process_name?: string;
   due_date?: string | null;
+  evaluation_purpose?: string | null;
+  target_job_title?: string | null;
+  target_job_profile_id?: string | null;
   manager_evaluator_name?: string;
   manager_evaluator_email?: string;
   manager_evaluator_phone?: string;
@@ -76,6 +79,9 @@ export async function POST(request: NextRequest) {
       ? body.force_template_ids.map(clean).filter(Boolean)
       : [],
   );
+  const evaluationPurpose = clean(body.evaluation_purpose) || null;
+  const targetJobTitle = clean(body.target_job_title) || null;
+  const targetJobProfileId = clean(body.target_job_profile_id) || null;
 
   if (!organizationId || templateIds.length === 0) {
     return NextResponse.json(
@@ -108,6 +114,33 @@ export async function POST(request: NextRequest) {
   }
   if (!organizationResult.data) {
     return NextResponse.json({ error: "La empresa seleccionada no está disponible." }, { status: 400 });
+  }
+
+  let validatedJobProfileId: string | null = null;
+  if (targetJobProfileId) {
+    const { data: jobProfile, error: jobProfileError } = await db
+      .from("psychometric_job_profiles")
+      .select("id,organization_id,active")
+      .eq("id", targetJobProfileId)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (jobProfileError) {
+      return NextResponse.json({ error: jobProfileError.message }, { status: 500 });
+    }
+
+    if (
+      !jobProfile ||
+      (jobProfile.organization_id !== null &&
+        jobProfile.organization_id !== organizationId)
+    ) {
+      return NextResponse.json(
+        { error: "El perfil objetivo seleccionado no está disponible para esta empresa." },
+        { status: 400 },
+      );
+    }
+
+    validatedJobProfileId = jobProfile.id;
   }
 
   const templates = templatesResult.data ?? [];
@@ -297,6 +330,9 @@ export async function POST(request: NextRequest) {
       status: templatesToApply.length ? "open" : "completed",
       start_date: new Date().toISOString().slice(0, 10),
       target_date: clean(body.due_date) || null,
+      evaluation_purpose: evaluationPurpose,
+      target_job_title: targetJobTitle,
+      target_job_profile_id: validatedJobProfileId,
     })
     .select("id,public_token")
     .single();
