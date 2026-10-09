@@ -55,6 +55,7 @@ type Props = {
   templateAccess: TemplateAccess[];
   batteries: Battery[];
   batteryItems: BatteryItem[];
+  scope?: "pdl" | "psychometrics";
 };
 
 type DeliveryLink = {
@@ -93,8 +94,14 @@ export default function NewAssessmentForm({
   templateAccess,
   batteries,
   batteryItems,
+  scope = "pdl",
 }: Props) {
   const initialOrganizationId = organizations[0]?.id ?? "";
+  const isPsychometrics = scope === "psychometrics";
+  const panelHref = isPsychometrics ? "/protected/psicometrias" : "/protected";
+  const newAssessmentHref = isPsychometrics
+    ? "/protected/psicometrias/nueva"
+    : "/protected/nueva-evaluacion";
 
   const [organizationId, setOrganizationId] = useState(initialOrganizationId);
   const [personMode, setPersonMode] = useState<"existing" | "new">(
@@ -326,7 +333,7 @@ export default function NewAssessmentForm({
           Liga creada
         </div>
         <h2 className="mt-4 text-2xl font-black text-neutral-900">
-          Evaluaciones asignadas correctamente
+          {isPsychometrics ? "Psicometrías asignadas correctamente" : "Evaluaciones asignadas correctamente"}
         </h2>
         <p className="mt-2 text-neutral-600">
           {created.person_name} · {created.organization_name}
@@ -352,8 +359,14 @@ export default function NewAssessmentForm({
 
           {created.participant_path && (
             <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
-              <div className="text-xs font-bold uppercase tracking-wide text-orange-600">Liga del líder evaluado</div>
-              <div className="mt-1 text-sm text-neutral-600">Contiene únicamente las pruebas que debe responder la propia persona.</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-orange-600">
+                {isPsychometrics ? "Liga del participante" : "Liga del líder evaluado"}
+              </div>
+              <div className="mt-1 text-sm text-neutral-600">
+                {isPsychometrics
+                  ? "Contiene únicamente las psicometrías asignadas a esta persona."
+                  : "Contiene únicamente las pruebas que debe responder la propia persona."}
+              </div>
               <div className="mt-3 break-all rounded-xl bg-neutral-50 p-3 text-sm font-medium text-neutral-800">{fullUrl(created.participant_path)}</div>
               <div className="mt-3">
                 <CopyAssessmentLink
@@ -402,7 +415,7 @@ export default function NewAssessmentForm({
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <a
-            href="/protected"
+            href={panelHref}
             className="rounded-xl bg-orange-500 px-5 py-3 text-center font-bold text-white hover:bg-orange-600"
           >
             Volver al panel
@@ -411,12 +424,12 @@ export default function NewAssessmentForm({
             type="button"
             onClick={() => {
               window.location.assign(
-                `/protected/nueva-evaluacion?fresh=${Date.now()}`,
+                `${newAssessmentHref}?fresh=${Date.now()}`,
               );
             }}
             className="rounded-xl border border-neutral-300 bg-white px-5 py-3 font-bold text-neutral-800 hover:bg-neutral-50"
           >
-            Crear otra evaluación
+            {isPsychometrics ? "Asignar otra psicometría" : "Crear otra evaluación"}
           </button>
         </div>
       </section>
@@ -556,11 +569,12 @@ export default function NewAssessmentForm({
             Paso 2
           </div>
           <h2 className="mt-2 text-xl font-bold text-neutral-900">
-            Elige las evaluaciones
+            {isPsychometrics ? "Elige las psicometrías" : "Elige las evaluaciones"}
           </h2>
           <p className="mt-2 text-sm text-neutral-500">
-            Puedes seleccionar una sola prueba o varias. En ambos casos se genera
-            una sola liga para el participante.
+            {isPsychometrics
+              ? "Selecciona una o varias psicometrías. La persona recibirá una sola liga con los instrumentos de este módulo."
+              : "Puedes seleccionar una sola prueba o varias. En ambos casos se genera una sola liga para el participante."}
           </p>
         </div>
 
@@ -631,8 +645,12 @@ export default function NewAssessmentForm({
           </span>{" "}
           <span className="text-neutral-600">
             {templateIds.length === 1
-              ? "evaluación seleccionada"
-              : "evaluaciones seleccionadas"}
+              ? isPsychometrics
+                ? "psicometría seleccionada"
+                : "evaluación seleccionada"
+              : isPsychometrics
+                ? "psicometrías seleccionadas"
+                : "evaluaciones seleccionadas"}
           </span>
         </div>
 
@@ -646,12 +664,12 @@ export default function NewAssessmentForm({
             />
           </Field>
 
-          <Field label="Nombre del proceso o batería (opcional)">
+          <Field label={isPsychometrics ? "Nombre de la batería psicométrica (opcional)" : "Nombre del proceso o batería (opcional)"}>
             <input
               value={processName}
               onChange={(event) => setProcessName(event.target.value)}
               className="input"
-              placeholder="Ej. Batería de ingreso · Ventas"
+              placeholder={isPsychometrics ? "Ej. Batería psicométrica · Ventas" : "Ej. Batería de ingreso · Ventas"}
             />
           </Field>
         </div>
@@ -734,7 +752,7 @@ export default function NewAssessmentForm({
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <Link
-          href="/protected"
+          href={panelHref}
           className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-center font-bold text-neutral-700 hover:bg-neutral-50"
         >
           Cancelar
@@ -747,8 +765,12 @@ export default function NewAssessmentForm({
           {saving
             ? "Creando..."
             : templateIds.length > 1
-              ? "Crear batería y liga"
-              : "Crear evaluación y liga"}
+              ? isPsychometrics
+                ? "Crear batería psicométrica y liga"
+                : "Crear batería y liga"
+              : isPsychometrics
+                ? "Crear psicometría y liga"
+                : "Crear evaluación y liga"}
         </button>
       </div>
 
