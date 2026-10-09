@@ -397,6 +397,23 @@ async function IntegralReportContent({ params }: PageProps) {
       "Para el jefe de la vacante: " + analysis.managerGuidance.supervision,
       "Bajo presión: " + analysis.managerGuidance.pressure,
     ],
+    objectiveText,
+    battery: batteryRows,
+    jobComparison: jobAlignment?.rows.map((item) => ({
+      name: item.name,
+      referenceMin: item.referenceMin,
+      referenceMax: item.referenceMax,
+      observed: item.observed,
+      status: item.status,
+      importance:
+        item.importance === "critical"
+          ? "Crítica"
+          : item.importance === "high"
+            ? "Alta"
+            : "Media",
+    })),
+    managerGuidance: analysis.managerGuidance,
+    onboardingPlan: analysis.onboardingPlan,
     keyFindings: exportFindings,
     cautions: exportCautions,
     interviewQuestions: analysis.interviewQuestions,
