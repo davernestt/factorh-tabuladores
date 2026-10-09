@@ -135,7 +135,8 @@ export default function AssessmentClient({ token }: { token: string }) {
   const [responses, setResponses] = useState<Record<string, LocalResponse>>({});
   const [loading, setLoading] = useState(true);
   const [started, setStarted] = useState(false);
-  const [savingQuestion, setSavingQuestion] = useState<string | null>(null);
+  const [pendingSaveIds, setPendingSaveIds] = useState<Set<string>>(new Set());
+  const [failedQuestionIds, setFailedQuestionIds] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
   const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set());
@@ -238,26 +239,60 @@ export default function AssessmentClient({ token }: { token: string }) {
     question: Question,
     next: LocalResponse,
   ) {
+    const previous = responses[question.id] ?? {
+      numeric_value: null,
+      text_value: "",
+      is_not_observed: false,
+    };
+
     setResponses((current) => ({ ...current, [question.id]: next }));
-    setSavingQuestion(question.id);
+    setPendingSaveIds((current) => {
+      const nextIds = new Set(current);
+      nextIds.add(question.id);
+      return nextIds;
+    });
+    setFailedQuestionIds((current) => {
+      const nextIds = new Set(current);
+      nextIds.delete(question.id);
+      return nextIds;
+    });
     setMessage(null);
 
     try {
-      const response = await fetch(`/api/evaluacion/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save",
-          question_id: question.id,
-          numeric_value: next.numeric_value,
-          text_value: next.text_value,
-          is_not_observed: next.is_not_observed,
-        }),
-      });
+      let saved = false;
+      let lastError = "No fue posible guardar la respuesta.";
 
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error || "No fue posible guardar la respuesta.");
+      for (let attempt = 0; attempt < 2 && !saved; attempt += 1) {
+        try {
+          const response = await fetch(`/api/evaluacion/${token}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "save",
+              question_id: question.id,
+              numeric_value: next.numeric_value,
+              text_value: next.text_value,
+              is_not_observed: next.is_not_observed,
+            }),
+          });
+
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error || lastError);
+          }
+
+          saved = true;
+        } catch (error) {
+          lastError =
+            error instanceof Error ? error.message : lastError;
+          if (attempt === 0) {
+            await new Promise((resolve) => setTimeout(resolve, 250));
+          }
+        }
+      }
+
+      if (!saved) {
+        throw new Error(lastError);
       }
 
       setSavedQuestionIds((current) => {
@@ -281,29 +316,52 @@ export default function AssessmentClient({ token }: { token: string }) {
           : current,
       );
     } catch (error) {
+      setResponses((current) => ({
+        ...current,
+        [question.id]: previous,
+      }));
       setSavedQuestionIds((current) => {
         const nextIds = new Set(current);
         nextIds.delete(question.id);
         return nextIds;
       });
+      setFailedQuestionIds((current) => {
+        const nextIds = new Set(current);
+        nextIds.add(question.id);
+        return nextIds;
+      });
       setMessage(
-        error instanceof Error ? error.message : "No fue posible guardar.",
+        "Una respuesta no pudo guardarse. La dejamos sin seleccionar para que puedas responderla de nuevo.",
       );
     } finally {
-      setSavingQuestion(null);
+      setPendingSaveIds((current) => {
+        const nextIds = new Set(current);
+        nextIds.delete(question.id);
+        return nextIds;
+      });
     }
   }
 
   async function completeAssessment() {
-    if (savingQuestion) {
-      setMessage("Espera un momento: todavía estamos guardando la última respuesta.");
+    if (pendingSaveIds.size > 0) {
+      setMessage("Espera un momento: todavía estamos guardando respuestas.");
       return;
     }
 
     if (answeredScored < scoredQuestions.length) {
-      setMessage(
-        `Aún faltan ${scoredQuestions.length - answeredScored} respuestas guardadas.`,
+      const firstPending = scoredQuestions.find(
+        (question) => !savedQuestionIds.has(question.id),
       );
+      setMessage(
+        `Aún faltan ${scoredQuestions.length - answeredScored} respuestas guardadas. Te llevamos a la primera pendiente.`,
+      );
+      if (firstPending) {
+        requestAnimationFrame(() => {
+          document
+            .getElementById(`question-${firstPending.id}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+      }
       return;
     }
 
@@ -662,7 +720,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                             placeholder={isExternalEvaluator ? "Registra evidencia, hechos o comentarios..." : "Escribe tu reflexión..."}
                             className="mt-3 w-full rounded-xl border border-neutral-300 bg-white p-3 text-sm outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                           />
-                          {savingQuestion === question.id && (
+                          {pendingSaveIds.has(question.id) && (
                             <div className="mt-2 text-xs text-neutral-400">
                               Guardando...
                             </div>
@@ -675,8 +733,13 @@ export default function AssessmentClient({ token }: { token: string }) {
                       const options = question.options ?? [];
                       return (
                         <div
+                          id={`question-${question.id}`}
                           key={question.id}
-                          className="border-b border-neutral-100 pb-6 last:border-0 last:pb-0"
+                          className={
+                            failedQuestionIds.has(question.id)
+                              ? "rounded-2xl border border-red-200 bg-red-50/60 p-4"
+                              : "border-b border-neutral-100 pb-6 last:border-0 last:pb-0"
+                          }
                         >
                           <p className="font-medium leading-relaxed text-neutral-900">
                             {question.prompt}
@@ -710,8 +773,16 @@ export default function AssessmentClient({ token }: { token: string }) {
                               );
                             })}
                           </div>
-                          <div className="mt-2 text-right text-xs text-neutral-400">
-                            {savingQuestion === question.id ? "Guardando..." : " "}
+                          <div className="mt-2 text-right text-xs">
+                            {pendingSaveIds.has(question.id) ? (
+                              <span className="text-neutral-400">Guardando...</span>
+                            ) : failedQuestionIds.has(question.id) ? (
+                              <span className="font-semibold text-red-600">
+                                No se guardó. Selecciona una opción nuevamente.
+                              </span>
+                            ) : (
+                              <span className="text-neutral-400"> </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -719,8 +790,13 @@ export default function AssessmentClient({ token }: { token: string }) {
 
                     return (
                       <div
+                        id={`question-${question.id}`}
                         key={question.id}
-                        className="border-b border-neutral-100 pb-5 last:border-0 last:pb-0"
+                        className={
+                          failedQuestionIds.has(question.id)
+                            ? "rounded-2xl border border-red-200 bg-red-50/60 p-4"
+                            : "border-b border-neutral-100 pb-5 last:border-0 last:pb-0"
+                        }
                       >
                         <p className="font-medium leading-relaxed text-neutral-900">
                           {question.prompt}
@@ -751,8 +827,16 @@ export default function AssessmentClient({ token }: { token: string }) {
                             );
                           })}
                         </div>
-                        <div className="mt-2 text-right text-xs text-neutral-400">
-                          {savingQuestion === question.id ? "Guardando..." : " "}
+                        <div className="mt-2 text-right text-xs">
+                          {pendingSaveIds.has(question.id) ? (
+                            <span className="text-neutral-400">Guardando...</span>
+                          ) : failedQuestionIds.has(question.id) ? (
+                            <span className="font-semibold text-red-600">
+                              No se guardó. Selecciona una respuesta nuevamente.
+                            </span>
+                          ) : (
+                            <span className="text-neutral-400"> </span>
+                          )}
                         </div>
                       </div>
                     );
@@ -834,7 +918,7 @@ export default function AssessmentClient({ token }: { token: string }) {
             </div>
             <button
               type="button"
-              disabled={finishing || Boolean(savingQuestion) || answeredScored < scoredQuestions.length}
+              disabled={finishing || pendingSaveIds.size > 0}
               onClick={() => void completeAssessment()}
               className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white transition enabled:hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
