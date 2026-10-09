@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeReasoning } from "@/lib/razonamiento-laboral";
 import { PsychometricTestInfo, ScoreColumnChart, ScoreRing } from "../../report-ui";
+import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -177,15 +178,68 @@ async function ReasoningReportContent({ params }: PageProps) {
       }).format(new Date(assignment.completed_at))
     : "—";
 
+  const exportData: PsychometricExportData = {
+    title: templateR.data.name,
+    subtitle:
+      "Desempeño en razonamiento verbal, numérico, lógico, secuencial y análisis aplicado",
+    personName,
+    jobTitle: person.job_title,
+    area: person.area,
+    organizationName: organizationR.data.name,
+    processName: processR.data.name,
+    reportDate: completedAt,
+    executiveSummary: analysis.executiveSummary,
+    keyFindings: analysis.strongest.map(
+      (item) => item.name + ": " + Math.round(item.percentage) + "% de aciertos",
+    ),
+    cautions: analysis.priorities.map(
+      (item) => item.name + ": conviene profundizar (" + Math.round(item.percentage) + "%)",
+    ),
+    interviewQuestions: analysis.interviewPrompts,
+    closing:
+      "El resultado de razonamiento aporta evidencia sobre la resolución de problemas bajo este formato. Para una decisión completa conviene integrarlo con experiencia, entrevista estructurada y muestras de trabajo.",
+    instruments: [
+      {
+        name: templateR.data.name,
+        subtitle:
+          "Razonamiento verbal, numérico, lógico, secuencial y análisis aplicado.",
+        chart: "columns",
+        overallLabel: "Resultado global",
+        overallDisplay: String(overallAccuracy) + "% · " + String(correct) + "/" + String(total) + " aciertos",
+        summary: analysis.executiveSummary,
+        highlights: analysis.strongest.map(
+          (item) => item.name + ": " + Math.round(item.percentage) + "%",
+        ),
+        watchouts: analysis.priorities.map(
+          (item) => item.name + ": " + Math.round(item.percentage) + "%",
+        ),
+        dimensions: analysis.dimensions.map((item) => ({
+          name: item.name,
+          value: item.percentage,
+          displayValue: Math.round(item.percentage) + "%",
+          band: item.band,
+          narrative: item.meaning,
+          potential: item.relevance,
+        })),
+      },
+    ],
+  };
+
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/protected/psicometrias" className="text-sm font-bold text-neutral-500 hover:text-orange-600">
           ← Volver a Psicometrías
         </Link>
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-          Reporte FactorRH
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <PsychometricExportActions
+            fileName={`Reporte-${templateR.data.name}-${personName}`}
+            data={exportData}
+          />
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+            Reporte FactorRH
+          </span>
+        </div>
       </div>
 
       <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
