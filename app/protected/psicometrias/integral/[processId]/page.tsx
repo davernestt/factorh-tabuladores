@@ -485,6 +485,104 @@ async function IntegralReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+          Objetivo de la evaluación
+        </div>
+        <h2 className="mt-2 text-2xl font-black text-neutral-900">
+          {purposeLabel}{targetRole ? " · " + targetRole : ""}
+        </h2>
+        <p className="mt-4 max-w-5xl text-sm leading-7 text-neutral-700">
+          {objectiveText}
+        </p>
+        {jobProfile && (
+          <div className="mt-5 rounded-2xl bg-neutral-50 p-4">
+            <div className="text-xs font-bold uppercase tracking-wide text-neutral-400">
+              Perfil base utilizado
+            </div>
+            <div className="mt-1 font-black text-neutral-900">
+              {jobProfile.name}
+            </div>
+            <div className="mt-1 text-sm text-neutral-500">
+              {jobProfile.family} · {jobProfile.level}
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+          Snapshot ejecutivo
+        </div>
+        <h2 className="mt-2 text-3xl font-black text-neutral-900">
+          Lo que un jefe de la vacante necesita ver primero
+        </h2>
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-2xl bg-emerald-50 p-5">
+            <div className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+              Fortaleza principal
+            </div>
+            <p className="mt-3 text-sm leading-6 text-neutral-700">
+              {analysis.strengths[0] ?? "El perfil requiere mayor evidencia para identificar una fortaleza predominante."}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-amber-50 p-5">
+            <div className="text-xs font-bold uppercase tracking-wide text-amber-700">
+              Aspecto principal a profundizar
+            </div>
+            <p className="mt-3 text-sm leading-6 text-neutral-700">
+              {analysis.opportunities[0] ?? "No se identificó un aspecto prioritario con la información disponible."}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-neutral-50 p-5">
+            <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+              Comparación con puesto
+            </div>
+            <p className="mt-3 text-sm leading-6 text-neutral-700">
+              {jobAlignment
+                ? jobAlignment.withinRange +
+                  " de " +
+                  jobAlignment.rows.length +
+                  " competencias cuentan con evidencia dentro del rango de referencia. " +
+                  (jobAlignment.missingEvidence
+                    ? jobAlignment.missingEvidence +
+                      " requieren más evidencia."
+                    : "La batería aporta evidencia para todo el perfil.")
+                : "No se seleccionó un perfil objetivo. El reporte presenta una lectura integral sin emitir una comparación contra puesto."}
+            </p>
+          </div>
+        </div>
+        <p className="mt-5 text-xs leading-5 text-neutral-400">
+          Este Snapshot organiza evidencia para facilitar la lectura. No representa una recomendación de contratación, promoción o descarte.
+        </p>
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+          Batería aplicada
+        </div>
+        <h2 className="mt-2 text-2xl font-black text-neutral-900">
+          Qué aportó cada instrumento
+        </h2>
+        <div className="mt-5 overflow-hidden rounded-2xl border border-neutral-200">
+          <div className="grid grid-cols-[minmax(180px,.8fr)_minmax(0,1.7fr)] bg-neutral-50 px-4 py-3 text-xs font-bold uppercase tracking-wide text-neutral-400">
+            <div>Prueba</div>
+            <div>Qué evalúa</div>
+          </div>
+          <div className="divide-y divide-neutral-100">
+            {batteryRows.map((item) => (
+              <div
+                key={item.name}
+                className="grid grid-cols-[minmax(180px,.8fr)_minmax(0,1.7fr)] gap-4 px-4 py-4"
+              >
+                <div className="text-sm font-black text-neutral-900">{item.name}</div>
+                <div className="text-sm leading-6 text-neutral-600">{item.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Resumen ejecutivo</div>
         <h2 className="mt-2 text-3xl font-black text-neutral-900">Lectura integrada del perfil</h2>
         <div className="mt-5 space-y-4 text-sm leading-7 text-neutral-700">
