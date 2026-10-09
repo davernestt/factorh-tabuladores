@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { Suspense } from "react";
+import FactoRHLogo from "@/components/factorh-logo";
 
 type RouteContext = {
   params: Promise<{ token: string }>;
@@ -264,7 +265,7 @@ function BrandHeader() {
     <header className="flex items-center justify-between">
       <div>
         <div className="text-2xl font-black tracking-tight text-neutral-900">
-          Factor<span className="text-orange-500">RH</span>
+          Facto<span className="text-orange-500">RH</span>
         </div>
         <div className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
           Evaluaciones
@@ -293,7 +294,7 @@ function PortalError() {
     <main className="min-h-screen bg-neutral-100 p-6">
       <div className="mx-auto mt-20 max-w-lg rounded-3xl border border-neutral-200 bg-white p-10 shadow-sm">
         <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-          FactorRH Evaluaciones
+          FactoRH Evaluaciones
         </div>
         <h1 className="mt-3 text-2xl font-black text-neutral-900">
           No pudimos abrir este proceso

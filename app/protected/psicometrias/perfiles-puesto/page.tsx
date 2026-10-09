@@ -89,7 +89,7 @@ async function JobProfilesContent() {
             ← Volver a Psicometrías
           </Link>
           <div className="mt-5 text-sm font-bold uppercase tracking-[.2em] text-orange-600">
-            FactorRH · Psicometrías
+            FactoRH · Psicometrías
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
             Perfiles objetivo de puesto

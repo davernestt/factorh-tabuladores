@@ -668,7 +668,7 @@ export default function NewAssessmentForm({
             </Field>
 
             <div className="md:col-span-2">
-              <Field label="Perfil base FactorRH (opcional)">
+              <Field label="Perfil base FactoRH (opcional)">
                 <select
                   value={targetJobProfileId}
                   onChange={(event) => setTargetJobProfileId(event.target.value)}

@@ -371,13 +371,13 @@ async function PsychometricsContent({ searchParams }: PageProps) {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">
-            FactorRH · Psicometrías
+            FactoRH · Psicometrías
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
             Evaluación psicométrica
           </h1>
           <p className="mt-3 max-w-3xl text-neutral-600">
-            Administración de candidatos, aplicaciones, avances, resultados y catálogo de instrumentos FactorRH.
+            Administración de candidatos, aplicaciones, avances, resultados y catálogo de instrumentos FactoRH.
           </p>
         </div>
         {clientCanAssign ? (
@@ -407,7 +407,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
               <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-700">
                 {clientPlan?.plan_type === "package"
                   ? clientPlan.plan_name
-                  : "Prueba gratuita FactorRH"}
+                  : "Prueba gratuita FactoRH"}
               </div>
               <div className="mt-1 text-xl font-black text-neutral-900">
                 {clientCreditsRemaining ?? 0} créditos disponibles
@@ -426,7 +426,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
           </div>
           {!clientCanAssign && (
             <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-amber-800">
-              Para generar nuevas ligas, solicita a FactorRH la activación de un paquete de créditos.
+              Para generar nuevas ligas, solicita a FactoRH la activación de un paquete de créditos.
             </p>
           )}
         </section>
@@ -437,7 +437,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
           href="/protected/psicometrias?view=personas"
           className={
             view === "personas"
-              ? "rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white"
+              ? "rounded-xl bg-[#4A4A4A] px-5 py-3 text-sm font-bold text-white"
               : "rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
           }
         >
@@ -447,7 +447,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
           href="/protected/psicometrias?view=pruebas"
           className={
             view === "pruebas"
-              ? "rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white"
+              ? "rounded-xl bg-[#4A4A4A] px-5 py-3 text-sm font-bold text-white"
               : "rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
           }
         >
@@ -527,7 +527,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
               <div className="flex items-end gap-2">
                 <button
                   type="submit"
-                  className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-800"
+                  className="rounded-xl bg-[#4A4A4A] px-5 py-3 text-sm font-bold text-white hover:bg-[#4A4A4A]"
                 >
                   Filtrar
                 </button>
@@ -632,7 +632,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                                 {processGroup.completed === processGroup.total ? (
                                   <Link
                                     href={`/protected/psicometrias/integral/${processGroup.processId}`}
-                                    className="rounded-xl bg-neutral-900 px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-neutral-800"
+                                    className="rounded-xl bg-[#4A4A4A] px-4 py-2.5 text-center text-sm font-bold text-white hover:bg-[#4A4A4A]"
                                   >
                                     Ver reporte integral
                                   </Link>
@@ -691,7 +691,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                 className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"
               >
                 <div className="text-xs font-bold uppercase tracking-wide text-orange-600">
-                  Instrumento FactorRH · v{template.version}
+                  Instrumento FactoRH · v{template.version}
                 </div>
                 <h3 className="mt-2 text-xl font-black text-neutral-900">
                   {meta?.publicName ?? template.name}

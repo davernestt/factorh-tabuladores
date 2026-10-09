@@ -7,7 +7,7 @@ import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChe
 const modules = [
   { name: 'PDL · Desarrollo de Líderes', description: 'Autoevaluaciones, liderazgo, casos y reportes individuales del programa.', icon: BookOpenCheck, href: '/protected', active: true, tag: 'Disponible' },
   { name: 'Evaluación 360°', description: 'Una persona evaluada; múltiples perspectivas. 12 competencias, 60 reactivos y un reporte consolidado.', icon: ChartNoAxesCombined, href: '/protected/360', active: true, tag: 'Módulo independiente' },
-  { name: 'Psicometrías', description: 'Instrumentos propios FactorRH, aplicaciones, seguimiento y reportes psicométricos.', icon: ListChecks, href: '/protected/psicometrias', active: true, tag: 'Disponible · Experimental' },
+  { name: 'Psicometrías', description: 'Instrumentos propios FactoRH, aplicaciones, seguimiento y reportes psicométricos.', icon: ListChecks, href: '/protected/psicometrias', active: true, tag: 'Disponible · Experimental' },
   { name: 'NOM-035', description: 'Evaluación de riesgos psicosociales y reportes organizacionales.', icon: HeartHandshake, href: null, active: false, tag: 'Próximamente' },
   { name: 'Clima laboral', description: 'Encuestas, campañas, participación y análisis por grupos.', icon: MessagesSquare, href: null, active: false, tag: 'Próximamente' },
   { name: 'Próximas herramientas', description: 'Desempeño, DNC y People Review, entre otras soluciones.', icon: CircleHelp, href: null, active: false, tag: 'Planeación' },
@@ -26,7 +26,7 @@ async function EvaluationModulesPageContent() {
   const { data, error } = await auth.auth.getClaims();
   if (error || !data?.claims) redirect('/auth/login');
   return <div className="space-y-8">
-    <div><div className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">FactorRH · Administración</div>
+    <div><div className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">FactoRH · Administración</div>
       <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-800">Centro de evaluaciones</h1>
       <p className="mt-3 max-w-3xl text-neutral-600">Cada herramienta funciona de manera independiente. Cuando sea pertinente, sus resultados se podrán integrar en un expediente o reporte global.</p>
     </div>

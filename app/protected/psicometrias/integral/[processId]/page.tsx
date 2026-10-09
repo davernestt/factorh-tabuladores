@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import {
+import FactoRHLogo from "@/components/factorh-logo";
   analyzeIntegralPsychometrics,
   type IntegralInstrument,
 } from "@/lib/psychometric-integral";
@@ -360,7 +361,7 @@ async function IntegralReportContent({ params }: PageProps) {
       name: instrument.name,
       description:
         meta?.publicDescription ??
-        "Instrumento psicométrico FactorRH aplicado dentro de este proceso.",
+        "Instrumento psicométrico FactoRH aplicado dentro de este proceso.",
     };
   });
 
@@ -472,15 +473,18 @@ async function IntegralReportContent({ params }: PageProps) {
             data={exportData}
             integral
           />
-          <span className="rounded-full bg-neutral-900 px-3 py-1 text-xs font-bold text-white">
+          <span className="rounded-full bg-[#4A4A4A] px-3 py-1 text-xs font-bold text-white">
             Reporte psicométrico integral
           </span>
         </div>
       </div>
 
-      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
+      <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
+        <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+          <FactoRHLogo className="h-10 w-auto" />
+        </div>
         <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">
-          FactorRH · Síntesis ejecutiva
+          FactoRH · Síntesis ejecutiva
         </div>
         <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
           <div>

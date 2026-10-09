@@ -1,3 +1,4 @@
+import FactoRHLogo from "@/components/factorh-logo";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -407,7 +408,7 @@ export default function AssessmentClient({ token }: { token: string }) {
       <main className="min-h-screen bg-neutral-100 flex items-center justify-center p-6">
         <div className="max-w-lg rounded-3xl bg-white border border-neutral-200 p-10 shadow-sm">
           <div className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-            FactorRH Evaluaciones
+            FactoRH Evaluaciones
           </div>
           <h1 className="text-2xl font-bold text-neutral-900">
             No pudimos abrir esta evaluación
@@ -463,9 +464,9 @@ export default function AssessmentClient({ token }: { token: string }) {
         <div className="mx-auto max-w-4xl">
           <BrandHeader />
           <section className="mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
-            <div className="border-b border-neutral-200 bg-neutral-900 px-7 py-9 text-white md:px-10">
+            <div className="border-b border-neutral-200 bg-[#4A4A4A] px-7 py-9 text-white md:px-10">
               <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-400">
-                {isExternalEvaluator ? "Portal del evaluador · FactorRH" : "Portal del participante · FactorRH"}
+                {isExternalEvaluator ? "Portal del evaluador · FactoRH" : "Portal del participante · FactoRH"}
               </div>
               <h1 className="mt-3 text-3xl font-bold md:text-4xl">
                 Hola, {isExternalEvaluator ? evaluatorName : data.person.first_name.trim()}
@@ -554,7 +555,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                       key={label}
                       className="flex gap-3 rounded-xl border border-neutral-200 px-4 py-3"
                     >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-sm font-bold text-white">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4A4A4A] text-sm font-bold text-white">
                         {index + 1}
                       </span>
                       <span className="text-sm text-neutral-700">{label}</span>
@@ -662,7 +663,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                 className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm md:p-8"
               >
                 <div className="mb-6 flex items-start gap-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 font-bold text-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#4A4A4A] font-bold text-white">
                     {dimension.sort_order}
                   </div>
                   <div>
@@ -908,7 +909,7 @@ export default function AssessmentClient({ token }: { token: string }) {
           )}
         </div>
 
-        <section className="mt-6 rounded-3xl bg-neutral-900 p-6 text-white md:p-8">
+        <section className="mt-6 rounded-3xl bg-[#4A4A4A] p-6 text-white md:p-8">
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-bold">Finalizar evaluación</h2>
@@ -935,9 +936,7 @@ function BrandHeader() {
   return (
     <header className="flex items-center justify-between">
       <div>
-        <div className="text-2xl font-black tracking-tight text-neutral-900">
-          Factor<span className="text-orange-500">RH</span>
-        </div>
+        <FactoRHLogo className="h-11 w-auto" />
         <div className="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">
           Evaluaciones
         </div>

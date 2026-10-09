@@ -1,3 +1,4 @@
+import FactoRHLogo from "@/components/factorh-logo";
 // 360 PRO deployment trigger
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -60,10 +61,13 @@ async function Feedback360DetailContent({ params }: PageProps) {
     <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Link href="/protected/360" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Evaluación 360°</Link>{closed&&<ReportActions fileName={reportFileName} elementId="feedback360-report"/>}</div>
 
     <article id="feedback360-report" className="space-y-7">
-    <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9">
+    <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white md:p-9">
+      <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+        <FactoRHLogo className="h-10 w-auto" />
+      </div>
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactorRH · Evaluación 360° v{cycle.instrument_version}</div>
+          <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactoRH · Evaluación 360° v{cycle.instrument_version}</div>
           <h1 className="mt-3 text-3xl font-black">{personName}</h1>
           <p className="mt-2 text-neutral-300">{[person.job_title,person.area].filter(Boolean).join(' · ')||'Sin puesto registrado'}</p>
           <p className="mt-1 text-sm text-neutral-400">{orgR.data.name} · {cycle.name}</p>
@@ -109,7 +113,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
       {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Lectura ejecutiva</div><h2 className="mt-2 text-3xl font-black text-neutral-800">{professional.headline}</h2><div className="mt-5 space-y-3 text-sm leading-7 text-neutral-600">{professional.executiveSummary.map((p,i)=><p key={i}>{p}</p>)}</div></div>
-          <div className="min-w-[190px] rounded-2xl bg-neutral-800 p-6 text-white"><div className="text-xs font-bold uppercase tracking-[.14em] text-orange-300">Índice del entorno</div><div className="mt-2 text-5xl font-black">{professional.overall?.toFixed(2)??'—'}</div><div className="mt-1 text-sm text-neutral-300">sobre 4.00</div></div>
+          <div className="min-w-[190px] rounded-2xl bg-[#4A4A4A] p-6 text-white"><div className="text-xs font-bold uppercase tracking-[.14em] text-orange-300">Índice del entorno</div><div className="mt-2 text-5xl font-black">{professional.overall?.toFixed(2)??'—'}</div><div className="mt-1 text-sm text-neutral-300">sobre 4.00</div></div>
         </div>
       </section>}
 
@@ -143,7 +147,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
       {professional&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Plan de desarrollo individual</div><h2 className="mt-2 text-2xl font-black text-neutral-800">Ruta de mejora · 90 días</h2><p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-500">El plan prioriza las competencias con menor valoración externa y las traduce en conductas observables, seguimiento y evidencia de avance.</p>
         <div className="mt-6 grid gap-4">{professional.developmentPlan.map((p,i)=><article key={p.competency} className="rounded-2xl border border-neutral-200 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><span className="text-xs font-bold uppercase tracking-[.12em] text-orange-600">Prioridad {i+1} · {p.horizon}</span><h3 className="mt-1 text-lg font-black text-neutral-800">{p.competency}</h3></div><span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold text-neutral-600">{p.indicator}</span></div><p className="mt-3 text-sm font-semibold text-neutral-700">{p.objective}</p><ul className="mt-3 grid gap-2 text-sm leading-6 text-neutral-600 md:grid-cols-3">{p.actions.map((a,j)=><li key={j} className="rounded-xl bg-neutral-50 p-3">{a}</li>)}</ul></article>)}</div>
-        <div className="mt-7 rounded-2xl bg-neutral-800 p-6 text-white"><h3 className="font-black">Sugerencias para la devolución y seguimiento</h3><ul className="mt-4 grid gap-3 text-sm leading-6 text-neutral-300 md:grid-cols-2">{professional.recommendations.map((x,i)=><li key={i}><span className="mr-2 font-black text-orange-400">0{i+1}</span>{x}</li>)}</ul></div>
+        <div className="mt-7 rounded-2xl bg-[#4A4A4A] p-6 text-white"><h3 className="font-black">Sugerencias para la devolución y seguimiento</h3><ul className="mt-4 grid gap-3 text-sm leading-6 text-neutral-300 md:grid-cols-2">{professional.recommendations.map((x,i)=><li key={i}><span className="mr-2 font-black text-orange-400">0{i+1}</span>{x}</li>)}</ul></div>
       </section>}
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">

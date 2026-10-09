@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { PsychometricTestInfo, ScoreDotPlot, ScoreRing } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
+import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = { params: Promise<{ id: string }> };
 type ResultRow = { dimension_id: string; percentage: number | string };
@@ -170,12 +171,15 @@ async function AttentionReportContent({ params }: PageProps) {
             fileName={`Reporte-${templateR.data.name}-${personName}`}
             data={exportData}
           />
-          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Reporte FactorRH</span>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Reporte FactoRH</span>
         </div>
       </div>
 
-      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
-        <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">FactorRH · Psicometrías</div>
+      <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
+        <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+          <FactoRHLogo className="h-10 w-auto" />
+        </div>
+        <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">FactoRH · Psicometrías</div>
         <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
           <div>
             <h1 className="text-3xl font-black md:text-4xl">{templateR.data.name}</h1>
@@ -258,7 +262,7 @@ async function AttentionReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Alcance de interpretación.</strong> Atención y Precisión FactorRH v1.0 utiliza reactivos originales. El tiempo total se muestra como dato contextual y el resultado debe interpretarse junto con las exigencias del puesto, entrevista y evidencia de desempeño.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Atención y Precisión FactoRH v1.0 utiliza reactivos originales. El tiempo total se muestra como dato contextual y el resultado debe interpretarse junto con las exigencias del puesto, entrevista y evidencia de desempeño.
       </section>
     </div>
   );

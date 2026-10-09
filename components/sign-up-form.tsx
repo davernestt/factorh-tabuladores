@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import FactoRHLogo from "@/components/factorh-logo";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,9 +72,7 @@ export function SignUpForm({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <div className="text-center">
-        <div className="text-3xl font-black tracking-tight text-neutral-900">
-          Factor<span className="text-orange-500">RH</span>
-        </div>
+        <FactoRHLogo className="mx-auto h-16 w-auto" full priority />
         <div className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
           Administración
         </div>

@@ -12,7 +12,7 @@ export default function ReportActions({fileName,elementId}:Props){
       p,li{font-size:10.5pt;line-height:1.5} table{width:100%;border-collapse:collapse;margin:12px 0 20px}
       th,td{border:1px solid #d4d4d4;padding:7px;text-align:left;vertical-align:top}
       th{background:#f5f5f5} svg{max-width:640px;height:auto}.no-print,button,a{display:none!important}
-      .bg-neutral-800,.bg-neutral-900{background:#262626!important;color:#fff!important}
+      .bg-[#4A4A4A],.bg-[#4A4A4A]{background:#555555!important;color:#fff!important}
     `;
     const html=`<html><head><meta charset="utf-8"/><style>${styles}</style></head><body>${report.innerHTML}</body></html>`;
     const blob=new Blob(["\ufeff",html],{type:"application/msword"});
@@ -20,7 +20,7 @@ export default function ReportActions({fileName,elementId}:Props){
     a.href=url;a.download=`${sanitize(fileName)}.doc`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
   return <div className="no-print flex flex-wrap gap-3">
-    <button type="button" onClick={downloadPdf} className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-800">Descargar PDF</button>
+    <button type="button" onClick={downloadPdf} className="rounded-xl bg-[#4A4A4A] px-5 py-3 text-sm font-bold text-white hover:bg-[#4A4A4A]">Descargar PDF</button>
     <button type="button" onClick={downloadWord} className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-800 hover:bg-neutral-50">Descargar Word</button>
   </div>
 }

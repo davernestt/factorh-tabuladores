@@ -6,6 +6,7 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 import { analyzeNeeds } from "@/lib/necesidades-laborales";
 import { PsychometricTestInfo, ScoreColumnChart } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
+import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -222,14 +223,17 @@ async function LaborNeedsReportContent({ params }: PageProps) {
             data={exportData}
           />
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-            Reporte FactorRH
+            Reporte FactoRH
           </span>
         </div>
       </div>
 
-      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
+      <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
+        <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+          <FactoRHLogo className="h-10 w-auto" />
+        </div>
         <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">
-          FactorRH · Psicometrías
+          FactoRH · Psicometrías
         </div>
         <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
           <div>
@@ -374,7 +378,7 @@ async function LaborNeedsReportContent({ params }: PageProps) {
                   {item.name}
                 </h2>
               </div>
-              <div className="rounded-2xl bg-neutral-900 px-4 py-3 text-2xl font-black text-white">
+              <div className="rounded-2xl bg-[#4A4A4A] px-4 py-3 text-2xl font-black text-white">
                 {item.index}
               </div>
             </div>
@@ -427,7 +431,7 @@ async function LaborNeedsReportContent({ params }: PageProps) {
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
         <strong className="text-neutral-800">Alcance de interpretación.</strong> Mapa de
-        Necesidades Laborales FactorRH v1.0 es un instrumento de
+        Necesidades Laborales FactoRH v1.0 es un instrumento de
         autodescripción laboral con reactivos originales. Las necesidades altas no son
         fortalezas por sí mismas y las bajas no son defectos. El resultado debe
         contrastarse con entrevista, condiciones del puesto, experiencia y evidencia de desempeño.

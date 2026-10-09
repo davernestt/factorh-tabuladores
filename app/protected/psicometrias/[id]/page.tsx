@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import {
+import FactoRHLogo from "@/components/factorh-logo";
   analyzeVectorConductual,
   vectorIndex,
   type VectorFacetInput,
@@ -278,14 +279,17 @@ async function PsychometricReportContent({ params }: PageProps) {
             data={exportData}
           />
           <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700">
-            Reporte FactorRH
+            Reporte FactoRH
           </span>
         </div>
       </div>
 
-      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
+      <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
+        <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+          <FactoRHLogo className="h-10 w-auto" />
+        </div>
         <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">
-          FactorRH · Psicometrías
+          FactoRH · Psicometrías
         </div>
         <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
           <div>
@@ -385,7 +389,7 @@ async function PsychometricReportContent({ params }: PageProps) {
                   <div className="text-xs font-bold uppercase tracking-wide text-orange-600">{dimension.band}</div>
                   <h2 className="mt-1 text-xl font-black text-neutral-900">{dimension.name}</h2>
                 </div>
-                <div className="rounded-2xl bg-neutral-900 px-4 py-3 text-2xl font-black text-white">{dimension.index}</div>
+                <div className="rounded-2xl bg-[#4A4A4A] px-4 py-3 text-2xl font-black text-white">{dimension.index}</div>
               </div>
               <p className="mt-4 text-sm leading-7 text-neutral-700">{dimension.summary}</p>
               <div className="mt-5 grid gap-3">
@@ -425,7 +429,7 @@ async function PsychometricReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Alcance de interpretación.</strong> Vector Conductual FactorRH v1.0 es un instrumento de autodescripción laboral con reactivos originales. El resultado debe integrarse con entrevista estructurada, experiencia, evidencia de desempeño y requisitos reales del puesto.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Vector Conductual FactoRH v1.0 es un instrumento de autodescripción laboral con reactivos originales. El resultado debe integrarse con entrevista estructurada, experiencia, evidencia de desempeño y requisitos reales del puesto.
       </section>
     </div>
   );

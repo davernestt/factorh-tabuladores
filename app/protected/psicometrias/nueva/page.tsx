@@ -208,11 +208,11 @@ async function NewPsychometricAssessmentContent() {
             Créditos agotados
           </div>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
-            Tu prueba de FactorRH terminó
+            Tu prueba de FactoRH terminó
           </h1>
           <p className="mt-3 max-w-2xl text-neutral-600">
             Ya utilizaste las aplicaciones disponibles o la vigencia del plan terminó.
-            Para seguir enviando evaluaciones, FactorRH debe activar un paquete de créditos para tu empresa.
+            Para seguir enviando evaluaciones, FactoRH debe activar un paquete de créditos para tu empresa.
           </p>
           <div className="mt-6 rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-700">
             Tus resultados y reportes anteriores permanecen disponibles. El bloqueo sólo evita generar nuevas aplicaciones.

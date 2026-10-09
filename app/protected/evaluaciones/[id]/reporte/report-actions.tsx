@@ -65,7 +65,8 @@ export default function ReportActions({ fileName, reportData }: Props) {
 
     try {
       await document.fonts?.ready;
-      const pageJpegs = buildBrandedPdfPages(reportData);
+      const brandLogo = await loadBrandLogo();
+      const pageJpegs = buildBrandedPdfPages(reportData, brandLogo);
       const pdf = buildImagePdf(pageJpegs, PDF_PAGE_WIDTH, PDF_PAGE_HEIGHT);
       triggerDownload(pdf, `${sanitize(fileName)}.pdf`);
     } catch (cause) {
@@ -83,10 +84,12 @@ export default function ReportActions({ fileName, reportData }: Props) {
 
     try {
       await document.fonts?.ready;
+      const brandLogo = await loadBrandLogo();
+      const brandBase64 = imageToPngBase64(brandLogo);
       const radarDataUrl = buildWordRadarImage(reportData.dimensions);
       const radarBase64 = radarDataUrl.split(",")[1] ?? "";
-      const html = buildWordReport(reportData, "radar.png");
-      const mhtml = buildWordMhtml(html, radarBase64);
+      const html = buildWordReport(reportData, "radar.png", "brand-logo.png");
+      const mhtml = buildWordMhtml(html, radarBase64, brandBase64);
       const blob = new Blob(["\ufeff", mhtml], {
         type: "application/msword;charset=utf-8",
       });
@@ -106,7 +109,7 @@ export default function ReportActions({ fileName, reportData }: Props) {
           type="button"
           onClick={() => void downloadPdf()}
           disabled={Boolean(exporting)}
-          className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-800 disabled:cursor-wait disabled:opacity-50"
+          className="rounded-xl bg-[#4A4A4A] px-5 py-3 text-sm font-bold text-white hover:bg-[#3F3F3F] disabled:cursor-wait disabled:opacity-50"
         >
           {exporting === "pdf" ? "Generando PDF..." : "Descargar PDF"}
         </button>
@@ -131,13 +134,13 @@ const PDF_CONTENT_WIDTH = PDF_PAGE_WIDTH - PDF_MARGIN * 2;
 const PDF_CONTENT_HEIGHT = PDF_PAGE_HEIGHT - PDF_MARGIN * 2;
 
 
-function buildBrandedPdfPages(data: ReportData) {
+function buildBrandedPdfPages(data: ReportData, brandLogo: HTMLImageElement) {
   const pages: HTMLCanvasElement[] = [];
   const first = createPdfPage();
   const ctx = first.getContext("2d");
   if (!ctx) throw new Error("Canvas no disponible.");
 
-  drawPdfHeader(ctx, data);
+  drawPdfHeader(ctx, data, brandLogo);
   drawMetricRow(ctx, data, 420);
   drawExecutiveSummary(ctx, data, 585);
   drawFooter(ctx, 1);
@@ -146,7 +149,7 @@ function buildBrandedPdfPages(data: ReportData) {
   const overview = createPdfPage();
   const overviewCtx = overview.getContext("2d");
   if (!overviewCtx) throw new Error("Canvas no disponible.");
-  drawSectionPageHeader(overviewCtx, data, "Vista global de competencias");
+  drawSectionPageHeader(overviewCtx, data, "Vista global de competencias", brandLogo);
   drawRadar(overviewCtx, data.dimensions, 320, 650, 205);
   drawRadarLegend(overviewCtx, data.dimensions, 85, 920, 465);
   drawDimensionBars(overviewCtx, data.dimensions, 650, 285, 500, 980);
@@ -197,7 +200,7 @@ function buildBrandedPdfPages(data: ReportData) {
     let page = createPdfPage();
     let pageCtx = page.getContext("2d");
     if (!pageCtx) throw new Error("Canvas no disponible.");
-    drawSectionPageHeader(pageCtx, data, "Anexo cualitativo");
+    drawSectionPageHeader(pageCtx, data, "Anexo cualitativo", brandLogo);
     let y = 220;
 
     for (const response of data.openResponses) {
@@ -208,7 +211,7 @@ function buildBrandedPdfPages(data: ReportData) {
         page = createPdfPage();
         pageCtx = page.getContext("2d");
         if (!pageCtx) throw new Error("Canvas no disponible.");
-        drawSectionPageHeader(pageCtx, data, "Anexo cualitativo");
+        drawSectionPageHeader(pageCtx, data, "Anexo cualitativo", brandLogo);
         y = 220;
       }
       y = drawResponseCard(pageCtx, response, y);
@@ -222,16 +225,15 @@ function buildBrandedPdfPages(data: ReportData) {
   return pages.map((canvas) => dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)));
 }
 
-function drawPdfHeader(ctx: CanvasRenderingContext2D, data: ReportData) {
-  ctx.fillStyle = "#111111";
+function drawPdfHeader(
+  ctx: CanvasRenderingContext2D,
+  data: ReportData,
+  brandLogo: HTMLImageElement,
+) {
+  ctx.fillStyle = "#4A4A4A";
   ctx.fillRect(0, 0, PDF_PAGE_WIDTH, 360);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 34px Arial";
-  ctx.fillText("Factor", 72, 82);
-  const factorWidth = ctx.measureText("Factor").width;
-  ctx.fillStyle = "#f97316";
-  ctx.fillText("RH", 72 + factorWidth, 82);
+  drawBrandLogoCard(ctx, brandLogo, 72, 42, 290);
 
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "700 14px Arial";
@@ -245,7 +247,7 @@ function drawPdfHeader(ctx: CanvasRenderingContext2D, data: ReportData) {
   ctx.font = "24px Arial";
   drawWrappedText(ctx, data.templateName, 72, 252, 650, 30);
 
-  roundRect(ctx, 835, 72, 330, 205, 20, "#1f1f1f", "#3f3f46");
+  roundRect(ctx, 835, 72, 330, 205, 20, "#555555", "#666666");
   ctx.fillStyle = "#fb923c";
   ctx.font = "700 13px Arial";
   ctx.fillText("PERSONA EVALUADA", 865, 112);
@@ -258,19 +260,20 @@ function drawPdfHeader(ctx: CanvasRenderingContext2D, data: ReportData) {
   ctx.fillText(data.organizationName, 865, 252);
 }
 
-function drawSectionPageHeader(ctx: CanvasRenderingContext2D, data: ReportData, title: string) {
-  ctx.fillStyle = "#111111";
+function drawSectionPageHeader(
+  ctx: CanvasRenderingContext2D,
+  data: ReportData,
+  title: string,
+  brandLogo: HTMLImageElement,
+) {
+  ctx.fillStyle = "#4A4A4A";
   ctx.fillRect(0, 0, PDF_PAGE_WIDTH, 150);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 28px Arial";
-  ctx.fillText("Factor", 62, 62);
-  const w = ctx.measureText("Factor").width;
-  ctx.fillStyle = "#f97316";
-  ctx.fillText("RH", 62 + w, 62);
+
+  drawBrandLogoCard(ctx, brandLogo, 62, 27, 210);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 24px Arial";
-  ctx.fillText(title, 62, 112);
+  ctx.fillText(title, 305, 72);
 
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "14px Arial";
@@ -691,7 +694,7 @@ function drawFooter(ctx: CanvasRenderingContext2D, pageNumber: number) {
 
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "12px Arial";
-  ctx.fillText("FactorRH · Reporte de desarrollo de liderazgo · Confidencial", PDF_MARGIN, PDF_PAGE_HEIGHT - 38);
+  ctx.fillText("FactoRH · Reporte de desarrollo de liderazgo · Confidencial", PDF_MARGIN, PDF_PAGE_HEIGHT - 38);
   ctx.textAlign = "right";
   ctx.fillText(`Página ${pageNumber}`, PDF_PAGE_WIDTH - PDF_MARGIN, PDF_PAGE_HEIGHT - 38);
   ctx.textAlign = "left";
@@ -873,6 +876,38 @@ async function renderReportToJpegPages(report: HTMLElement) {
   pages.push(page);
 
   return pages.map((canvas) => dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92)));
+}
+
+async function loadBrandLogo() {
+  return await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("No fue posible cargar el logo de FactoRH."));
+    image.src = "/brand/factorh-wordmark.svg";
+  });
+}
+
+function imageToPngBase64(image: HTMLImageElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 820;
+  canvas.height = 180;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible.");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/png").split(",")[1] ?? "";
+}
+
+function drawBrandLogoCard(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  x: number,
+  y: number,
+  width: number,
+) {
+  const height = Math.round(width * (180 / 820));
+  roundRect(ctx, x, y, width + 22, height + 16, 12, "#ffffff");
+  ctx.drawImage(image, x + 11, y + 8, width, height);
 }
 
 function createPdfPage() {
@@ -1178,8 +1213,12 @@ function buildWordRadarImage(dimensions: DimensionExport[]) {
   return canvas.toDataURL("image/png");
 }
 
-function buildWordMhtml(html: string, radarBase64: string) {
-  const boundary = "----=_NextPart_FactorRH_Report";
+function buildWordMhtml(
+  html: string,
+  radarBase64: string,
+  brandBase64: string,
+) {
+  const boundary = "----=_NextPart_FactoRH_Report";
   return [
     "MIME-Version: 1.0",
     `Content-Type: multipart/related; boundary="${boundary}"`,
@@ -1198,6 +1237,13 @@ function buildWordMhtml(html: string, radarBase64: string) {
     "",
     wrapBase64(radarBase64),
     "",
+    `--${boundary}`,
+    "Content-Type: image/png",
+    "Content-Transfer-Encoding: base64",
+    "Content-Location: brand-logo.png",
+    "",
+    wrapBase64(brandBase64),
+    "",
     `--${boundary}--`,
   ].join("\r\n");
 }
@@ -1206,7 +1252,11 @@ function wrapBase64(value: string) {
   return value.match(/.{1,76}/g)?.join("\r\n") ?? value;
 }
 
-function buildWordReport(data: ReportData, radarImageName: string) {
+function buildWordReport(
+  data: ReportData,
+  radarImageName: string,
+  brandImageName: string,
+) {
   const dimensions = data.dimensions
     .map(
       (item) => `
@@ -1302,12 +1352,12 @@ function buildWordReport(data: ReportData, radarImageName: string) {
           td { vertical-align:top; }
           h1 { font-size:24pt; line-height:1.05; margin:0; color:#ffffff; }
           h2 { font-size:15pt; margin:4px 0 8px; color:#171717; }
-          .header { background:#171717; color:#ffffff; }
+          .header { background:#4A4A4A; color:#ffffff; }
           .header td { padding:22px; }
           .brand { font-size:20pt; font-weight:bold; }
           .orange { color:#f97316; }
           .program { color:#a3a3a3; font-size:8pt; letter-spacing:1.5px; }
-          .header-meta { border:1px solid #404040; background:#262626; padding:12px; color:#e5e5e5; }
+          .header-meta { border:1px solid #404040; background:#555555; padding:12px; color:#e5e5e5; }
           .header-meta b { color:#ffffff; }
           .spacer { height:14px; }
           .metrics td { width:20%; padding:10px; border:1px solid #e5e7eb; background:#fafafa; }
@@ -1320,7 +1370,7 @@ function buildWordReport(data: ReportData, radarImageName: string) {
           .muted { color:#737373; font-size:9pt; }
           .radar-section { margin-top:16px; page-break-inside:avoid; }
           .overview { margin-top:8px; }
-          .overview th { background:#171717; color:#ffffff; padding:8px; font-size:8.5pt; text-align:left; }
+          .overview th { background:#4A4A4A; color:#ffffff; padding:8px; font-size:8.5pt; text-align:left; }
           .overview td { border-bottom:1px solid #e5e7eb; padding:8px; }
           .dim-name { width:28%; font-weight:bold; }
           .dim-score { width:9%; text-align:center; font-weight:bold; }
@@ -1353,7 +1403,7 @@ function buildWordReport(data: ReportData, radarImageName: string) {
           .risk { color:#b91c1c; }
           .plan { margin-top:12px; border:1px solid #d4d4d4; page-break-inside:avoid; }
           .plan td { padding:10px; border:1px solid #e5e7eb; width:50%; }
-          .plan-head { background:#171717; color:#ffffff; font-size:12pt; }
+          .plan-head { background:#4A4A4A; color:#ffffff; font-size:12pt; }
           .plan-head span { color:#fb923c; font-size:8pt; letter-spacing:1px; }
           .timeline td { width:33.333%; background:#fafafa; font-size:9pt; border:0; }
           .timeline b { color:#ea580c; }
@@ -1369,8 +1419,10 @@ function buildWordReport(data: ReportData, radarImageName: string) {
         <table class="header" role="presentation">
           <tr>
             <td style="width:58%;">
-              <div class="brand">Factor<span class="orange">RH</span></div>
-              <div class="program">PROGRAMA DE DESARROLLO DE LÍDERES</div>
+              <div style="display:inline-block;background:#ffffff;padding:7px 10px;border-radius:8px;">
+                <img src="${brandImageName}" alt="FactoRH" style="width:210px;height:auto;"/>
+              </div>
+              <div class="program" style="margin-top:7px;">PROGRAMA DE DESARROLLO DE LÍDERES</div>
               <div style="height:22px;"></div>
               <h1>Reporte de Competencias</h1>
               <div style="margin-top:6px;color:#d4d4d4;font-size:13pt;">${escapeHtml(data.templateName)}</div>

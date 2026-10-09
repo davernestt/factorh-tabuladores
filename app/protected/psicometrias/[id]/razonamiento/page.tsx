@@ -6,6 +6,7 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 import { analyzeReasoning } from "@/lib/razonamiento-laboral";
 import { PsychometricTestInfo, ScoreColumnChart, ScoreRing } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
+import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -243,14 +244,17 @@ async function ReasoningReportContent({ params }: PageProps) {
             data={exportData}
           />
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-            Reporte FactorRH
+            Reporte FactoRH
           </span>
         </div>
       </div>
 
-      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
+      <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
+        <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+          <FactoRHLogo className="h-10 w-auto" />
+        </div>
         <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">
-          FactorRH · Psicometrías
+          FactoRH · Psicometrías
         </div>
         <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
           <div>
@@ -361,7 +365,7 @@ async function ReasoningReportContent({ params }: PageProps) {
                 <div className="text-xs font-bold uppercase tracking-wide text-orange-600">{item.band}</div>
                 <h2 className="mt-1 text-xl font-black text-neutral-900">{item.name}</h2>
               </div>
-              <div className="rounded-2xl bg-neutral-900 px-4 py-3 text-2xl font-black text-white">
+              <div className="rounded-2xl bg-[#4A4A4A] px-4 py-3 text-2xl font-black text-white">
                 {Math.round(item.percentage)}%
               </div>
             </div>
@@ -387,7 +391,7 @@ async function ReasoningReportContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-neutral-50 p-6 text-sm leading-6 text-neutral-600">
-        <strong className="text-neutral-800">Alcance de interpretación.</strong> Razonamiento Laboral General FactorRH v1.0 utiliza reactivos originales y reporta el porcentaje de aciertos por área. Para una decisión completa conviene integrarlo con entrevista estructurada, experiencia, requisitos del puesto y, cuando sea pertinente, una muestra de trabajo.
+        <strong className="text-neutral-800">Alcance de interpretación.</strong> Razonamiento Laboral General FactoRH v1.0 utiliza reactivos originales y reporta el porcentaje de aciertos por área. Para una decisión completa conviene integrarlo con entrevista estructurada, experiencia, requisitos del puesto y, cuando sea pertinente, una muestra de trabajo.
       </section>
     </div>
   );

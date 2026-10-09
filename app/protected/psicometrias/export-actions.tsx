@@ -84,7 +84,8 @@ export default function PsychometricExportActions({ fileName, data, integral = f
     setError(null);
     try {
       await document.fonts?.ready;
-      const pages = buildPages(data, integral);
+      const brandLogo = await loadBrandLogo();
+      const pages = buildPages(data, integral, brandLogo);
       triggerDownload(buildImagePdf(pages), sanitize(fileName) + ".pdf");
     } catch (cause) {
       console.error(cause);
@@ -100,13 +101,24 @@ export default function PsychometricExportActions({ fileName, data, integral = f
     setError(null);
     try {
       await document.fonts?.ready;
-      const images = data.instruments.map(function (instrument, index) {
+      const brandLogo = await loadBrandLogo();
+      const brandBase64 = imageToPngBase64(brandLogo);
+      const chartImages = data.instruments.map(function (instrument, index) {
         return {
           name: "chart-" + String(index + 1) + ".png",
           base64: buildChart(instrument, 920, 600).toDataURL("image/png").split(",")[1] || "",
         };
       });
-      const html = buildWordHtml(data, images.map(function (item) { return item.name; }), integral);
+      const images = [
+        { name: "brand-logo.png", base64: brandBase64 },
+        ...chartImages,
+      ];
+      const html = buildWordHtml(
+        data,
+        chartImages.map(function (item) { return item.name; }),
+        integral,
+        "brand-logo.png",
+      );
       const blob = new Blob(["\ufeff", buildMhtml(html, images)], {
         type: "application/msword;charset=utf-8",
       });
@@ -123,7 +135,7 @@ export default function PsychometricExportActions({ fileName, data, integral = f
     <div className="no-print">
       <div className="flex flex-wrap gap-3">
         <button type="button" onClick={() => void downloadPdf()} disabled={Boolean(exporting)}
-          className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-800 disabled:opacity-50">
+          className="rounded-xl bg-[#4A4A4A] px-5 py-3 text-sm font-bold text-white hover:bg-[#3F3F3F] disabled:opacity-50">
           {exporting === "pdf" ? "Generando PDF..." : integral ? "Descargar reporte integral PDF" : "Descargar PDF"}
         </button>
         <button type="button" onClick={() => void downloadWord()} disabled={Boolean(exporting)}
@@ -136,7 +148,11 @@ export default function PsychometricExportActions({ fileName, data, integral = f
   );
 }
 
-function buildPages(data: PsychometricExportData, integral: boolean) {
+function buildPages(
+  data: PsychometricExportData,
+  integral: boolean,
+  brandLogo: HTMLImageElement,
+) {
   const out: Uint8Array[] = [];
   let page = 1;
   const pageBottom = H - 105;
@@ -152,13 +168,13 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
   function beginPage(title: string) {
     canvas = makePage();
     ctx = mustContext(canvas);
-    header(ctx, data, title);
+    header(ctx, data, title, brandLogo);
   }
 
   // 1. Portada
-  ctx.fillStyle = "#111111";
+  ctx.fillStyle = "#4A4A4A";
   ctx.fillRect(0, 0, W, 505);
-  brand(ctx, 74, 92);
+  brand(ctx, 74, 92, brandLogo);
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "700 14px Arial";
   ctx.fillText("EVALUACIONES PSICOMÉTRICAS", 74, 128);
@@ -182,7 +198,7 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
     3,
   );
 
-  box(ctx, 852, 88, 316, 282, "#1f1f1f", "#404040");
+  box(ctx, 852, 88, 316, 282, "#555555", "#666666");
   ctx.fillStyle = "#fb923c";
   ctx.font = "700 11px Arial";
   ctx.fillText("PERSONA EVALUADA", 880, 128);
@@ -1371,7 +1387,12 @@ function bars(ctx: CanvasRenderingContext2D, items: PsychometricExportDimension[
   });
 }
 
-function buildWordHtml(data: PsychometricExportData, imageNames: string[], integral: boolean) {
+function buildWordHtml(
+  data: PsychometricExportData,
+  imageNames: string[],
+  integral: boolean,
+  brandImageName: string,
+) {
   const instruments = data.instruments.map(function (instrument, index) {
     const rows = instrument.dimensions.map(function (item) {
       return "<tr><td><b>" + esc(item.name) + "</b>" + (item.band ? "<br/><span class='muted'>" + esc(item.band) + "</span>" : "") +
@@ -1476,12 +1497,12 @@ function buildWordHtml(data: PsychometricExportData, imageNames: string[], integ
 
   return "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'/>" +
     "<style>@page{size:A4;margin:1.35cm}body{font-family:Arial;color:#262626;font-size:10.5pt;line-height:1.45}table{border-collapse:collapse;width:100%}td{vertical-align:top}" +
-    ".header{background:#171717;color:#fff}.header td{padding:22px}.brand{font-size:22pt;font-weight:bold}.orange{color:#f97316}.eyebrow{color:#ea580c;font-size:8pt;font-weight:bold;letter-spacing:1.1px}" +
+    ".header{background:#4A4A4A;color:#fff}.header td{padding:22px}.brand{font-size:22pt;font-weight:bold}.orange{color:#f97316}.eyebrow{color:#ea580c;font-size:8pt;font-weight:bold;letter-spacing:1.1px}" +
     ".dark{color:#171717;font-size:22pt;margin:4px 0 8px}h2{font-size:15pt;color:#171717}.lead{color:#525252;font-size:11pt}.muted{color:#737373;font-size:8.5pt}.summary{background:#fff7ed;border:1px solid #fed7aa;padding:14px;margin:12px 0}" +
-    ".good{background:#ecfdf5;border:1px solid #a7f3d0;padding:12px;margin-top:12px}.watch{background:#fffbeb;border:1px solid #fde68a;padding:12px;margin-top:12px}.results th{background:#171717;color:#fff;padding:8px;text-align:left;font-size:8.5pt}.results td{border-bottom:1px solid #e5e7eb;padding:9px}.results .score{width:12%;text-align:center;font-weight:bold}.bar{width:100%;margin:4px 0 8px}.chart{text-align:center;border:1px solid #e5e7eb;padding:10px;margin:10px 0}.metric{display:inline-block;background:#fafafa;border:1px solid #e5e7eb;padding:10px;font-size:16pt}.page-break{page-break-before:always}.exec{margin-top:14px;background:#fafafa;border:1px solid #e5e7eb;padding:14px}</style></head><body>" +
+    ".good{background:#ecfdf5;border:1px solid #a7f3d0;padding:12px;margin-top:12px}.watch{background:#fffbeb;border:1px solid #fde68a;padding:12px;margin-top:12px}.results th{background:#4A4A4A;color:#fff;padding:8px;text-align:left;font-size:8.5pt}.results td{border-bottom:1px solid #e5e7eb;padding:9px}.results .score{width:12%;text-align:center;font-weight:bold}.bar{width:100%;margin:4px 0 8px}.chart{text-align:center;border:1px solid #e5e7eb;padding:10px;margin:10px 0}.metric{display:inline-block;background:#fafafa;border:1px solid #e5e7eb;padding:10px;font-size:16pt}.page-break{page-break-before:always}.exec{margin-top:14px;background:#fafafa;border:1px solid #e5e7eb;padding:14px}</style></head><body>" +
     "<table class='header'><tr><td style='width:60%'><div class='brand'>Factor<span class='orange'>RH</span></div><div style='color:#a3a3a3;font-size:8pt'>EVALUACIONES PSICOMÉTRICAS</div><div style='font-size:25pt;font-weight:bold;margin-top:16px'>" + esc(data.title) + "</div>" +
     "<div style='color:#d4d4d4;font-size:12pt'>" + esc(data.subtitle || (integral ? "Síntesis ejecutiva y acumulado de resultados individuales" : "Reporte ejecutivo de resultados")) + "</div></td>" +
-    "<td style='width:40%'><div style='background:#262626;border:1px solid #404040;padding:12px'><div style='color:#fb923c;font-size:8pt;font-weight:bold'>PERSONA EVALUADA</div><div style='font-size:14pt;font-weight:bold'>" + esc(data.personName) + "</div><div>" + esc([data.jobTitle, data.area].filter(Boolean).join(" · ") || "Sin puesto registrado") + "</div><div>" + esc(data.organizationName) + "</div><div>" + esc(data.reportDate) + "</div></div></td></tr></table>" +
+    "<td style='width:40%'><div style='background:#555555;border:1px solid #404040;padding:12px'><div style='color:#fb923c;font-size:8pt;font-weight:bold'>PERSONA EVALUADA</div><div style='font-size:14pt;font-weight:bold'>" + esc(data.personName) + "</div><div>" + esc([data.jobTitle, data.area].filter(Boolean).join(" · ") || "Sin puesto registrado") + "</div><div>" + esc(data.organizationName) + "</div><div>" + esc(data.reportDate) + "</div></div></td></tr></table>" +
     "<div class='exec'><div class='eyebrow'>" + (integral ? "REPORTE INTEGRAL" : "LECTURA EJECUTIVA") + "</div><h2>Resumen ejecutivo</h2>" + data.executiveSummary.map(function (p) { return "<p>" + esc(p) + "</p>"; }).join("") + "</div>" +
     (data.keyFindings && data.keyFindings.length ? "<div class='good'><h2>Hallazgos principales</h2>" + data.keyFindings.map(function (p) { return "<p>• " + esc(p) + "</p>"; }).join("") + "</div>" : "") +
     (data.cautions && data.cautions.length ? "<div class='watch'><h2>Aspectos a validar</h2>" + data.cautions.map(function (p) { return "<p>• " + esc(p) + "</p>"; }).join("") + "</div>" : "") +
@@ -1492,7 +1513,7 @@ function buildWordHtml(data: PsychometricExportData, imageNames: string[], integ
 }
 
 function buildMhtml(html: string, images: Array<{ name: string; base64: string }>) {
-  const boundary = "----=_NextPart_FactorRH_Psychometrics";
+  const boundary = "----=_NextPart_FactoRH_Psychometrics";
   const parts = ["MIME-Version: 1.0", "Content-Type: multipart/related; boundary=\"" + boundary + "\"", "", "--" + boundary,
     "Content-Type: text/html; charset=\"utf-8\"", "Content-Transfer-Encoding: 8bit", "Content-Location: report.html", "", html];
   images.forEach(function (image) {
@@ -1500,6 +1521,25 @@ function buildMhtml(html: string, images: Array<{ name: string; base64: string }
   });
   parts.push("", "--" + boundary + "--");
   return parts.join("\r\n");
+}
+
+async function loadBrandLogo() {
+  return await new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("No fue posible cargar el logo de FactoRH."));
+    image.src = "/brand/factorh-wordmark.svg";
+  });
+}
+
+function imageToPngBase64(image: HTMLImageElement) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 820;
+  canvas.height = 180;
+  const ctx = mustContext(canvas);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/png").split(",")[1] || "";
 }
 
 function makePage() {
@@ -1514,34 +1554,46 @@ function mustContext(canvas: HTMLCanvasElement) {
   if (!ctx) throw new Error("Canvas no disponible.");
   return ctx;
 }
-function brand(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = "#ffffff"; ctx.font = "800 36px Arial"; ctx.fillText("Factor", x, y);
-  const w = ctx.measureText("Factor").width; ctx.fillStyle = "#f97316"; ctx.fillText("RH", x + w, y);
+function brand(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  logo: HTMLImageElement,
+) {
+  const width = 270;
+  const height = Math.round(width * (180 / 820));
+  box(ctx, x, y - 48, width + 24, height + 18, "#ffffff");
+  ctx.drawImage(logo, x + 12, y - 39, width, height);
 }
-function header(ctx: CanvasRenderingContext2D, data: PsychometricExportData, title: string) {
-  ctx.fillStyle = "#111111";
+function header(
+  ctx: CanvasRenderingContext2D,
+  data: PsychometricExportData,
+  title: string,
+  logo: HTMLImageElement,
+) {
+  ctx.fillStyle = "#4A4A4A";
   ctx.fillRect(0, 0, W, 112);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 26px Arial";
-  ctx.fillText("Factor", M, 48);
-  const brandWidth = ctx.measureText("Factor").width;
-  ctx.fillStyle = "#f97316";
-  ctx.fillText("RH", M + brandWidth, 48);
+
+  const logoWidth = 205;
+  const logoHeight = Math.round(logoWidth * (180 / 820));
+  box(ctx, M, 19, logoWidth + 20, logoHeight + 16, "#ffffff");
+  ctx.drawImage(logo, M + 10, 27, logoWidth, logoHeight);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 17px Arial";
-  ctx.fillText(clip(ctx, title, 590), M, 88);
+  ctx.fillText(clip(ctx, title, 470), 325, 50);
 
-  ctx.fillStyle = "#a3a3a3";
+  ctx.fillStyle = "#d4d4d4";
   ctx.font = "12px Arial";
+  ctx.fillText(clip(ctx, data.personName, 470), 325, 79);
+
   ctx.textAlign = "right";
-  ctx.fillText(clip(ctx, data.personName, 390), W - M, 47);
-  ctx.fillText(clip(ctx, data.organizationName + " · " + data.reportDate, 390), W - M, 80);
+  ctx.fillText(clip(ctx, data.organizationName + " · " + data.reportDate, 330), W - M, 64);
   ctx.textAlign = "left";
 }
 function footer(ctx: CanvasRenderingContext2D, page: number) {
   ctx.strokeStyle = "#e5e5e5"; ctx.beginPath(); ctx.moveTo(M, H - 72); ctx.lineTo(W - M, H - 72); ctx.stroke();
-  ctx.fillStyle = "#a3a3a3"; ctx.font = "12px Arial"; ctx.fillText("FactorRH · Reporte psicométrico", M, H - 44);
+  ctx.fillStyle = "#a3a3a3"; ctx.font = "12px Arial"; ctx.fillText("FactoRH · Reporte psicométrico", M, H - 44);
   ctx.textAlign = "right"; ctx.fillText("Página " + String(page), W - M, H - 44); ctx.textAlign = "left";
 }
 function metric(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, label: string, value: string) {
@@ -1549,7 +1601,7 @@ function metric(ctx: CanvasRenderingContext2D, x: number, y: number, width: numb
   ctx.fillStyle = "#171717"; ctx.font = "800 20px Arial"; wrap(ctx, value, x + 20, y + 74, width - 40, 25, 2);
 }
 function sectionTitle(ctx: CanvasRenderingContext2D, title: string, y: number) {
-  ctx.fillStyle = "#f97316"; ctx.font = "700 12px Arial"; ctx.fillText("FACTORRH", M, y);
+  ctx.fillStyle = "#f97316"; ctx.font = "700 12px Arial"; ctx.fillText("FACTORH", M, y);
   ctx.fillStyle = "#171717"; ctx.font = "800 28px Arial"; ctx.fillText(title, M, y + 42); return y + 76;
 }
 function paragraphs(ctx: CanvasRenderingContext2D, ps: string[], y: number) {

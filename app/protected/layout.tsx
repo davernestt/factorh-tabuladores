@@ -1,4 +1,5 @@
 import { AuthButton } from "@/components/auth-button";
+import FactoRHLogo from "@/components/factorh-logo";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -61,10 +62,8 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
             className="flex items-center gap-3"
           >
             <div>
-              <div className="text-xl font-black tracking-tight text-neutral-800">
-                Factor<span className="text-orange-500">RH</span>
-              </div>
-              <div className="text-[10px] font-semibold uppercase tracking-[.2em] text-neutral-500">
+              <FactoRHLogo className="h-9 w-auto" priority />
+              <div className="mt-1 text-[10px] font-semibold uppercase tracking-[.2em] text-neutral-500">
                 {isClient
                   ? appUser.organizationName ?? "Portal Empresa"
                   : "Administración"}

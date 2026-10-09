@@ -1,3 +1,4 @@
+import FactoRHLogo from "@/components/factorh-logo";
 'use client';
 import {useEffect,useMemo,useState} from 'react';
 import { ANSWER_SCALE, COMPETENCIES_360, FEEDBACK_ROLES, OPEN_QUESTIONS, type FeedbackRole } from '@/lib/feedback360';
@@ -19,7 +20,7 @@ export default function Participant360({token}:{token:string}){
     try{const res=await fetch(`/api/360/${token}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answers:info.questions.map(q=>({key:q.key,...answers[q.key]})),comments})});const data=await res.json();if(!res.ok)throw new Error(data.error||'No se pudo guardar.');setFinished(true)}catch(e){setError(e instanceof Error?e.message:'Error al enviar.')}finally{setSaving(false)}
   }
   return <main className="min-h-screen bg-neutral-100 px-4 py-8 text-neutral-800 md:py-12"><div className="mx-auto max-w-4xl">
-    <div className="mb-7 flex items-center justify-between"><span className="text-xl font-black tracking-tight text-neutral-700">Factor<span className="text-orange-500">RH</span></span><span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Evaluación 360°</span></div>
+    <div className="mb-7 flex items-center justify-between"><FactoRHLogo className="h-9 w-auto" /><span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Evaluación 360°</span></div>
     {pending?<div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center text-neutral-500">Cargando tu evaluación…</div>:finished?<div className="rounded-3xl border border-orange-200 bg-white p-10 text-center"><div className="text-4xl">✓</div><h1 className="mt-4 text-2xl font-black">Respuestas enviadas</h1><p className="mt-3 text-neutral-600">Gracias por participar. Tu evaluación ha sido registrada y se integrará al reporte de la persona evaluada.</p></div>:!info?<p role="alert" className="rounded-3xl bg-red-50 p-7 text-red-700">{error||'No se encontró una evaluación activa para esta liga.'}</p>:<form onSubmit={submit}>
       <section className="mb-5 rounded-3xl border border-orange-200 bg-orange-50 p-6 shadow-sm md:p-7">
         <div className="text-xs font-black uppercase tracking-[.16em] text-orange-700">Verifica tu invitación antes de comenzar</div>

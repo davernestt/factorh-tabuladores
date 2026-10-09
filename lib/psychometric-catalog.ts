@@ -12,7 +12,7 @@ export type PsychometricCatalogItem = {
 export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   psychometric_vector: {
     assessmentType: "psychometric_vector",
-    publicName: "Vector Conductual FactorRH",
+    publicName: "Vector Conductual FactoRH",
     publicDescription:
       "Explora cuatro tendencias conductuales relevantes en el trabajo: Impulso, Vinculación, Constancia y Estructura. Ayuda a comprender estilo de ejecución, comunicación, ritmo, control y adaptación al entorno.",
     recommendedFor: ["Selección general", "Mandos y liderazgo", "Ventas", "Servicio", "Desarrollo"],
@@ -24,7 +24,7 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   },
   psychometric_needs: {
     assessmentType: "psychometric_needs",
-    publicName: "Mapa de Necesidades Laborales FactorRH",
+    publicName: "Mapa de Necesidades Laborales FactoRH",
     publicDescription:
       "Identifica condiciones que tienden a incrementar o disminuir la motivación laboral, como logro, autonomía, influencia, reconocimiento, estructura, afiliación, variedad, servicio, estabilidad y aprendizaje.",
     recommendedFor: ["Selección general", "Retención", "Desarrollo", "Mandos", "Planes de carrera"],
@@ -36,7 +36,7 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   },
   psychometric_reasoning: {
     assessmentType: "psychometric_reasoning",
-    publicName: "Razonamiento Laboral General FactorRH",
+    publicName: "Razonamiento Laboral General FactoRH",
     publicDescription:
       "Evalúa desempeño en razonamiento verbal, numérico, lógico, secuencial y análisis aplicado mediante problemas de opción múltiple orientados al contexto laboral.",
     recommendedFor: ["Administrativos", "Analistas", "Técnicos", "Supervisión", "Gerencias"],
@@ -48,7 +48,7 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   },
   psychometric_social_leadership: {
     assessmentType: "psychometric_social_leadership",
-    publicName: "Adaptabilidad Social y Liderazgo FactorRH",
+    publicName: "Adaptabilidad Social y Liderazgo FactoRH",
     publicDescription:
       "Explora juicio interpersonal, tacto y comunicación, influencia, supervisión y delegación, y manejo de conflicto en situaciones laborales.",
     recommendedFor: ["Supervisores", "Jefaturas", "Coordinaciones", "Gerencias", "Servicio"],
@@ -60,7 +60,7 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   },
   psychometric_values: {
     assessmentType: "psychometric_values",
-    publicName: "Valores y Motivadores Laborales FactorRH",
+    publicName: "Valores y Motivadores Laborales FactoRH",
     publicDescription:
       "Explora la importancia relativa que la persona asigna a logro, servicio, aprendizaje, colaboración, influencia y estabilidad dentro del trabajo.",
     recommendedFor: ["Selección general", "Cultura", "Desarrollo", "Planes de carrera", "Mandos"],
@@ -68,11 +68,11 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
     estimatedMinutes: "8–12 min",
     internalMarketReference: "Zavic / SIV-SPV (familia de valores)",
     internalReferenceNote:
-      "Referencia funcional interna por evaluación de valores y motivadores. La estructura FactorRH es propia y no replica esas pruebas.",
+      "Referencia funcional interna por evaluación de valores y motivadores. La estructura FactoRH es propia y no replica esas pruebas.",
   },
   psychometric_integrity: {
     assessmentType: "psychometric_integrity",
-    publicName: "Integridad y Criterio Laboral FactorRH",
+    publicName: "Integridad y Criterio Laboral FactoRH",
     publicDescription:
       "Explora actitudes declaradas frente a responsabilidad, apego a normas, transparencia, uso de recursos, manejo de errores y criterio ético en el trabajo.",
     recommendedFor: ["Administrativos", "Caja y valores", "Compras", "Almacén", "Supervisión"],
@@ -84,7 +84,7 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   },
   psychometric_bigfive: {
     assessmentType: "psychometric_bigfive",
-    publicName: "Personalidad Laboral Big Five FactorRH",
+    publicName: "Personalidad Laboral Big Five FactoRH",
     publicDescription:
       "Describe cinco tendencias amplias de personalidad en contexto laboral: Responsabilidad, Extraversión, Estabilidad emocional, Apertura al aprendizaje y Cooperación.",
     recommendedFor: ["Selección general", "Profesionales", "Mandos", "Gerencias", "Desarrollo"],
@@ -92,11 +92,11 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
     estimatedMinutes: "10–15 min",
     internalMarketReference: "Big Five / NEO / BFI",
     internalReferenceNote:
-      "Comparte el modelo conceptual de Cinco Grandes, de uso amplio en psicología de la personalidad. Los reactivos, scoring e interpretación FactorRH son propios.",
+      "Comparte el modelo conceptual de Cinco Grandes, de uso amplio en psicología de la personalidad. Los reactivos, scoring e interpretación FactoRH son propios.",
   },
   psychometric_sales: {
     assessmentType: "psychometric_sales",
-    publicName: "Perfil Comercial FactorRH",
+    publicName: "Perfil Comercial FactoRH",
     publicDescription:
       "Explora iniciativa comercial, persuasión, orientación al cliente, tolerancia al rechazo y disciplina comercial para puestos de venta y desarrollo de negocio.",
     recommendedFor: ["Ventas", "Ejecutivos comerciales", "Prospección", "Account managers", "Desarrollo de negocio"],
@@ -108,7 +108,7 @@ export const psychometricCatalog: Record<string, PsychometricCatalogItem> = {
   },
   psychometric_attention: {
     assessmentType: "psychometric_attention",
-    publicName: "Atención y Precisión FactorRH",
+    publicName: "Atención y Precisión FactoRH",
     publicDescription:
       "Evalúa exactitud en discriminación visual, atención selectiva, seguimiento de reglas, verificación y control de errores mediante tareas breves de opción múltiple.",
     recommendedFor: ["Operativos", "Administrativos", "Calidad", "Almacén", "Captura y control"],

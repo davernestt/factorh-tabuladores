@@ -7,6 +7,7 @@ import { Suspense } from "react";
 import ReportActions from "./report-actions";
 import { DimensionBars, Heatmap, RadarChart } from "./report-charts";
 import { relationshipLabel } from "@/lib/pdl-evaluation-role";
+import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -225,12 +226,10 @@ async function LeadershipReportContent({ params }: PageProps) {
         id="leadership-report"
         className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none"
       >
-        <header className="bg-neutral-950 px-7 py-10 text-white md:px-10">
+        <header className="bg-[#4A4A4A] px-7 py-10 text-white md:px-10">
           <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="text-2xl font-black tracking-tight">
-                Factor<span className="text-orange-500">RH</span>
-              </div>
+
               <div className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-400">
                 Programa de Desarrollo de Líderes
               </div>
@@ -548,7 +547,7 @@ async function LeadershipReportContent({ params }: PageProps) {
                   key={item.competency}
                   className="break-inside-avoid overflow-hidden rounded-3xl border border-neutral-200"
                 >
-                  <div className="bg-neutral-950 px-6 py-5 text-white">
+                  <div className="bg-[#4A4A4A] px-6 py-5 text-white">
                     <div className="text-xs font-semibold uppercase tracking-wide text-orange-400">
                       Prioridad {index + 1}
                     </div>

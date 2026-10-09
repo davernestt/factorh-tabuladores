@@ -154,7 +154,7 @@ export default function CompanyManager({ organization }: Props) {
                 <p className="mt-1 text-sm text-neutral-500">
                   {editing
                     ? "Actualiza datos comerciales y estatus. No se elimina el historial de la empresa."
-                    : "Al crearla puedes dejar listas las psicometrías FactorRH desde el primer momento."}
+                    : "Al crearla puedes dejar listas las psicometrías FactoRH desde el primer momento."}
                 </p>
               </div>
               <button
@@ -270,7 +270,7 @@ export default function CompanyManager({ organization }: Props) {
                   />
                   <span>
                     <span className="block text-sm font-bold text-neutral-900">
-                      Habilitar psicometrías FactorRH
+                      Habilitar psicometrías FactoRH
                     </span>
                     <span className="mt-1 block text-xs leading-5 text-neutral-600">
                       Deja disponibles automáticamente las pruebas psicométricas generales para esta empresa. Después puedes encender o apagar instrumentos desde esta misma pantalla.

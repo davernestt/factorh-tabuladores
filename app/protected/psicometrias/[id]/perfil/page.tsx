@@ -6,6 +6,7 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 import { analyzeScaleProfile } from "@/lib/psychometric-scale-profiles";
 import { PsychometricTestInfo, ScoreColumnChart, ScoreRadarChart } from "../../report-ui";
 import PsychometricExportActions, { type PsychometricExportData } from "../../export-actions";
+import FactoRHLogo from "@/components/factorh-logo";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -206,13 +207,16 @@ async function ProfileContent({ params }: PageProps) {
             data={exportData}
           />
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-            Reporte FactorRH
+            Reporte FactoRH
           </span>
         </div>
       </div>
 
-      <header className="rounded-3xl bg-neutral-900 p-7 text-white shadow-sm md:p-9">
-        <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">FactorRH · Psicometrías</div>
+      <header className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
+        <div className="mb-5 inline-flex rounded-xl bg-white px-3 py-2 shadow-sm">
+          <FactoRHLogo className="h-10 w-auto" />
+        </div>
+        <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-400">FactoRH · Psicometrías</div>
         <div className="mt-5 grid gap-7 lg:grid-cols-[1.7fr_.8fr] lg:items-end">
           <div>
             <h1 className="text-3xl font-black md:text-4xl">{templateR.data.name}</h1>
@@ -317,7 +321,7 @@ async function ProfileContent({ params }: PageProps) {
                 <div className="text-xs font-bold uppercase tracking-wide text-orange-600">{item.band}</div>
                 <h2 className="mt-1 text-xl font-black text-neutral-900">{item.name}</h2>
               </div>
-              <div className="rounded-2xl bg-neutral-900 px-4 py-3 text-2xl font-black text-white">{item.index}</div>
+              <div className="rounded-2xl bg-[#4A4A4A] px-4 py-3 text-2xl font-black text-white">{item.index}</div>
             </div>
             <p className="mt-4 text-sm leading-7 text-neutral-700">{item.meaning}</p>
             <div className="mt-5 grid gap-3">
