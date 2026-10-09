@@ -95,6 +95,36 @@ async function NewAssessmentContent() {
     );
   }
 
+  const pdlTemplates = (templatesResult.data ?? []).filter((template) =>
+    template.assessment_type.startsWith("leadership"),
+  );
+  const pdlTemplateIds = new Set(pdlTemplates.map((template) => template.id));
+  const pdlAccess = (accessResult.data ?? []).filter((row) =>
+    pdlTemplateIds.has(row.template_id),
+  );
+  const allBatteryItems = batteryItemsResult.data ?? [];
+  const validBatteryIds = new Set(
+    (batteriesResult.data ?? [])
+      .filter((battery) => {
+        const items = allBatteryItems.filter(
+          (item) => item.battery_id === battery.id,
+        );
+        return (
+          items.length > 0 &&
+          items.every((item) => pdlTemplateIds.has(item.template_id))
+        );
+      })
+      .map((battery) => battery.id),
+  );
+  const pdlBatteries = (batteriesResult.data ?? []).filter((battery) =>
+    validBatteryIds.has(battery.id),
+  );
+  const pdlBatteryItems = allBatteryItems.filter(
+    (item) =>
+      validBatteryIds.has(item.battery_id) &&
+      pdlTemplateIds.has(item.template_id),
+  );
+
   return (
     <div>
       <Link
@@ -109,11 +139,10 @@ async function NewAssessmentContent() {
           Administración
         </div>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
-          Nueva evaluación
+          Nueva evaluación PDL
         </h1>
         <p className="mt-2 max-w-2xl text-neutral-600">
-          Selecciona la empresa, el colaborador y la evaluación. Al guardar se
-          generará automáticamente una liga única para responderla.
+          Asigna únicamente las herramientas del Programa de Desarrollo de Líderes. Las psicometrías se administran desde su propio módulo.
         </p>
       </div>
 
@@ -121,10 +150,11 @@ async function NewAssessmentContent() {
         <NewAssessmentForm
           organizations={organizationsResult.data ?? []}
           people={peopleResult.data ?? []}
-          templates={templatesResult.data ?? []}
-          templateAccess={accessResult.data ?? []}
-          batteries={batteriesResult.data ?? []}
-          batteryItems={batteryItemsResult.data ?? []}
+          templates={pdlTemplates}
+          templateAccess={pdlAccess}
+          batteries={pdlBatteries}
+          batteryItems={pdlBatteryItems}
+          scope="pdl"
         />
       </div>
     </div>
