@@ -33,6 +33,35 @@ async function NewPsychometricAssessmentContent() {
 
   const db = createAdminClient();
 
+  const creditPlanResult = scopedOrganizationId
+    ? await db
+        .from("organization_psychometric_credits")
+        .select("plan_type,plan_name,credits_total,credits_used,valid_until,active,trial_single_test_only")
+        .eq("organization_id", scopedOrganizationId)
+        .maybeSingle()
+    : { data: null, error: null };
+
+  if (creditPlanResult.error) {
+    return (
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-7">
+        <h1 className="font-bold text-red-800">No fue posible validar tu plan</h1>
+        <p className="mt-2 text-sm text-red-700">{creditPlanResult.error.message}</p>
+      </div>
+    );
+  }
+
+  const creditPlan = creditPlanResult.data;
+  const creditsRemaining = creditPlan
+    ? Math.max(0, Number(creditPlan.credits_total) - Number(creditPlan.credits_used))
+    : 0;
+  const planExpired =
+    Boolean(creditPlan?.valid_until) &&
+    new Date(String(creditPlan?.valid_until) + "T23:59:59").getTime() <
+      Date.now();
+  const planBlocked =
+    Boolean(scopedOrganizationId) &&
+    (!creditPlan || !creditPlan.active || planExpired || creditsRemaining <= 0);
+
   let organizationsQuery = db
     .from("organizations")
     .select("id,name")
@@ -165,6 +194,42 @@ async function NewPsychometricAssessmentContent() {
       psychometricTemplateIds.has(item.template_id),
   );
 
+  if (planBlocked) {
+    return (
+      <div className="space-y-6">
+        <Link
+          href="/protected/psicometrias"
+          className="text-sm font-semibold text-neutral-500 hover:text-neutral-900"
+        >
+          ← Volver a Psicometrías
+        </Link>
+        <section className="rounded-3xl border border-orange-200 bg-white p-8 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
+            Créditos agotados
+          </div>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
+            Tu prueba de FactorRH terminó
+          </h1>
+          <p className="mt-3 max-w-2xl text-neutral-600">
+            Ya utilizaste las aplicaciones disponibles o la vigencia del plan terminó.
+            Para seguir enviando evaluaciones, FactorRH debe activar un paquete de créditos para tu empresa.
+          </p>
+          <div className="mt-6 rounded-2xl bg-neutral-50 p-5 text-sm text-neutral-700">
+            Tus resultados y reportes anteriores permanecen disponibles. El bloqueo sólo evita generar nuevas aplicaciones.
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  const maxTemplateSelections =
+    scopedOrganizationId && creditPlan?.plan_type === "trial" ? 1 : null;
+  const creditNotice = scopedOrganizationId && creditPlan
+    ? creditPlan.plan_type === "trial"
+      ? `Prueba gratuita: quedan ${creditsRemaining} de ${creditPlan.credits_total} aplicaciones. Cada liga demo permite una sola psicometría.`
+      : `${creditPlan.plan_name}: ${creditsRemaining} créditos disponibles. Cada instrumento nuevo consume 1 crédito; una batería consume un crédito por cada prueba incluida.`
+    : null;
+
   return (
     <div>
       <Link
@@ -196,6 +261,8 @@ async function NewPsychometricAssessmentContent() {
           batteryItems={psychometricBatteryItems}
           jobProfiles={jobProfilesResult.data ?? []}
           scope="psychometrics"
+          maxTemplateSelections={maxTemplateSelections}
+          creditNotice={creditNotice}
         />
       </div>
     </div>

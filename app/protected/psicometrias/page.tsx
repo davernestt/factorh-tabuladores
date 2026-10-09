@@ -104,6 +104,35 @@ async function PsychometricsContent({ searchParams }: PageProps) {
 
   const db = createAdminClient();
 
+  const creditPlanR = scopedOrganizationId
+    ? await db
+        .from("organization_psychometric_credits")
+        .select("plan_type,plan_name,credits_total,credits_used,valid_until,active")
+        .eq("organization_id", scopedOrganizationId)
+        .maybeSingle()
+    : { data: null, error: null };
+
+  if (creditPlanR.error) {
+    return <ErrorCard message={creditPlanR.error.message} />;
+  }
+
+  const clientPlan = creditPlanR.data;
+  const clientCreditsRemaining = clientPlan
+    ? Math.max(0, Number(clientPlan.credits_total) - Number(clientPlan.credits_used))
+    : null;
+  const clientPlanExpired =
+    Boolean(clientPlan?.valid_until) &&
+    new Date(String(clientPlan?.valid_until) + "T23:59:59").getTime() <
+      Date.now();
+  const clientCanAssign =
+    !scopedOrganizationId ||
+    Boolean(
+      clientPlan &&
+        clientPlan.active &&
+        !clientPlanExpired &&
+        (clientCreditsRemaining ?? 0) > 0,
+    );
+
   const templatesR = await db
     .from("assessment_templates")
     .select("id,name,description,assessment_type,version,validity_days")
@@ -351,13 +380,57 @@ async function PsychometricsContent({ searchParams }: PageProps) {
             Administración de candidatos, aplicaciones, avances, resultados y catálogo de instrumentos FactorRH.
           </p>
         </div>
-        <Link
-          href="/protected/psicometrias/nueva?fresh=1"
-          className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
-        >
-          + Asignar psicometría
-        </Link>
+        {clientCanAssign ? (
+          <Link
+            href="/protected/psicometrias/nueva?fresh=1"
+            className="rounded-xl bg-orange-500 px-5 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-orange-600"
+          >
+            + Asignar psicometría
+          </Link>
+        ) : (
+          <div className="rounded-xl bg-neutral-200 px-5 py-3 text-center text-sm font-bold text-neutral-500">
+            Sin créditos disponibles
+          </div>
+        )}
       </div>
+
+      {scopedOrganizationId && (
+        <section
+          className={
+            clientCanAssign
+              ? "rounded-3xl border border-orange-200 bg-orange-50 p-5"
+              : "rounded-3xl border border-amber-200 bg-amber-50 p-5"
+          }
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-700">
+                {clientPlan?.plan_type === "package"
+                  ? clientPlan.plan_name
+                  : "Prueba gratuita FactorRH"}
+              </div>
+              <div className="mt-1 text-xl font-black text-neutral-900">
+                {clientCreditsRemaining ?? 0} créditos disponibles
+              </div>
+              <p className="mt-1 text-sm text-neutral-600">
+                {clientPlan?.plan_type === "trial"
+                  ? "La demo incluye 2 aplicaciones. Cada liga permite una sola psicometría."
+                  : "Cada instrumento nuevo consume 1 crédito. Puedes agrupar varias pruebas en una sola liga."}
+              </p>
+            </div>
+            {clientPlan?.valid_until && (
+              <div className="rounded-xl bg-white px-4 py-3 text-xs font-bold text-neutral-600 ring-1 ring-neutral-200">
+                Vigencia: {new Date(clientPlan.valid_until + "T12:00:00").toLocaleDateString("es-MX")}
+              </div>
+            )}
+          </div>
+          {!clientCanAssign && (
+            <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-amber-800">
+              Para generar nuevas ligas, solicita a FactorRH la activación de un paquete de créditos.
+            </p>
+          )}
+        </section>
+      )}
 
       <nav className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm">
         <Link

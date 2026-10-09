@@ -100,6 +100,40 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.enable_psychometrics !== false && lifecycleStage !== "inactive") {
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 30);
+
+    const { error: creditError } = await db
+      .from("organization_psychometric_credits")
+      .upsert(
+        {
+          organization_id: insertResult.data.id,
+          plan_type: "trial",
+          plan_name: "Prueba gratuita",
+          credits_total: 2,
+          credits_used: 0,
+          valid_from: new Date().toISOString().slice(0, 10),
+          valid_until: trialEnd.toISOString().slice(0, 10),
+          active: true,
+          trial_single_test_only: true,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "organization_id" },
+      );
+
+    if (creditError) {
+      return NextResponse.json(
+        {
+          error:
+            "La empresa se creó, pero no fue posible configurar la prueba gratuita: " +
+            creditError.message,
+          company: insertResult.data,
+        },
+        { status: 500 },
+      );
+    }
+
+
     const templatesResult = await db
       .from("assessment_templates")
       .select("id")

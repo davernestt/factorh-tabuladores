@@ -66,6 +66,8 @@ type Props = {
   batteryItems: BatteryItem[];
   jobProfiles?: JobProfile[];
   scope?: "pdl" | "psychometrics";
+  maxTemplateSelections?: number | null;
+  creditNotice?: string | null;
 };
 
 type DeliveryLink = {
@@ -93,6 +95,7 @@ type CreatedResult = {
   template_names: string[];
   reused_template_names: string[];
   delivery_links: DeliveryLink[];
+  credits_remaining?: number | null;
 };
 
 type ValidResult = { template_id:string; template_name:string; source_assignment_id:string; completed_at:string; valid_until:string; validity_days:number };
@@ -106,6 +109,8 @@ export default function NewAssessmentForm({
   batteryItems,
   jobProfiles = [],
   scope = "pdl",
+  maxTemplateSelections = null,
+  creditNotice = null,
 }: Props) {
   const initialOrganizationId = organizations[0]?.id ?? "";
   const isPsychometrics = scope === "psychometrics";
@@ -277,11 +282,28 @@ export default function NewAssessmentForm({
     setSelectedBatteryId("");
     setValidResults([]);
     setValidDecisions({});
-    setTemplateIds((current) =>
-      current.includes(templateId)
-        ? current.filter((id) => id !== templateId)
-        : [...current, templateId],
-    );
+    setTemplateIds((current) => {
+      if (current.includes(templateId)) {
+        return current.filter((id) => id !== templateId);
+      }
+
+      if (maxTemplateSelections === 1) {
+        return [templateId];
+      }
+
+      if (
+        typeof maxTemplateSelections === "number" &&
+        maxTemplateSelections > 0 &&
+        current.length >= maxTemplateSelections
+      ) {
+        setError(
+          `Puedes seleccionar máximo ${maxTemplateSelections} instrumentos con tu plan actual.`,
+        );
+        return current;
+      }
+
+      return [...current, templateId];
+    });
   }
 
   function applyBattery(batteryId: string) {
@@ -446,6 +468,11 @@ export default function NewAssessmentForm({
           ))}
 
           {created.reused_template_names.length > 0 && <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800"><strong>Resultados vigentes reutilizados:</strong> {created.reused_template_names.join(", ")}. Estas pruebas no se vuelven a contestar.</div>}
+          {typeof created.credits_remaining === "number" && (
+            <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm font-bold text-orange-800">
+              Créditos disponibles después de esta aplicación: {created.credits_remaining}
+            </div>
+          )}
           <p className="mt-4 text-xs text-neutral-500">
             Esta liga abre el portal del participante. Si tiene varias pruebas,
             podrá responderlas desde el mismo acceso.
@@ -696,7 +723,13 @@ export default function NewAssessmentForm({
           </p>
         </div>
 
-        {availableBatteries.length > 0 && (
+        {creditNotice && (
+          <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900">
+            {creditNotice}
+          </div>
+        )}
+
+        {availableBatteries.length > 0 && maxTemplateSelections !== 1 && (
           <div className="mb-5">
             <Field label="Batería predeterminada (opcional)">
               <select

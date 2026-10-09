@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import CompanyTestSettings from "./company-test-settings";
 import CompanyManager from "./company-manager";
+import CompanyCreditManager, { type CreditPlan } from "./company-credit-manager";
 
 type Organization = {
   id: string;
@@ -55,7 +56,7 @@ async function CompaniesContent() {
   }
 
   const db = createAdminClient();
-  const [organizationsResult, templatesResult, accessResult] = await Promise.all([
+  const [organizationsResult, templatesResult, accessResult, creditsResult] = await Promise.all([
     db
       .from("organizations")
       .select("id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes")
@@ -69,10 +70,13 @@ async function CompaniesContent() {
     db
       .from("organization_assessment_templates")
       .select("organization_id,template_id,enabled,participant_sendable"),
+    db
+      .from("organization_psychometric_credits")
+      .select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only"),
   ]);
 
   const firstError =
-    organizationsResult.error || templatesResult.error || accessResult.error;
+    organizationsResult.error || templatesResult.error || accessResult.error || creditsResult.error;
 
   if (firstError) {
     return (
@@ -86,6 +90,10 @@ async function CompaniesContent() {
   const organizations = (organizationsResult.data ?? []) as Organization[];
   const templates = (templatesResult.data ?? []) as Template[];
   const access = (accessResult.data ?? []) as AccessRow[];
+  const creditPlans = (creditsResult.data ?? []) as CreditPlan[];
+  const creditPlanByOrganization = new Map(
+    creditPlans.map((plan) => [plan.organization_id, plan]),
+  );
 
   const grouped = Array.from(
     templates.reduce((map, template) => {
@@ -159,7 +167,14 @@ async function CompaniesContent() {
                   {organization.website && <span>{organization.website}</span>}
                 </div>
               </div>
-              <CompanyManager organization={organization} />
+              <div className="flex flex-wrap items-center gap-3">
+                <CompanyCreditManager
+                  organizationId={organization.id}
+                  organizationName={organization.name}
+                  plan={creditPlanByOrganization.get(organization.id)}
+                />
+                <CompanyManager organization={organization} />
+              </div>
             </div>
 
             {organization.active ? (

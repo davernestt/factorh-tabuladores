@@ -48,6 +48,44 @@ function addDays(value: string, days: number) {
   return date;
 }
 
+function psychometricCreditError(message: string) {
+  if (message.includes("trial_single_test_only")) {
+    return {
+      code: "trial_single_test_only",
+      message:
+        "Tu prueba gratuita permite una sola psicometría por liga. Selecciona un instrumento para continuar.",
+    };
+  }
+  if (message.includes("psychometric_credits_exhausted")) {
+    return {
+      code: "psychometric_credits_exhausted",
+      message:
+        "Ya utilizaste los créditos disponibles. Contacta a FactorRH para activar tu paquete.",
+    };
+  }
+  if (message.includes("psychometric_plan_expired")) {
+    return {
+      code: "psychometric_plan_expired",
+      message:
+        "La vigencia de tu acceso terminó. Contacta a FactorRH para renovar o activar un paquete.",
+    };
+  }
+  if (
+    message.includes("psychometric_plan_missing") ||
+    message.includes("psychometric_plan_inactive")
+  ) {
+    return {
+      code: "psychometric_plan_inactive",
+      message:
+        "Tu empresa no tiene un plan psicométrico activo. Contacta a FactorRH para activarlo.",
+    };
+  }
+  return {
+    code: "psychometric_credit_error",
+    message: "No fue posible validar los créditos disponibles.",
+  };
+}
+
 export async function POST(request: NextRequest) {
   const currentUser = await getCurrentAppUser();
 
@@ -364,6 +402,38 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: processError.message }, { status: 500 });
   }
 
+  let creditsReserved = false;
+  let creditsRemaining: number | null = null;
+
+  if (currentUser.role === "client" && templatesToApply.length > 0) {
+    const { data: creditData, error: creditError } = await db.rpc(
+      "consume_psychometric_credits",
+      {
+        p_organization_id: organizationId,
+        p_process_id: processData.id,
+        p_units: templatesToApply.length,
+      },
+    );
+
+    if (creditError) {
+      await db.from("assessment_processes").delete().eq("id", processData.id);
+      if (createdPersonId) await db.from("people").delete().eq("id", createdPersonId);
+
+      const parsed = psychometricCreditError(creditError.message);
+      return NextResponse.json(
+        { error: parsed.message, code: parsed.code },
+        { status: 402 },
+      );
+    }
+
+    creditsReserved = true;
+    const row = Array.isArray(creditData) ? creditData[0] : creditData;
+    creditsRemaining =
+      row && typeof row.credits_remaining !== "undefined"
+        ? Number(row.credits_remaining)
+        : null;
+  }
+
   const dueDate = clean(body.due_date) ? `${clean(body.due_date)}T23:59:59` : null;
   let assignments: {
     id: string;
@@ -404,6 +474,11 @@ export async function POST(request: NextRequest) {
       .select("id,public_token,status,template_id,relationship_type,evaluator_name,evaluator_email,evaluator_phone");
 
     if (assignmentError) {
+      if (creditsReserved) {
+        await db.rpc("refund_psychometric_credits", {
+          p_process_id: processData.id,
+        });
+      }
       await db.from("assessment_processes").delete().eq("id", processData.id);
       if (createdPersonId) await db.from("people").delete().eq("id", createdPersonId);
       return NextResponse.json({ error: assignmentError.message }, { status: 500 });
@@ -428,6 +503,11 @@ export async function POST(request: NextRequest) {
       );
 
     if (reuseError) {
+      if (creditsReserved) {
+        await db.rpc("refund_psychometric_credits", {
+          p_process_id: processData.id,
+        });
+      }
       await db.from("assessment_processes").delete().eq("id", processData.id);
       if (createdPersonId) await db.from("people").delete().eq("id", createdPersonId);
       return NextResponse.json({ error: reuseError.message }, { status: 500 });
@@ -455,6 +535,7 @@ export async function POST(request: NextRequest) {
         : `Batería de ${orderedTemplates.length} evaluaciones`,
     template_names: orderedTemplates.map((template) => template.name),
     reused_template_names: templatesToReuse.map((template) => template.name),
+    credits_remaining: creditsRemaining,
     delivery_links: externalAssignments.map((item) => ({
       assignment_id: item.id,
       path: `/e/${item.public_token}`,

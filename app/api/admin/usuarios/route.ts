@@ -62,6 +62,39 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const { data: currentPlan, error: currentPlanError } = await db
+    .from("organization_psychometric_credits")
+    .select("organization_id")
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+
+  if (currentPlanError) {
+    return NextResponse.json({ error: currentPlanError.message }, { status: 500 });
+  }
+
+  if (!currentPlan) {
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 30);
+    const { error: trialError } = await db
+      .from("organization_psychometric_credits")
+      .insert({
+        organization_id: organizationId,
+        plan_type: "trial",
+        plan_name: "Prueba gratuita",
+        credits_total: 2,
+        credits_used: 0,
+        valid_from: new Date().toISOString().slice(0, 10),
+        valid_until: trialEnd.toISOString().slice(0, 10),
+        active: true,
+        trial_single_test_only: true,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (trialError) {
+      return NextResponse.json({ error: trialError.message }, { status: 500 });
+    }
+  }
+
   const origin = request.nextUrl.origin;
   const { data: linkData, error: linkError } = await db.auth.admin.generateLink({
     type: "invite",
