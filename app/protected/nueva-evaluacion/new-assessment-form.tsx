@@ -48,6 +48,15 @@ type BatteryItem = {
   sort_order: number;
 };
 
+type JobProfile = {
+  id: string;
+  organization_id: string | null;
+  name: string;
+  family: string;
+  level: string;
+  description: string | null;
+};
+
 type Props = {
   organizations: Organization[];
   people: Person[];
@@ -55,6 +64,7 @@ type Props = {
   templateAccess: TemplateAccess[];
   batteries: Battery[];
   batteryItems: BatteryItem[];
+  jobProfiles?: JobProfile[];
   scope?: "pdl" | "psychometrics";
 };
 
@@ -94,6 +104,7 @@ export default function NewAssessmentForm({
   templateAccess,
   batteries,
   batteryItems,
+  jobProfiles = [],
   scope = "pdl",
 }: Props) {
   const initialOrganizationId = organizations[0]?.id ?? "";
@@ -120,6 +131,9 @@ export default function NewAssessmentForm({
   const [area, setArea] = useState("");
   const [processName, setProcessName] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [evaluationPurpose, setEvaluationPurpose] = useState("selection");
+  const [targetJobTitle, setTargetJobTitle] = useState("");
+  const [targetJobProfileId, setTargetJobProfileId] = useState("");
   const [created, setCreated] = useState<CreatedResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -156,6 +170,9 @@ export default function NewAssessmentForm({
     setSelectedBatteryId("");
     setProcessName("");
     setDueDate("");
+    setEvaluationPurpose("selection");
+    setTargetJobTitle("");
+    setTargetJobProfileId("");
     setCreated(null);
     setError(null);
     setValidResults([]);
@@ -206,6 +223,24 @@ export default function NewAssessmentForm({
   const selectedInterview = useMemo(
     () => availableTemplates.some((template) => template.assessment_type === "leadership_interview" && templateIds.includes(template.id)),
     [availableTemplates, templateIds],
+  );
+
+  const availableJobProfiles = useMemo(
+    () =>
+      jobProfiles.filter(
+        (profile) =>
+          profile.organization_id === null ||
+          profile.organization_id === organizationId,
+      ),
+    [jobProfiles, organizationId],
+  );
+
+  const selectedJobProfile = useMemo(
+    () =>
+      availableJobProfiles.find(
+        (profile) => profile.id === targetJobProfileId,
+      ) ?? null,
+    [availableJobProfiles, targetJobProfileId],
   );
 
   const availableBatteries = useMemo(() => {
@@ -288,6 +323,10 @@ export default function NewAssessmentForm({
           area,
           process_name: processName,
           due_date: dueDate || null,
+          evaluation_purpose: isPsychometrics ? evaluationPurpose : null,
+          target_job_title: isPsychometrics ? targetJobTitle : null,
+          target_job_profile_id:
+            isPsychometrics && targetJobProfileId ? targetJobProfileId : null,
           reuse_template_ids: Object.entries(validDecisions).filter(([,decision])=>decision==="reuse").map(([id])=>id),
           force_template_ids: Object.entries(validDecisions).filter(([,decision])=>decision==="force").map(([id])=>id),
           manager_evaluator_name: managerName,
@@ -562,6 +601,85 @@ export default function NewAssessmentForm({
           </div>
         )}
       </section>
+
+      {isPsychometrics && (
+        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
+          <div className="mb-6">
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-600">
+              Contexto de evaluación
+            </div>
+            <h2 className="mt-2 text-xl font-bold text-neutral-900">
+              Objetivo y puesto de referencia
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-neutral-500">
+              Esto permite que el reporte integral explique el perfil en contexto.
+              El sistema no emite una recomendación automática de contratación.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <Field label="Objetivo de la evaluación">
+              <select
+                value={evaluationPurpose}
+                onChange={(event) => setEvaluationPurpose(event.target.value)}
+                className="input"
+              >
+                <option value="selection">Selección</option>
+                <option value="promotion">Promoción</option>
+                <option value="development">Desarrollo</option>
+                <option value="profile">Conocimiento de perfil</option>
+              </select>
+            </Field>
+
+            <Field label="Puesto objetivo (opcional)">
+              <input
+                value={targetJobTitle}
+                onChange={(event) => setTargetJobTitle(event.target.value)}
+                className="input"
+                placeholder="Ej. Gerente de Operaciones"
+              />
+            </Field>
+
+            <div className="md:col-span-2">
+              <Field label="Perfil base FactorRH (opcional)">
+                <select
+                  value={targetJobProfileId}
+                  onChange={(event) => setTargetJobProfileId(event.target.value)}
+                  className="input"
+                >
+                  <option value="">Sin comparación contra perfil objetivo</option>
+                  {availableJobProfiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.name} · {profile.family} · {profile.level}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              {selectedJobProfile && (
+                <div className="mt-3 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                  <div className="text-xs font-bold uppercase tracking-wide text-orange-700">
+                    Perfil de referencia
+                  </div>
+                  <div className="mt-1 font-black text-neutral-900">
+                    {selectedJobProfile.name}
+                  </div>
+                  {selectedJobProfile.description && (
+                    <p className="mt-2 text-sm leading-6 text-neutral-600">
+                      {selectedJobProfile.description}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs leading-5 text-neutral-500">
+                    El reporte comparará evidencia psicométrica con rangos de referencia
+                    por competencia y señalará coincidencias, desviaciones y aspectos
+                    que requieren validación. No se genera un veredicto de contratación.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="mb-6">
