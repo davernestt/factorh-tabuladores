@@ -347,6 +347,12 @@ async function PsychometricsContent({ searchParams }: PageProps) {
         >
           Catálogo de pruebas
         </Link>
+        <Link
+          href="/protected/psicometrias/perfiles-puesto"
+          className="rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
+        >
+          Perfiles de puesto
+        </Link>
       </nav>
 
       <section className="grid gap-4 sm:grid-cols-4">
