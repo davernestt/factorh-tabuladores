@@ -37,6 +37,28 @@ export type PsychometricExportData = {
   keyFindings?: string[];
   cautions?: string[];
   interviewQuestions?: string[];
+  objectiveText?: string;
+  battery?: Array<{ name: string; description: string }>;
+  jobComparison?: Array<{
+    name: string;
+    referenceMin: number;
+    referenceMax: number;
+    observed: number | null;
+    status: string;
+    importance: string;
+  }>;
+  managerGuidance?: {
+    supervision: string;
+    pressure: string;
+    team: string;
+    motivators: string[];
+    coaching: string[];
+  };
+  onboardingPlan?: Array<{
+    period: string;
+    focus: string;
+    actions: string[];
+  }>;
   closing?: string;
   instruments: PsychometricExportInstrument[];
 };
@@ -175,6 +197,157 @@ function buildPages(data: PsychometricExportData, integral: boolean) {
   }
   footer(ctx, page++);
   out.push(canvasBytes(canvas));
+
+  if (data.objectiveText || (data.battery && data.battery.length)) {
+    canvas = makePage();
+    ctx = mustContext(canvas);
+    header(ctx, data, "Objetivo y batería aplicada");
+    let oy = 220;
+    if (data.objectiveText) {
+      oy = sectionTitle(ctx, "Objetivo de la evaluación", oy);
+      ctx.fillStyle = "#404040";
+      ctx.font = "16px Arial";
+      oy = wrap(ctx, data.objectiveText, M, oy, CW, 25, 12) + 28;
+    }
+    if (data.battery && data.battery.length) {
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 12px Arial";
+      ctx.fillText("BATERÍA APLICADA", M, oy);
+      oy += 40;
+      data.battery.slice(0, 9).forEach(function (item) {
+        box(ctx, M, oy, CW, 108, "#fafafa", "#e5e5e5");
+        ctx.fillStyle = "#171717";
+        ctx.font = "800 15px Arial";
+        ctx.fillText(clip(ctx, item.name, 360), M + 20, oy + 32);
+        ctx.fillStyle = "#525252";
+        ctx.font = "13px Arial";
+        wrap(ctx, item.description, M + 330, oy + 26, CW - 350, 19, 4);
+        oy += 120;
+      });
+    }
+    footer(ctx, page++);
+    out.push(canvasBytes(canvas));
+  }
+
+  if (data.jobComparison && data.jobComparison.length) {
+    for (let start = 0; start < data.jobComparison.length; start += 7) {
+      canvas = makePage();
+      ctx = mustContext(canvas);
+      header(ctx, data, "Comparación contra perfil objetivo");
+      let jy = 220;
+      jy = sectionTitle(ctx, start === 0 ? "Mapa de competencias de referencia" : "Mapa de competencias · continuación", jy);
+      ctx.fillStyle = "#737373";
+      ctx.font = "14px Arial";
+      jy = wrap(
+        ctx,
+        "La comparación organiza evidencia psicométrica frente a rangos definidos para el perfil objetivo. No constituye una recomendación automática de contratación.",
+        M,
+        jy,
+        CW,
+        22,
+        5,
+      ) + 24;
+
+      data.jobComparison.slice(start, start + 7).forEach(function (item) {
+        box(ctx, M, jy, CW, 148, "#ffffff", "#e5e5e5");
+        ctx.fillStyle = "#171717";
+        ctx.font = "800 16px Arial";
+        ctx.fillText(clip(ctx, item.name, 410), M + 20, jy + 34);
+        ctx.fillStyle = "#737373";
+        ctx.font = "11px Arial";
+        ctx.fillText(item.importance.toUpperCase(), M + 20, jy + 60);
+        ctx.fillStyle = "#171717";
+        ctx.font = "800 15px Arial";
+        ctx.fillText(
+          "Referencia " +
+            Math.round(item.referenceMin) +
+            "–" +
+            Math.round(item.referenceMax),
+          M + 470,
+          jy + 34,
+        );
+        ctx.fillText(
+          "Evidencia " + (item.observed === null ? "—" : Math.round(item.observed)),
+          M + 720,
+          jy + 34,
+        );
+        ctx.fillStyle =
+          item.status === "Dentro del rango de referencia"
+            ? "#065f46"
+            : item.status === "Sin evidencia suficiente"
+              ? "#737373"
+              : "#92400e";
+        ctx.font = "700 13px Arial";
+        wrap(ctx, item.status, M + 20, jy + 100, CW - 40, 20, 2);
+        jy += 162;
+      });
+      footer(ctx, page++);
+      out.push(canvasBytes(canvas));
+    }
+  }
+
+  if (data.managerGuidance || (data.onboardingPlan && data.onboardingPlan.length)) {
+    canvas = makePage();
+    ctx = mustContext(canvas);
+    header(ctx, data, "Lectura para el jefe de la vacante");
+    let my = 220;
+    if (data.managerGuidance) {
+      my = sectionTitle(ctx, "Cómo gestionar e integrar este perfil", my);
+      const managerItems = [
+        ["SUPERVISIÓN RECOMENDADA", data.managerGuidance.supervision],
+        ["BAJO PRESIÓN", data.managerGuidance.pressure],
+        ["INTEGRACIÓN CON EL EQUIPO", data.managerGuidance.team],
+      ];
+      managerItems.forEach(function (item) {
+        box(ctx, M, my, CW, 160, "#fafafa", "#e5e5e5");
+        ctx.fillStyle = "#f97316";
+        ctx.font = "700 11px Arial";
+        ctx.fillText(item[0], M + 20, my + 30);
+        ctx.fillStyle = "#404040";
+        ctx.font = "14px Arial";
+        wrap(ctx, item[1], M + 20, my + 60, CW - 40, 21, 4);
+        my += 176;
+      });
+      if (data.managerGuidance.motivators.length) {
+        box(ctx, M, my, CW, 135, "#fff7ed", "#fed7aa");
+        ctx.fillStyle = "#9a3412";
+        ctx.font = "700 11px Arial";
+        ctx.fillText("MOTIVADORES CLAVE", M + 20, my + 30);
+        ctx.fillStyle = "#404040";
+        ctx.font = "15px Arial";
+        wrap(ctx, data.managerGuidance.motivators.join(" · "), M + 20, my + 62, CW - 40, 22, 3);
+        my += 150;
+      }
+    }
+    footer(ctx, page++);
+    out.push(canvasBytes(canvas));
+
+    if (data.onboardingPlan && data.onboardingPlan.length) {
+      canvas = makePage();
+      ctx = mustContext(canvas);
+      header(ctx, data, "Integración sugerida 30–60–90");
+      let py = sectionTitle(ctx, "Primeros 90 días", 220);
+      data.onboardingPlan.forEach(function (stage) {
+        box(ctx, M, py, CW, 340, "#fafafa", "#e5e5e5");
+        ctx.fillStyle = "#f97316";
+        ctx.font = "700 12px Arial";
+        ctx.fillText(stage.period.toUpperCase(), M + 22, py + 35);
+        ctx.fillStyle = "#171717";
+        ctx.font = "800 20px Arial";
+        ctx.fillText(clip(ctx, stage.focus, CW - 44), M + 22, py + 72);
+        let ay = py + 112;
+        ctx.font = "14px Arial";
+        stage.actions.forEach(function (action) {
+          ctx.fillStyle = "#404040";
+          ctx.fillText("•", M + 24, ay);
+          ay = wrap(ctx, action, M + 45, ay, CW - 70, 21, 4) + 12;
+        });
+        py += 365;
+      });
+      footer(ctx, page++);
+      out.push(canvasBytes(canvas));
+    }
+  }
 
   data.instruments.forEach(function (instrument) {
     canvas = makePage();
