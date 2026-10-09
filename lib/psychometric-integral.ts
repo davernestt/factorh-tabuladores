@@ -17,6 +17,20 @@ export type IntegralAnalysis = {
   convergences: string[];
   tensions: string[];
   interviewQuestions: string[];
+  strengths: string[];
+  opportunities: string[];
+  managerGuidance: {
+    supervision: string;
+    pressure: string;
+    team: string;
+    motivators: string[];
+    coaching: string[];
+  };
+  onboardingPlan: Array<{
+    period: "0–30 días" | "31–60 días" | "61–90 días";
+    focus: string;
+    actions: string[];
+  }>;
   closing: string;
 };
 
@@ -342,6 +356,126 @@ export function analyzeIntegralPsychometrics(
     );
   }
 
+  const allDimensions = instruments.flatMap((instrument) =>
+    instrument.dimensions.map((item) => ({
+      instrument: instrument.name,
+      assessmentType: instrument.assessmentType,
+      ...item,
+    })),
+  );
+
+  const strengths = [...allDimensions]
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5)
+    .map(
+      (item) =>
+        item.name +
+        " (" +
+        item.instrument +
+        "): " +
+        Math.round(item.value),
+    );
+
+  const opportunities = [...allDimensions]
+    .sort((a, b) => a.value - b.value)
+    .slice(0, 4)
+    .map(
+      (item) =>
+        item.name +
+        " (" +
+        item.instrument +
+        "): " +
+        Math.round(item.value) +
+        ". Conviene validarlo con ejemplos conductuales y exigencias reales del puesto.",
+    );
+
+  const autonomy = dimension(needs, "Autonomía");
+  const emotionalStability = dimension(bigfive, "Estabilidad emocional");
+  const conflict = dimension(social, "Manejo de conflicto");
+  const vinculation = dimension(vector, "Vinculación");
+
+  let supervision =
+    "Trabajar con objetivos, criterios de éxito y espacios periódicos de seguimiento, ajustando el nivel de autonomía conforme se observe desempeño.";
+  if (high(autonomy) && high(structure)) {
+    supervision =
+      "Definir objetivos, límites y criterios de éxito con claridad, dejando libertad sobre el método de ejecución. Evitar microgestión, pero mantener puntos de control acordados.";
+  } else if (high(autonomy)) {
+    supervision =
+      "Gestionar principalmente por resultados y acuerdos. Dar margen de decisión y evitar supervisión excesivamente detallada.";
+  } else if (high(structure)) {
+    supervision =
+      "Proporcionar prioridades, responsables, fechas y criterios claros; el seguimiento estructurado puede favorecer consistencia y seguridad operativa.";
+  }
+
+  let pressure =
+    "Bajo presión conviene observar cómo conserva claridad, regula su ritmo y comunica decisiones.";
+  if (low(emotionalStability) && high(impulse)) {
+    pressure =
+      "Bajo presión puede combinar rapidez de acción con mayor sensibilidad al estrés. Conviene acordar criterios de decisión, pausas de verificación y mecanismos de escalamiento.";
+  } else if (high(emotionalStability) && high(impulse)) {
+    pressure =
+      "La combinación sugiere capacidad para sostener iniciativa con relativa estabilidad bajo presión; conviene verificar que la rapidez no reduzca revisión o escucha.";
+  } else if (low(conflict)) {
+    pressure =
+      "En situaciones tensas conviene observar si posterga conversaciones difíciles o evita confrontar problemas que requieren definición.";
+  }
+
+  let team =
+    "La integración al equipo debe considerar su nivel de interacción, cooperación y necesidad de autonomía.";
+  if (high(cooperation) && high(vinculation)) {
+    team =
+      "Puede favorecer coordinación y cercanía con el equipo. Conviene aprovechar esa disposición sin convertir la búsqueda de consenso en demora para decidir.";
+  } else if (low(cooperation) && low(vinculation)) {
+    team =
+      "Puede funcionar con mayor independencia interpersonal. Conviene explicitar canales de coordinación, acuerdos y expectativas de colaboración.";
+  }
+
+  const motivators = [
+    ...top(needs, 3).map((item) => item.name),
+    ...top(values, 2).map((item) => item.name),
+  ].filter((value, index, array) => array.indexOf(value) === index);
+
+  const coaching = lowest.slice(0, 3).map(
+    (item) =>
+      "Trabajar " +
+      item.name.toLowerCase() +
+      " mediante objetivos conductuales concretos, práctica y retroalimentación sobre situaciones reales.",
+  );
+
+  const onboardingPlan: IntegralAnalysis["onboardingPlan"] = [
+    {
+      period: "0–30 días",
+      focus: "Claridad, contexto y acuerdos de trabajo",
+      actions: [
+        "Definir prioridades, resultados esperados y criterios de éxito del puesto.",
+        "Acordar forma de seguimiento y nivel de autonomía esperado.",
+        motivators.length
+          ? "Conectar responsabilidades iniciales con motivadores relevantes: " +
+            motivators.slice(0, 3).join(", ") +
+            "."
+          : "Identificar motivadores reales durante las primeras conversaciones de seguimiento.",
+      ],
+    },
+    {
+      period: "31–60 días",
+      focus: "Autonomía y validación de hipótesis",
+      actions: [
+        "Incrementar gradualmente la responsabilidad sobre decisiones y resultados.",
+        "Observar en situaciones reales los puntos señalados como áreas a profundizar.",
+        "Dar retroalimentación específica sobre conductas, impacto y acuerdos de mejora.",
+      ],
+    },
+    {
+      period: "61–90 días",
+      focus: "Consolidación y ajuste",
+      actions: [
+        "Revisar resultados, adaptación al equipo y respuesta ante presión.",
+        "Confirmar qué fortalezas se están traduciendo en desempeño observable.",
+        "Definir un plan de desarrollo breve sobre uno o dos aspectos prioritarios.",
+      ],
+    },
+  ];
+
   return {
     headline:
       instruments.length > 1
@@ -364,6 +498,16 @@ export function analyzeIntegralPsychometrics(
     convergences,
     tensions,
     interviewQuestions,
+    strengths,
+    opportunities,
+    managerGuidance: {
+      supervision,
+      pressure,
+      team,
+      motivators,
+      coaching,
+    },
+    onboardingPlan,
     closing:
       "La decisión final debe considerar la combinación entre perfil, experiencia, entrevista, referencias, resultados previos y requisitos críticos del puesto.",
   };
