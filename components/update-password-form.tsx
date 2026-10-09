@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function UpdatePasswordForm({
   className,
@@ -24,7 +24,20 @@ export function UpdatePasswordForm({
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [returnTo, setReturnTo] = useState("/auth/login");
   const router = useRouter();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedReturnTo = params.get("return_to");
+    if (
+      requestedReturnTo &&
+      requestedReturnTo.startsWith("/") &&
+      !requestedReturnTo.startsWith("//")
+    ) {
+      setReturnTo(requestedReturnTo);
+    }
+  }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +64,8 @@ export function UpdatePasswordForm({
       // Cerramos esa sesión para no sustituir accidentalmente una sesión
       // administrativa abierta en el mismo navegador.
       await supabase.auth.signOut();
-      router.push("/auth/login?setup=success");
+      const separator = returnTo.includes("?") ? "&" : "?";
+      router.push(returnTo + separator + "setup=success");
       router.refresh();
     } catch (cause: unknown) {
       setError(
