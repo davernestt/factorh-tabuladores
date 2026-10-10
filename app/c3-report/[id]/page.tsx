@@ -3,6 +3,7 @@ import Link from "next/link";
 import {redirect,notFound} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {loadC3Report} from "@/lib/c3/report";
+import {createAdminClient} from "@/lib/supabase/admin";
 import {c3ReadyToReport} from "@/lib/c3/consulting";
 import C3ReportContent from "../report-content";
 import ReportToolbar from "./report-toolbar";
@@ -28,6 +29,10 @@ async function C3ExecutiveReportContent({params}:{params:Promise<{id:string}>}){
    </div>
   </section>
  </main>;
+ // The first real report release fixes this wave; it cannot be reopened to
+ // reconstruct incremental responses from successive exports.
+ const {error:releaseError}=await createAdminClient().rpc("c3_release_final_report",{p_campaign_id:id});
+ if(releaseError)return <main className="min-h-screen bg-neutral-100 p-8"><section className="mx-auto max-w-xl rounded-2xl bg-white p-7"><h1 className="text-xl font-black text-neutral-800">Reporte final no disponible</h1><p className="mt-3 text-sm text-neutral-600">No se pudo completar la validación de confidencialidad. Revisa el estado de la campaña.</p><Link href={"/protected/c3/"+id} className="mt-4 inline-block font-bold text-orange-600">Volver a campaña</Link></section></main>;
  return <main className="min-h-screen bg-neutral-100 px-4 py-7">
    <style>{`
      @page {size:A4;margin:14mm 12mm;}
