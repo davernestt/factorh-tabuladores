@@ -39,7 +39,7 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound();
   const db=createAdminClient();
   const [campaignResult,statsResult,groupResult]=await Promise.all([
-    db.from("c3_campaigns").select("id,name,status,organization_id,planned_population,scope,bank_version,report_breakdown,created_at").eq("id",id).maybeSingle(),
+    db.from("c3_campaigns").select("id,name,status,organization_id,planned_population,scope,bank_version,report_breakdown,report_released_at,created_at").eq("id",id).maybeSingle(),
     db.rpc("c3_campaign_aggregate",{p_campaign_id:id}),
     db.rpc("c3_safe_group_summary",{p_campaign_id:id}),
   ]);
@@ -73,7 +73,7 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full bg-orange-500" style={{width:participation+"%"}} /></div>
       <p className="mt-3 text-sm text-neutral-600">Las preguntas se congelan al abrir la campaña. Los resultados se liberan solo al cerrarla y cumplir los criterios de cobertura. Puedes reabrir un cierre accidental mientras no se haya consultado ni descargado el informe final.</p>
       <p className="mt-2 text-xs text-orange-700">Después de emitir el primer reporte final, la campaña quedará cerrada definitivamente para proteger la confidencialidad. Un nuevo levantamiento requerirá otra campaña.</p>
-      <CampaignStatusControls campaignId={id} status={campaign.status}/>
+      <CampaignStatusControls campaignId={id} status={campaign.status} released={!!campaign.report_released_at}/>
     </section>
     <InviteGenerator campaignId={id} disabled={campaign.status!=="open"}/>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
