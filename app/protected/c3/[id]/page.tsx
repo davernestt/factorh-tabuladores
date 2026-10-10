@@ -80,7 +80,8 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
         <div><p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Dashboard ejecutivo</p><h2 className="mt-2 text-2xl font-black text-neutral-800">Clima, Cultura y Compromiso</h2></div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-600">Instrumento en validación</span>
-          {!summary.suppressed && summary.global != null && summary.dimensions?.length===13 && summary.dimensions.every(d=>d.score!==null) &&
+          <Link href="/protected/c3/demo/reporte" className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100">Ver informe de ejemplo</Link>
+          {campaign.status==="closed" && !summary.suppressed && summary.global != null && summary.dimensions?.length===13 && summary.dimensions.every(d=>d.score!==null) &&
             <Link href={"/c3-report/"+id} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Ver reporte ejecutivo →</Link>}
         </div>
       </div>
