@@ -33,7 +33,7 @@ async function C3DemoContent(){
  if(!user||user.role!=="super_admin")redirect("/auth/login");
  const lows=[...raw].sort((a,b)=>a[3]-b[3]).slice(0,3);
  return <div className="space-y-6">
-  <Link href="/protected/c3" className="text-sm font-bold text-orange-600">← Campañas C3 PRO</Link>
+  <Link href="/protected/clima" className="text-sm font-bold text-orange-600">← Catálogo de Clima Laboral</Link>
   <div className="rounded-2xl border-2 border-orange-400 bg-orange-50 p-5">
    <p className="text-sm font-black uppercase tracking-[.15em] text-orange-700">Vista demostrativa · Datos 100% ficticios</p>
    <p className="mt-2 text-sm leading-6 text-neutral-700">Esta pantalla existe únicamente para revisar el diseño del dashboard. <strong>No representa a Colbert ni contiene respuestas reales.</strong> Sus resultados no se guardan, comparan ni exportan a campañas.</p>
