@@ -9,9 +9,9 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  const {id}=await params;
  const report=await loadC3Report(id);
  if(!report)return NextResponse.json({error:"Campaña no encontrada."},{status:404,headers:{"Cache-Control":"private, no-store"}});
- if(report.summary.suppressed||report.summary.global==null||
+ if(report.campaign.status!=="closed"||report.summary.suppressed||report.summary.global==null||
    report.summary.dimensions?.length!==13||report.summary.dimensions.some(d=>d.score==null))
-   return NextResponse.json({error:"El reporte no puede emitirse porque no hay datos suficientes para proteger la confidencialidad y calcular todas las dimensiones."},{status:409,headers:{"Cache-Control":"private, no-store"}});
+   return NextResponse.json({error:"El reporte final requiere una campaña cerrada, datos suficientes y todas las dimensiones calculables."},{status:409,headers:{"Cache-Control":"private, no-store"}});
  try{
   const word=createC3WordReport(report);
   const fileName="FactoRH_C3_PRO_Reporte_"+id.slice(0,8)+".docx";
