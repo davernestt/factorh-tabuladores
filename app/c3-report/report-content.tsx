@@ -14,7 +14,7 @@ export default function C3ReportContent({report}:{report:C3Report}){
  const reading=c3Readout(s);
  const date=new Date(report.generatedAt).toLocaleDateString("es-MX",{day:"numeric",month:"long",year:"numeric",timeZone:"America/Mexico_City"});
  const completedPercent=s.population&&s.population>0?100*s.completed/s.population:null;
- const sample=s.demo===true;
+ const sample=report.demo===true;
  return <article className="c3-print-document relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-white px-6 pb-10 pt-9 text-neutral-800 shadow-xl sm:px-12 sm:pt-12">
    <header className="c3-keep flex flex-wrap items-center justify-between gap-5 border-b-4 border-orange-500 pb-7">
      <div><Image src="/brand/factorh-wordmark.svg" alt="FactoRH" width={220} height={55} className="h-auto w-52 object-contain object-left"/>
