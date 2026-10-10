@@ -22,6 +22,11 @@ type C3Aggregate = {
   global?: number | null; enps?: number | null; enps_responses?: number | null;
   version?: string; validated?: boolean;
 };
+type C3GroupSummary = {
+  enabled:boolean; suppressed:boolean; mode?:string;
+  reason?:string; groups?:Array<{label:string;completed:number;score:number|null;
+    pillars:Array<{name:string;score:number|null}>}>;
+};
 const numberText=(n:number|null|undefined,decimals=1)=>typeof n==="number"?n.toFixed(decimals):"—";
 
 export default function C3CampaignDetail(props:{params:Promise<{id:string}>}) {
@@ -33,14 +38,16 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
   const {id}=await params;
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound();
   const db=createAdminClient();
-  const [campaignResult,statsResult]=await Promise.all([
-    db.from("c3_campaigns").select("id,name,status,organization_id,planned_population,scope,bank_version,created_at").eq("id",id).maybeSingle(),
+  const [campaignResult,statsResult,groupResult]=await Promise.all([
+    db.from("c3_campaigns").select("id,name,status,organization_id,planned_population,scope,bank_version,report_breakdown,created_at").eq("id",id).maybeSingle(),
     db.rpc("c3_campaign_aggregate",{p_campaign_id:id}),
+    db.rpc("c3_safe_group_summary",{p_campaign_id:id}),
   ]);
   if(campaignResult.error||!campaignResult.data)notFound();
   if(statsResult.error)return <div className="rounded-2xl bg-red-50 p-6 text-red-700">No se pudo generar el dashboard: {statsResult.error.message}</div>;
   const campaign=campaignResult.data;
   const summary=statsResult.data as C3Aggregate;
+  const grouped=groupResult.error?{enabled:false,suppressed:true} as C3GroupSummary:groupResult.data as C3GroupSummary;
   const {data:company}=await db.from("organizations").select("name").eq("id",campaign.organization_id).maybeSingle();
   const participation=summary.population&&summary.population>0?Math.min(100,Math.max(0,100*summary.completed/summary.population)):0;
   return <div className="space-y-7">
@@ -104,6 +111,27 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
         </>
       }
       <p className="mt-6 text-xs leading-5 text-neutral-500">Resultados descriptivos del piloto. No constituyen una validación científica ni equivalen a una evaluación NOM-035. Se exige supresión complementaria antes de activar segmentaciones o exportaciones.</p>
+    </section>
+    {grouped.enabled&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><p className="text-xs font-black uppercase tracking-[.15em] text-orange-600">Comparativo confidencial</p>
+          <h2 className="mt-2 text-xl font-black text-neutral-800">
+            {campaign.report_breakdown==="department"?"Clima por departamento":"Clima por tipo de personal"}
+          </h2>
+        </div>
+        <span className="rounded-full bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-600">Umbral ≥ 5 · Sin respuestas individuales</span>
+      </div>
+      {grouped.suppressed?
+        <p className="mt-4 rounded-xl bg-neutral-50 p-5 text-sm leading-6 text-neutral-600">{grouped.reason||"No hay datos suficientes para mostrar un comparativo protegido."} La comparación se oculta por completo para impedir deducir los resultados de un grupo pequeño.</p>:
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {(grouped.groups||[]).map(g=><div key={g.label} className="rounded-2xl border border-neutral-200 p-5">
+            <p className="font-black text-neutral-800">{g.label}</p>
+            <p className="mt-1 text-xs text-neutral-500">{g.completed} respuestas completas · cifras agrupadas</p>
+            <p className="mt-3 text-3xl font-black text-orange-600">{numberText(g.score)}<span className="text-base font-normal text-neutral-400"> / 100</span></p>
+            <div className="mt-4 space-y-2">{(g.pillars||[]).map(p=><div key={p.name} className="flex items-center justify-between text-xs text-neutral-600"><span>{p.name}</span><strong>{numberText(p.score)}</strong></div>)}</div>
+          </div>)}
+        </div>}
+      <p className="mt-4 text-xs leading-5 text-neutral-500">Elige un solo desglose por campaña. La configuración permanece fija después de abrir la encuesta. No se muestran comentarios abiertos ni cruces de grupos potencialmente identificables.</p>
     </section>
   </div>;
 }
