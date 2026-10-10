@@ -79,6 +79,16 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
       <p className="mt-2 text-xs text-orange-700">Después de emitir el primer reporte final, la campaña quedará cerrada definitivamente para proteger la confidencialidad. Un nuevo levantamiento requerirá otra campaña.</p>
       <CampaignStatusControls campaignId={id} status={campaign.status} released={finalReleased}/>
     </section>
+    <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[.15em] text-orange-600">Seguimiento consultivo</p>
+          <h2 className="mt-2 text-xl font-black text-neutral-800">Plan de acción · 30 / 60 / 90 días</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600">Documenta intervenciones, responsables, fechas, indicadores y evidencias sin consultar respuestas individuales. Puedes preparar el plan mientras la encuesta continúa abierta.</p>
+        </div>
+        <Link href={"/protected/c3/"+id+"/plan"} className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-700">Gestionar plan de acción →</Link>
+      </div>
+    </section>
     <InviteGenerator campaignId={id} disabled={campaign.status!=="open"}/>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
