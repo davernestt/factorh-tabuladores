@@ -74,7 +74,11 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Dashboard ejecutivo</p><h2 className="mt-2 text-2xl font-black text-neutral-800">Clima, Cultura y Compromiso</h2></div>
-        <span className="rounded-full bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-600">Instrumento en validación</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-neutral-100 px-3 py-2 text-xs font-bold text-neutral-600">Instrumento en validación</span>
+          {!summary.suppressed && summary.global != null && summary.dimensions?.length===13 && summary.dimensions.every(d=>d.score!==null) &&
+            <Link href={"/c3-report/"+id} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Ver reporte ejecutivo →</Link>}
+        </div>
       </div>
       {summary.suppressed?
         <p className="mt-5 rounded-2xl bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">Los indicadores todavía están protegidos. Se necesitan por lo menos <strong>5 cuestionarios completos</strong> y datos suficientes en cada dimensión para mostrar resultados. No se habilitan desgloses por departamento o tipo de personal en esta etapa.</p>:
