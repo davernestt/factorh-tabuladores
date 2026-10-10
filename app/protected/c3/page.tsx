@@ -1,11 +1,14 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createC3Campaign } from "./actions";
 
-export const dynamic = "force-dynamic";
-export default async function C3Index() {
+export default function C3Index() {
+  return <Suspense fallback={<p className="rounded-2xl bg-white p-8 text-neutral-600">Cargando C3 PRO...</p>}><C3IndexContent/></Suspense>;
+}
+async function C3IndexContent() {
   const user = await getCurrentAppUser();
   if (!user || user.role === "client") redirect("/auth/login");
   const db = createAdminClient();
