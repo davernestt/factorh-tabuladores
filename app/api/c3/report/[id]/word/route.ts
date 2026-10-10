@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { loadC3Report } from "@/lib/c3/report";
 import { createC3WordReport } from "@/lib/c3/word";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){
  const user=await getCurrentAppUser();
@@ -12,6 +13,8 @@ export async function GET(_request:Request,{params}:{params:Promise<{id:string}>
  if(report.campaign.status!=="closed"||report.summary.suppressed||report.summary.global==null||
    report.summary.dimensions?.length!==13||report.summary.dimensions.some(d=>d.score==null))
    return NextResponse.json({error:"El reporte final requiere una campaña cerrada, datos suficientes y todas las dimensiones calculables."},{status:409,headers:{"Cache-Control":"private, no-store"}});
+ const {error:releaseError}=await createAdminClient().rpc("c3_release_final_report",{p_campaign_id:id});
+ if(releaseError)return NextResponse.json({error:"No se pudo liberar el informe final con los controles de confidencialidad."},{status:409,headers:{"Cache-Control":"private, no-store"}});
  try{
   const word=createC3WordReport(report);
   const fileName="FactoRH_C3_PRO_Reporte_"+id.slice(0,8)+".docx";
