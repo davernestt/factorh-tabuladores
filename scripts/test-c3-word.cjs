@@ -64,7 +64,7 @@ try{
  childProcess.execFileSync("unzip",["-t",filename],{stdio:"pipe"});
  const content=childProcess.execFileSync("unzip",["-p",filename,"word/document.xml"],{encoding:"utf8"});
  const expected=["DATOS FICTICIOS","Lectura ejecutiva","Liderazgo inmediato","Compensaciones, beneficios y equidad",
-   "Oportunidades y plan de acción","Decisiones","Días 31–60","Metodología","eNPS"];
+   "Oportunidades y plan de acción","Agenda de decisiones","Días 31–60","Metodología","eNPS"];
  for(const marker of expected){if(!content.includes(marker))throw new Error("Word output missing content: "+marker);}
  if((content.match(/<w:tbl>/g)||[]).length<5)throw new Error("Tables and action plan were not rendered.");
  const blocked={...report,summary:{...report.summary,suppressed:true}};
