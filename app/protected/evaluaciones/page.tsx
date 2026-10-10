@@ -9,7 +9,7 @@ const modules = [
   { name: 'Evaluación 360°', description: 'Una persona evaluada; múltiples perspectivas. 12 competencias, 60 reactivos y un reporte consolidado.', icon: ChartNoAxesCombined, href: '/protected/360', active: true, tag: 'Módulo independiente' },
   { name: 'Psicometrías', description: 'Instrumentos propios FactoRH, aplicaciones, seguimiento y reportes psicométricos.', icon: ListChecks, href: '/protected/psicometrias', active: true, tag: 'Disponible · Experimental' },
   { name: 'NOM-035', description: 'Evaluación de riesgos psicosociales y reportes organizacionales.', icon: HeartHandshake, href: null, active: false, tag: 'Próximamente' },
-  { name: 'Clima laboral', description: 'Encuestas, campañas, participación y análisis por grupos.', icon: MessagesSquare, href: null, active: false, tag: 'Próximamente' },
+  { name: 'C3 PRO · Clima, Cultura y Compromiso', description: 'Campañas confidenciales, encuestas y análisis organizacional. Piloto metodológico.', icon: MessagesSquare, href: '/protected/c3', active: true, tag: 'Piloto en desarrollo' },
   { name: 'Próximas herramientas', description: 'Desempeño, DNC y People Review, entre otras soluciones.', icon: CircleHelp, href: null, active: false, tag: 'Planeación' },
 ];
 

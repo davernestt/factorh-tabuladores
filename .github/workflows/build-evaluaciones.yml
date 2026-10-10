@@ -5,6 +5,7 @@ on:
     branches:
       - evaluaciones-v1
       - feedback360-v1
+      - c3-pro-v1
   workflow_dispatch:
 
 jobs:
@@ -17,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -25,3 +26,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Validate C3 native Word export
+        run: node scripts/test-c3-word.cjs
