@@ -5,6 +5,7 @@ on:
     branches:
       - evaluaciones-v1
       - feedback360-v1
+      - c3-pro-v1
   workflow_dispatch:
 
 jobs:
