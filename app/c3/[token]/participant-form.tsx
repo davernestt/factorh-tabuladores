@@ -1,7 +1,7 @@
 "use client";
 import {useState} from "react";
-type Item={code:string;instrument_code:string;dimension_name:string|null;pillar:string|null;prompt:string;response_type:string;position:number;shared_with:string|null};
-type Answer={score?:number;text?:string;na?:boolean};
+type Item={code:string;instrument_code:string;dimension_name:string|null;pillar:string|null;prompt:string;response_type:string;position:number};
+type Answer={score?:number;text?:string;na?:boolean;na_reason?:"not_applicable"|"no_information"};
 export default function C3ParticipantForm({token,items}:{token:string;items:Item[]}){
  const [values,setValues]=useState<Record<string,Answer>>({}),[page,setPage]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(""),[done,setDone]=useState(false);
  const pageSize=8, pages=Math.ceil(items.length/pageSize),part=items.slice(page*pageSize,(page+1)*pageSize);
@@ -27,7 +27,8 @@ export default function C3ParticipantForm({token,items}:{token:string;items:Item
  <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-orange-600">{it.pillar&&it.pillar!=="Complementario"?it.pillar+" · ":""}{it.dimension_name&&it.dimension_name!=="Pregunta abierta"?it.dimension_name:""}</p>
  {it.response_type==="open"?<textarea maxLength={3000} value={values[it.code]?.text||""} onChange={e=>update(it.code,{text:e.target.value})} rows={4} className="mt-4 w-full rounded-xl border border-neutral-300 p-3 text-sm" placeholder="Respuesta opcional. Evita nombres o información que identifique a alguien."/>:
  <div className="mt-4 grid gap-2">{(it.response_type==="enps"?Array.from({length:11},(_,i)=>({value:i,label:String(i)})):[{value:1,label:"Totalmente en desacuerdo"},{value:2,label:"En desacuerdo"},{value:3,label:"Ni de acuerdo ni en desacuerdo"},{value:4,label:"De acuerdo"},{value:5,label:"Totalmente de acuerdo"}]).map(opt=><label key={opt.value} className={"flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm "+(values[it.code]?.score===opt.value?"border-orange-400 bg-orange-50":"border-neutral-200 hover:bg-neutral-50")}><input type="radio" name={it.code} checked={values[it.code]?.score===opt.value} onChange={()=>update(it.code,{score:opt.value})}/>{opt.label}</label>)}
- <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 p-3 text-sm"><input type="radio" name={it.code} checked={!!values[it.code]?.na} onChange={()=>update(it.code,{na:true})}/>No aplica / No tengo información suficiente</label>
+ <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 p-3 text-sm"><input type="radio" name={it.code} checked={values[it.code]?.na_reason==="not_applicable"} onChange={()=>update(it.code,{na:true,na_reason:"not_applicable"})}/>No aplica a mis funciones o experiencia</label>
+ <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-neutral-200 p-3 text-sm"><input type="radio" name={it.code} checked={values[it.code]?.na_reason==="no_information"} onChange={()=>update(it.code,{na:true,na_reason:"no_information"})}/>No tengo información suficiente</label>
  </div>}</fieldset>)}</div>
  {error&&<p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
  <div className="mt-6 flex flex-wrap justify-between gap-3"><button type="button" onClick={()=>{setError("");setPage(x=>Math.max(0,x-1));window.scrollTo(0,0)}} disabled={page===0||busy} className="rounded-xl border border-neutral-300 px-5 py-3 font-bold text-neutral-700 disabled:opacity-40">Anterior</button>
