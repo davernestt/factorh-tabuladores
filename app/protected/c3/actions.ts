@@ -34,20 +34,28 @@ export async function createC3Campaign(formData: FormData) {
 
 export async function changeC3CampaignStatus(formData: FormData) {
   const user = await getCurrentAppUser();
-  if (!user || user.role === "client") throw new Error("No autorizado.");
+  if (!user || user.role !== "super_admin") throw new Error("No autorizado.");
   const id = String(formData.get("id") || "");
   const next = String(formData.get("status") || "");
-  if (!["open", "closed"].includes(next)) throw new Error("Estado inválido.");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||
+      !["open", "closed"].includes(next)) throw new Error("Estado o campaña inválido.");
   const db = createAdminClient();
   const { data } = await db.from("c3_campaigns").select("id,status").eq("id",id).maybeSingle();
-  if (!data || (next === "open" && data.status !== "draft") || (next === "closed" && data.status !== "open")) {
-    throw new Error("Transición de estado no permitida.");
-  }
-  const { error } = await db.from("c3_campaigns").update({
-    status:next,
-    ...(next === "open" ? { opened_at: new Date().toISOString() } : { closed_at: new Date().toISOString() })
-  }).eq("id",id).eq("status",data.status);
-  if (error) throw new Error(error.message);
+  const validTransition = !!data && (
+    (next === "open" && ["draft","closed"].includes(data.status)) ||
+    (next === "closed" && data.status === "open")
+  );
+  if (!validTransition || !data) throw new Error("Transición de estado no permitida.");
+  // Reopening a closed campaign preserves its original opened_at, frozen questions,
+  // and all invitations and answers. Only the close marker is cleared.
+  const fields = next === "closed"
+    ? { status: "closed", closed_at: new Date().toISOString() }
+    : data.status === "draft"
+      ? { status: "open", opened_at: new Date().toISOString(), closed_at: null }
+      : { status: "open", closed_at: null };
+  const { data: updated, error } = await db.from("c3_campaigns")
+    .update(fields).eq("id",id).eq("status",data.status).select("id").maybeSingle();
+  if (error || !updated) throw new Error(error?.message || "La campaña cambió de estado. Actualiza e intenta nuevamente.");
   revalidatePath("/protected/c3/" + id);
   revalidatePath("/protected/c3");
   redirect("/protected/c3/" + id);
