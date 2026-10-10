@@ -110,7 +110,7 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
           </div>
         </>
       }
-      <p className="mt-6 text-xs leading-5 text-neutral-500">Resultados descriptivos del piloto. No constituyen una validación científica ni equivalen a una evaluación NOM-035. Se exige supresión complementaria antes de activar segmentaciones o exportaciones.</p>
+      <p className="mt-6 text-xs leading-5 text-neutral-500">Resultados descriptivos del piloto. No constituyen una validación científica ni equivalen a una evaluación NOM-035. Los desgloses aplican un umbral mínimo y ocultamiento complementario.</p>
     </section>
     {grouped.enabled&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -132,6 +132,6 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
           </div>)}
         </div>}
       <p className="mt-4 text-xs leading-5 text-neutral-500">Elige un solo desglose por campaña. La configuración permanece fija después de abrir la encuesta. No se muestran comentarios abiertos ni cruces de grupos potencialmente identificables.</p>
-    </section>
+    </section>}
   </div>;
 }
