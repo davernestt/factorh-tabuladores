@@ -16,11 +16,11 @@ async function C3ExecutiveReportContent({params}:{params:Promise<{id:string}>}){
  const {id}=await params;
  const report=await loadC3Report(id);
  if(!report)notFound();
- if(!c3ReadyToReport(report.summary))return <main className="min-h-screen bg-neutral-100 px-4 py-16">
+ if(report.campaign.status!=="closed" || !c3ReadyToReport(report.summary))return <main className="min-h-screen bg-neutral-100 px-4 py-16">
   <section className="mx-auto max-w-2xl rounded-3xl bg-white p-8 shadow-sm">
    <p className="text-xs font-black uppercase tracking-wider text-orange-600">Confidencialidad C3 PRO</p>
-   <h1 className="mt-3 text-2xl font-black text-neutral-800">Reporte pendiente de respuestas suficientes</h1>
-   <p className="mt-4 text-sm leading-7 text-neutral-600">Todavía no se puede emitir un informe ejecutivo. Se necesitan por lo menos cinco cuestionarios completos y suficiente cobertura en las 13 dimensiones. No se muestran resultados individuales ni se rellenan datos faltantes.</p>
+   <h1 className="mt-3 text-2xl font-black text-neutral-800">Reporte final aún no disponible</h1>
+   <p className="mt-4 text-sm leading-7 text-neutral-600">El informe real se habilita cuando la campaña está cerrada, tiene por lo menos cinco cuestionarios completos y presenta cobertura suficiente en las 13 dimensiones. Así evitamos publicar datos parciales o facilitar inferencias sobre respuestas individuales mediante exportaciones sucesivas.</p>
    <p className="mt-3 text-sm leading-6 text-neutral-600">Mientras tanto puedes revisar el diseño y las recomendaciones consultivas con una demostración que utiliza datos ficticios.</p>
    <div className="mt-6 flex flex-wrap gap-3">
     <Link href={"/protected/c3/"+id} className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white">Volver a campaña</Link>
