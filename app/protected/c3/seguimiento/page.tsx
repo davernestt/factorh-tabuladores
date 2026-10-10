@@ -43,12 +43,12 @@ async function C3TrackingContent() {
     No pudimos cargar el seguimiento ejecutivo: {error.message}
   </div>;
   const orgMap=new Map((orgResult.data||[]).map(o=>[o.id,o.name]));
-  const campaigns:PortfolioCampaign=(campaignResult.data||[]).map(c=>({
+  const campaigns:PortfolioCampaign[]=(campaignResult.data||[]).map(c=>({
     id:c.id,name:c.name,organizationId:c.organization_id,
     organizationName:orgMap.get(c.organization_id)||"Empresa",
     status:c.status,reportReleased:!!c.report_released_at
   }));
-  const actions:PortfolioAction=(actionsResult.data||[]).map(a=>({
+  const actions:PortfolioAction[]=(actionsResult.data||[]).map(a=>({
     id:a.id,campaignId:a.campaign_id,title:a.title,owner:a.owner_label||"",
     phaseDays:a.phase_days,priority:a.priority,status:a.status,
     dimensionCode:a.dimension_code,dueOn:a.due_on,updatedAt:a.updated_at
