@@ -4,6 +4,7 @@ import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {c3DemoReport} from "@/lib/c3/demo-report";
 import C3ReportContent from "@/app/c3-report/report-content";
+import DemoReportControls from "./demo-report-controls";
 
 export default function C3ExecutiveReportDemo(){
  return <Suspense fallback={<main className="p-10 text-center text-neutral-600">Preparando demostración...</main>}><C3DemoContent/></Suspense>;
@@ -26,10 +27,7 @@ async function C3DemoContent(){
   `}</style>
   <div className="c3-no-print mx-auto mb-5 flex max-w-5xl flex-wrap items-center justify-between gap-3">
    <Link href="/protected/c3/demo" className="rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-700">← Volver al dashboard ficticio</Link>
-   <div className="flex flex-wrap items-center gap-2">
-    <button type="button" id="c3-demo-print" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white" onClick={undefined}>Vista lista para imprimir / PDF</button>
-    <a href="/api/c3/report/demo/word" className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white">Word demostrativo</a>
-   </div>
+   <DemoReportControls/>
   </div>
   <C3ReportContent report={c3DemoReport}/>
   <p className="c3-no-print mx-auto mt-4 max-w-5xl text-xs leading-5 text-neutral-500">La impresión a PDF utiliza el navegador. Esta demostración no registra ni consulta respuestas reales.</p>
