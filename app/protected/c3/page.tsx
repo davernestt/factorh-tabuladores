@@ -19,7 +19,7 @@ async function C3IndexContent() {
   if (orgs.error || campaigns.error) return <p className="rounded-2xl bg-red-50 p-6 text-red-700">Error al consultar C3 PRO: {orgs.error?.message || campaigns.error?.message}</p>;
   const orgById = new Map((orgs.data || []).map(o => [o.id, o.name]));
   return <div className="space-y-7">
-    <Link href="/protected/evaluaciones" className="text-sm font-semibold text-orange-600">← Centro de evaluaciones</Link>
+    <Link href="/protected/clima" className="text-sm font-semibold text-orange-600">← Catálogo de Clima Laboral</Link>
     <div><div className="text-xs font-bold uppercase tracking-[.2em] text-orange-600">FactoRH · Diagnóstico organizacional</div>
       <h1 className="mt-2 text-3xl font-black text-neutral-800">C3 PRO · Clima, Cultura y Compromiso</h1>
       <p className="mt-2 text-neutral-600">Administra campañas confidenciales y mide participación e indicadores agregados. Instrumento en fase piloto.</p>
