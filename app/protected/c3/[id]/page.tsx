@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound,redirect } from "next/navigation";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { changeC3CampaignStatus } from "../actions";
+import CampaignStatusControls from "./campaign-status-controls";
 import InviteGenerator from "./invite-generator";
 
 
@@ -71,11 +71,8 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
         <span className="rounded-full bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">{campaign.status==="draft"?"Borrador":campaign.status==="open"?"Abierta":campaign.status==="closed"?"Cerrada":"Cancelada"}</span>
       </div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full bg-orange-500" style={{width:participation+"%"}} /></div>
-      <p className="mt-3 text-sm text-neutral-600">Las preguntas se congelan al abrir la campaña. Una vez cerrada, los enlaces dejan de aceptar respuestas.</p>
-      {(campaign.status==="draft"||campaign.status==="open")&&<form action={changeC3CampaignStatus} className="mt-4">
-        <input type="hidden" name="id" value={id}/><input type="hidden" name="status" value={campaign.status==="draft"?"open":"closed"}/>
-        <button className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-700">{campaign.status==="draft"?"Abrir campaña":"Cerrar campaña"}</button>
-      </form>}
+      <p className="mt-3 text-sm text-neutral-600">Las preguntas se congelan al abrir la campaña. Al cerrar, los enlaces dejan de aceptar respuestas; si fue por error, puedes reabrirla conservando las ligas y el cuestionario.</p>
+      <CampaignStatusControls campaignId={id} status={campaign.status}/>
     </section>
     <InviteGenerator campaignId={id} disabled={campaign.status!=="open"}/>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
