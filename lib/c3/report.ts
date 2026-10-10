@@ -16,6 +16,7 @@ export type C3Report = {
   campaign:{id:string;name:string;status:string;bank_version:string;scope:string};
   organization:string; summary:C3Aggregate;
   generatedAt:string;
+  demo?:boolean;
 };
 export type C3Opportunity = {code:string;name:string;score:number;action:string;measure:string};
 
