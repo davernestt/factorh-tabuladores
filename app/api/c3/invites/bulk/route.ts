@@ -11,7 +11,7 @@ export async function POST(req:Request){
  let data:{campaignId?:string;segment?:string;departmentId?:string|null;count?:number};
  try{data=await req.json();}catch{return NextResponse.json({error:"Solicitud inválida."},{status:400})}
  if(!data.campaignId||!/^[0-9a-f-]{36}$/i.test(data.campaignId)||
- !["operativo","administrativo"].includes(data.segment||"")||
+ !["operativo","administrativo","sin_clasificar"].includes(data.segment||"")||
  !Number.isInteger(data.count)||Number(data.count)<1||Number(data.count)>200||
  (data.departmentId!==null&&data.departmentId!==undefined&&!/^[0-9a-f-]{36}$/i.test(data.departmentId)))
  return NextResponse.json({error:"Elige un segmento y una cantidad entre 1 y 200."},{status:400});
