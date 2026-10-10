@@ -242,7 +242,7 @@ export default function C3PortfolioClient({
           </div>
           <div className="mt-4 flex flex-wrap justify-between gap-3 text-xs text-neutral-600">
             <span>{c.late} vencidas · {c.soon} próximas a vencer</span>
-            <Link href={"/protected/c3/"+c.id+"/plan"} className="font-black text-orange-600 hover:text-orange-700">Abrir plan →</Link>
+            <div className="flex flex-wrap gap-3"><Link href={"/protected/c3/"+c.id+"/plan"} className="font-black text-orange-600 hover:text-orange-700">Abrir plan →</Link><Link href={"/c3-plan-report/"+c.id} className="font-black text-neutral-800 hover:text-orange-700">Informe para Dirección →</Link></div>
           </div>
         </article>)}
       </div>}
