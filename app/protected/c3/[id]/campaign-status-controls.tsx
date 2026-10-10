@@ -4,13 +4,15 @@ import { useState } from "react";
 import { changeC3CampaignStatus } from "../actions";
 
 export default function CampaignStatusControls({
-  campaignId,status
+  campaignId,status,released=false
 }:{
   campaignId:string;
   status:"draft"|"open"|"closed"|"cancelled";
+  released?:boolean;
 }){
   const [submitting,setSubmitting]=useState(false);
   if(status==="cancelled")return null;
+  if(status==="closed" && released)return <p className="mt-4 rounded-xl bg-neutral-100 p-4 text-sm font-semibold text-neutral-700">Reporte final emitido: esta campaña está cerrada de forma definitiva para proteger la confidencialidad. Para nuevas respuestas, crea otra campaña.</p>;
   const next=status==="open"?"closed":"open";
   const closing=status==="open";
   const label=status==="draft"?"Abrir campaña":closing?"Cerrar campaña":"Reabrir campaña";
