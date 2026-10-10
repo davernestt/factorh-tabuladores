@@ -10,7 +10,8 @@ export async function createC3Campaign(formData: FormData) {
   const organizationId = String(formData.get("organization_id") || "");
   const name = String(formData.get("name") || "").trim().slice(0, 150);
   const planned = Number(formData.get("planned_population"));
-  if (!organizationId || name.length < 4 || !Number.isInteger(planned) || planned < 1 || planned > 100000) {
+  const breakdown = String(formData.get("report_breakdown") || "none");
+  if (!organizationId || name.length < 4 || !Number.isInteger(planned) || planned < 1 || planned > 100000 || !["none","segment","department"].includes(breakdown)) {
     throw new Error("Revisa empresa, nombre y población elegible.");
   }
   const db = createAdminClient();
@@ -21,6 +22,7 @@ export async function createC3Campaign(formData: FormData) {
     name,
     planned_population: planned,
     scope: "operativo_administrativo",
+    report_breakdown: breakdown,
     created_by: user.userId
   }).select("id").single();
   if (error || !data) throw new Error(error?.message || "No se creó la campaña.");
