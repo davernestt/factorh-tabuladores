@@ -35,6 +35,14 @@ async function C3IndexContent() {
         <label className="text-sm font-semibold text-neutral-700">Empresa<select required name="organization_id" defaultValue="" className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3"><option value="" disabled>Selecciona una empresa</option>{(orgs.data||[]).map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
         <label className="text-sm font-semibold text-neutral-700">Población elegible<input required name="planned_population" type="number" min={1} max={100000} className="mt-2 w-full rounded-xl border border-neutral-300 p-3" placeholder="Número de operativos y administrativos" /></label>
         <label className="text-sm font-semibold text-neutral-700 md:col-span-2">Nombre de campaña<input required name="name" maxLength={150} className="mt-2 w-full rounded-xl border border-neutral-300 p-3" placeholder="Diagnóstico organizacional · Colbert · Piloto 2026" /></label>
+        <label className="text-sm font-semibold text-neutral-700 md:col-span-2">¿Cómo quieres analizar los resultados?
+          <select name="report_breakdown" defaultValue="none" className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3">
+            <option value="none">Solo resultados generales de la empresa (mayor protección)</option>
+            <option value="segment">Comparar personal operativo y administrativo</option>
+            <option value="department">Comparar departamentos (RH, Finanzas, Logística, etc.)</option>
+          </select>
+          <p className="mt-2 text-xs font-normal leading-5 text-neutral-500">Elige un desglose por campaña. Si algún grupo tiene menos de cinco respuestas, se ocultará la comparación completa. Esta decisión se congela al abrir la encuesta.</p>
+        </label>
         <div className="md:col-span-2"><button type="submit" className="rounded-xl bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700">Crear campaña en borrador</button></div>
       </form>
     </section>
