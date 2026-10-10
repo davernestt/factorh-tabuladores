@@ -71,7 +71,8 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
         <span className="rounded-full bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">{campaign.status==="draft"?"Borrador":campaign.status==="open"?"Abierta":campaign.status==="closed"?"Cerrada":"Cancelada"}</span>
       </div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full bg-orange-500" style={{width:participation+"%"}} /></div>
-      <p className="mt-3 text-sm text-neutral-600">Las preguntas se congelan al abrir la campaña. Al cerrar, los enlaces dejan de aceptar respuestas; si fue por error, puedes reabrirla conservando las ligas y el cuestionario.</p>
+      <p className="mt-3 text-sm text-neutral-600">Las preguntas se congelan al abrir la campaña. Los resultados se liberan solo al cerrarla y cumplir los criterios de cobertura. Puedes reabrir un cierre accidental mientras no se haya consultado ni descargado el informe final.</p>
+      <p className="mt-2 text-xs text-orange-700">Después de emitir el primer reporte final, la campaña quedará cerrada definitivamente para proteger la confidencialidad. Un nuevo levantamiento requerirá otra campaña.</p>
       <CampaignStatusControls campaignId={id} status={campaign.status}/>
     </section>
     <InviteGenerator campaignId={id} disabled={campaign.status!=="open"}/>
@@ -85,8 +86,8 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
             <Link href={"/c3-report/"+id} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Ver reporte ejecutivo →</Link>}
         </div>
       </div>
-      {summary.suppressed?
-        <p className="mt-5 rounded-2xl bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">Los indicadores todavía están protegidos. Se necesitan por lo menos <strong>5 cuestionarios completos</strong> y datos suficientes en cada dimensión para mostrar resultados. No se habilitan desgloses por departamento o tipo de personal en esta etapa.</p>:
+      {campaign.status!=="closed" || summary.suppressed?
+        <p className="mt-5 rounded-2xl bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">Los indicadores se mantienen ocultos mientras la campaña está abierta. Una vez cerrada, se necesitan por lo menos <strong>5 cuestionarios completos</strong> y cobertura suficiente de las 13 dimensiones. Los desgloses también requieren grupos seguros para publicar.</p>:
         <>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl bg-neutral-100 p-5"><p className="text-sm font-semibold text-neutral-500">Índice global C3 · 0–100</p><p className="mt-2 text-4xl font-black text-neutral-800">{numberText(summary.global)}</p><p className="mt-2 text-xs text-neutral-500">Promedio de tres pilares; cada dimensión requiere cobertura suficiente.</p></div>
@@ -110,7 +111,7 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
       }
       <p className="mt-6 text-xs leading-5 text-neutral-500">Resultados descriptivos del piloto. No constituyen una validación científica ni equivalen a una evaluación NOM-035. Los desgloses aplican un umbral mínimo y ocultamiento complementario.</p>
     </section>
-    {grouped.enabled&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+    {campaign.status==="closed" && grouped.enabled&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><p className="text-xs font-black uppercase tracking-[.15em] text-orange-600">Comparativo confidencial</p>
           <h2 className="mt-2 text-xl font-black text-neutral-800">
