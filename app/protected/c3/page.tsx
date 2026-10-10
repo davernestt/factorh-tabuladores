@@ -23,6 +23,7 @@ async function C3IndexContent() {
     <div><div className="text-xs font-bold uppercase tracking-[.2em] text-orange-600">FactoRH · Diagnóstico organizacional</div>
       <h1 className="mt-2 text-3xl font-black text-neutral-800">C3 PRO · Clima, Cultura y Compromiso</h1>
       <p className="mt-2 text-neutral-600">Administra campañas confidenciales y mide participación e indicadores agregados. Instrumento en fase piloto.</p>
+      <Link href="/protected/c3/demo" className="mt-4 inline-flex rounded-xl border border-orange-200 bg-orange-50 px-5 py-3 text-sm font-bold text-orange-700 hover:bg-orange-100">Ver ejemplo de dashboard con datos ficticios →</Link>
     </div>
     <div className="grid gap-4 md:grid-cols-3">
       {[["56", "Preguntas C3 Base"],["8", "Módulos adicionales"],[String((campaigns.data || []).length),"Campañas"]].map(([n,label])=><div key={label} className="rounded-2xl border border-neutral-200 bg-white p-5"><div className="text-3xl font-black text-neutral-800">{n}</div><div className="mt-1 text-sm text-neutral-500">{label}</div></div>)}
