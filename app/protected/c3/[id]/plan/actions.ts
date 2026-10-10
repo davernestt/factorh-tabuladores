@@ -45,6 +45,7 @@ export async function createC3Action(form:FormData){
  });
  if(error)throw Error("No se pudo guardar la acción: "+error.message);
  revalidatePath("/protected/c3/"+campaignId+"/plan");
+ revalidatePath("/protected/c3/seguimiento");
 }
 
 export async function updateC3Action(form:FormData){
@@ -58,4 +59,5 @@ export async function updateC3Action(form:FormData){
    .update({status,evidence}).eq("campaign_id",campaignId).eq("id",id).select("id").maybeSingle();
  if(error||!data)throw Error("No se pudo actualizar la actividad.");
  revalidatePath("/protected/c3/"+campaignId+"/plan");
+ revalidatePath("/protected/c3/seguimiento");
 }
