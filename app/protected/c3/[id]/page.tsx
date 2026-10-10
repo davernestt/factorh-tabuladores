@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound,redirect } from "next/navigation";
 import { getCurrentAppUser } from "@/lib/app-auth";
@@ -5,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { changeC3CampaignStatus } from "../actions";
 import InviteGenerator from "./invite-generator";
 
-export const dynamic = "force-dynamic";
+
 
 type DimensionResult = {
   code: string; name: string; pillar: string; score: number | null;
@@ -23,7 +24,10 @@ type C3Aggregate = {
 };
 const numberText=(n:number|null|undefined,decimals=1)=>typeof n==="number"?n.toFixed(decimals):"—";
 
-export default async function C3CampaignDetail({params}:{params:Promise<{id:string}>}) {
+export default function C3CampaignDetail(props:{params:Promise<{id:string}>}) {
+  return <Suspense fallback={<p className="rounded-2xl bg-white p-8 text-neutral-600">Cargando diagnóstico...</p>}><C3CampaignDetailContent {...props}/></Suspense>;
+}
+async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
   const user=await getCurrentAppUser();
   if(!user||user.role!=="super_admin")redirect("/auth/login");
   const {id}=await params;
