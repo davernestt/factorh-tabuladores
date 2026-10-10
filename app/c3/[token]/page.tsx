@@ -1,10 +1,13 @@
+import { Suspense } from "react";
 import {createHash} from "node:crypto";
 import {notFound} from "next/navigation";
 import {createAdminClient} from "@/lib/supabase/admin";
 import C3ParticipantForm from "./participant-form";
 
-export const dynamic="force-dynamic";
-export default async function C3PublicSurvey({params}:{params:Promise<{token:string}>}){
+export default function C3PublicSurvey(props:{params:Promise<{token:string}>}) {
+  return <Suspense fallback={<main className="min-h-screen bg-neutral-100 p-8 text-center">Cargando encuesta C3 PRO...</main>}><C3PublicSurveyContent {...props}/></Suspense>;
+}
+async function C3PublicSurveyContent({params}:{params:Promise<{token:string}>}){
  const {token}=await params;
  if(!/^[A-Za-z0-9_-]{43}$/.test(token))notFound();
  const hash=createHash("sha256").update(token).digest("hex");
