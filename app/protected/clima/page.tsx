@@ -23,7 +23,7 @@ const instruments = [
     duration:"Tiempo pendiente de medición en piloto",
     status:"Prepiloto funcional",
     available:true,
-    href:"/protected/c3",
+    href:"/protected/clima/pro",
     icon:ClipboardCheck,
   },
   {
@@ -105,7 +105,7 @@ async function ClimaLandingContent(){
               <span className="rounded-lg bg-neutral-100 px-3 py-2 text-xs text-neutral-600">{item.duration}</span>
             </div>
             <Link href={item.href} className="mt-6 inline-flex items-center gap-2 self-start rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600">
-              {item.available?"Entrar a C3 PRO":"Ver especificación"}<ArrowRight className="h-4 w-4"/>
+              {item.available?"Ver C3 PRO y sus preguntas":"Ver especificación"}<ArrowRight className="h-4 w-4"/>
             </Link>
           </article>;
         })}
