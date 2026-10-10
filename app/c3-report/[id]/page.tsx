@@ -25,7 +25,7 @@ async function C3ExecutiveReportContent({params}:{params:Promise<{id:string}>}){
    <p className="mt-3 text-sm leading-6 text-neutral-600">Mientras tanto puedes revisar el diseño y las recomendaciones consultivas con una demostración que utiliza datos ficticios.</p>
    <div className="mt-6 flex flex-wrap gap-3">
     <Link href={"/protected/c3/"+id} className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white">Volver a campaña</Link>
-    <Link href="/protected/c3/demo/reporte" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white">Ver ejemplo de reporte</Link>
+    <Link href="/c3-report/ejemplo" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white">Ver ejemplo de reporte</Link>
    </div>
   </section>
  </main>;
