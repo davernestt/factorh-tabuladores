@@ -112,7 +112,7 @@ export default function C3PortfolioClient({
   }, [visibleActions, today, sevenDays]);
 
   const campaignMetrics = useMemo(() => filteredCampaigns.map(c => {
-    const all=visibleActions.filter(a => a.campaignId === c.id);
+    const all=actions.filter(a => a.campaignId === c.id && (phase === "all" || String(a.phaseDays) === phase));
     const active=all.filter(a => a.status !== "cancelada");
     const done=active.filter(a => a.status === "completada").length;
     return {
@@ -122,7 +122,7 @@ export default function C3PortfolioClient({
       soon: active.filter(a => dueSoon(a,today,sevenDays)).length,
       percent: active.length ? Math.round(100*done/active.length) : null
     };
-  }), [filteredCampaigns, visibleActions, today, sevenDays]);
+  }), [filteredCampaigns, actions, phase, today, sevenDays]);
 
   const sortedActions = useMemo(() => [...visibleActions]
     .sort((a,b) => {
