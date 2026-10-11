@@ -59,7 +59,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action="/api/auth/login" method="post" autoComplete="off">
+          <form action="/api/auth/login" method="post" autoComplete="on">
             <div className="flex flex-col gap-6">
               {message && (
                 <p
@@ -80,7 +80,7 @@ export function LoginForm({
                   name="email"
                   type="email"
                   placeholder="tu@empresa.com"
-                  autoComplete="off"
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -99,7 +99,7 @@ export function LoginForm({
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="off"
+                  autoComplete="current-password"
                   required
                 />
               </div>
