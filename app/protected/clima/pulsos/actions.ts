@@ -9,12 +9,13 @@ export async function createPulse(form:FormData){
  const user=await admin();
  const org=String(form.get("organization_id")||"");
  const name=String(form.get("name")||"").trim();
- const focus=String(form.get("focus")||"").trim();
+ const requestedFocus=String(form.get("focus")||"").trim();
  const population=Number(form.get("population"));
  const topic=String(form.get("topic")||"");
  const topics=await import("@/lib/pulse/topics");
  const selected=topics.pulseTopicFor(topic);
  const dims=selected?[...selected.dimensionCodes]:topic==="custom"?form.getAll("dimensions").map(String):[];
+ const focus=requestedFocus||(selected?.intent||"Seguimiento específico de dos o tres dimensiones del clima laboral.");
  if(dims.length<2||dims.length>3||new Set(dims).size!==dims.length||dims.some(d=>!/^D(0[1-9]|1[0-3])$/.test(d)))throw Error("Selecciona un tema válido.");
  const db=createAdminClient();
  const {data:questions,error:bankError}=await db.from("c3_items").select("code,dimension_code,position").eq("instrument_code","C3").eq("response_type","likert").eq("active",true).in("dimension_code",dims).order("position");
@@ -25,7 +26,8 @@ export async function createPulse(form:FormData){
  new Set(codes).size!==codes.length)throw Error("Revisa empresa, nombre, tema y población.");
  const {data,error}=await db.rpc("pulse_create_campaign",{p_org:org,p_name:name,p_focus:focus,p_population:population,p_codes:codes,p_actor:user.userId});
  if(error||!data)throw Error(error?.message||"No fue posible crear el pulso.");
- await db.from("pulse_campaigns").update({topic_code:topic,topic_dimensions:dims}).eq("id",data);
+ const {error:topicError}=await db.from("pulse_campaigns").update({topic_code:topic,topic_dimensions:dims}).eq("id",data);
+ if(topicError)throw Error("Campaña creada, pero no se guardó su tema. Revísala en campañas antes de repetir.");
  revalidatePath("/protected/clima/pulsos");
  redirect("/protected/clima/pulsos/"+data);
 }
