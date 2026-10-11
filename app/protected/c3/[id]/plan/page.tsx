@@ -25,7 +25,7 @@ async function C3PlanContent({params}:{params:Promise<{id:string}>}){
  const campaign=campaignR.data;
  const {data:org}=await db.from("organizations").select("name").eq("id",campaign.organization_id).maybeSingle();
  return <div className="space-y-7">
-  <Link href={"/protected/c3/"+id} className="text-sm font-bold text-orange-600">← Volver a campaña C3 PRO</Link>
+  <div className="flex flex-wrap items-center justify-between gap-3"><Link href={"/protected/c3/"+id} className="text-sm font-bold text-orange-600">← Volver a campaña C3 PRO</Link><Link href="/protected/c3/alertas" className="text-sm font-bold text-neutral-700 hover:text-orange-600">Alertas y agenda semanal →</Link></div>
   <div className="flex flex-wrap items-center justify-between gap-3"><span className="text-xs font-bold uppercase tracking-wide text-neutral-500">Seguimiento de intervención</span><Link href={"/c3-plan-report/"+id} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">Informe ejecutivo para Dirección →</Link></div>
   <header className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
    <p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">FactoRH · Gestión de intervención</p>
