@@ -4,6 +4,7 @@ import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {createPulse} from "./actions";
+import PulseThemePicker from "./pulse-theme-picker";
 
 export default function PulseIndex(){return <Suspense fallback={<p className="p-8">Cargando Pulsos...</p>}><Content/></Suspense>}
 async function Content(){
@@ -13,12 +14,12 @@ async function Content(){
  const [orgs,campaigns,questions]=await Promise.all([
   db.from("organizations").select("id,name").eq("active",true).order("name"),
   db.from("pulse_campaigns").select("id,name,focus,status,organization_id,planned_population,created_at").order("created_at",{ascending:false}),
-  db.from("c3_items").select("code,dimension_name,prompt,position").eq("instrument_code","C3").eq("response_type","likert").eq("active",true).order("position")
+  db.from("c3_items").select("code,dimension_code,dimension_name,prompt,position").eq("instrument_code","C3").eq("response_type","likert").eq("active",true).order("position")
  ]);
  const error=orgs.error||campaigns.error||questions.error;
  if(error)return <p className="rounded-xl bg-red-50 p-5 text-red-700">{error.message}</p>;
  const orgMap=new Map((orgs.data||[]).map(o=>[o.id,o.name]));
- const groups=[...new Set((questions.data||[]).map(q=>q.dimension_name||"General"))];
+
  return <div className="space-y-7">
   <Link href="/protected/clima" className="text-sm font-bold text-orange-600">← Catálogo de clima laboral</Link>
   <section className="rounded-3xl bg-white p-7 shadow-sm">
@@ -29,25 +30,15 @@ async function Content(){
   </section>
   <section className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
    <h2 className="text-xl font-black text-neutral-800">Crear una campaña de pulso</h2>
-   <p className="mt-2 text-sm text-neutral-600">Selecciona de 8 a 12 preguntas del banco. La selección y redacción quedarán congeladas al crear el pulso.</p>
+   <p className="mt-2 text-sm text-neutral-600">Elige un tema de interés. FactoRH seleccionará de 8 a 12 preguntas automáticamente y conservará el cuestionario de la campaña.</p>
    <form action={createPulse} className="mt-5 space-y-5">
     <div className="grid gap-4 md:grid-cols-2">
      <label className="text-sm font-bold text-neutral-700">Empresa<select name="organization_id" required defaultValue="" className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3"><option value="" disabled>Selecciona empresa</option>{(orgs.data||[]).map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
      <label className="text-sm font-bold text-neutral-700">Población elegible<input name="population" required type="number" min={1} max={100000} className="mt-2 w-full rounded-xl border border-neutral-300 p-3" placeholder="Número de participantes elegibles"/></label>
      <label className="text-sm font-bold text-neutral-700">Nombre de campaña<input name="name" required minLength={4} maxLength={150} className="mt-2 w-full rounded-xl border border-neutral-300 p-3" placeholder="Pulso de comunicación · Octubre"/></label>
-     <label className="text-sm font-bold text-neutral-700">Tema u objetivo<input name="focus" required minLength={4} maxLength={150} className="mt-2 w-full rounded-xl border border-neutral-300 p-3" placeholder="Seguimiento a la comunicación entre áreas"/></label>
+     <label className="text-sm font-bold text-neutral-700">Tema u objetivo<input name="focus" minLength={4} maxLength={150} className="mt-2 w-full rounded-xl border border-neutral-300 p-3" placeholder="Opcional: explica qué cambio quieres verificar"/></label>
     </div>
-    <div className="rounded-2xl border border-neutral-200 p-4">
-     <h3 className="font-black text-neutral-800">Banco de afirmaciones (elige 8 a 12)</h3>
-     <p className="mt-1 text-xs text-neutral-500">La plataforma validará la cantidad y que no existan reactivos repetidos.</p>
-     <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto">
-      {groups.map(group=><details key={group} className="rounded-xl border border-neutral-200 p-4" open={groups.indexOf(group)===0}>
-       <summary className="cursor-pointer text-sm font-bold text-neutral-800">{group}</summary>
-       <div className="mt-3 space-y-3">{(questions.data||[]).filter(q=>(q.dimension_name||"General")===group).map(q=><label key={q.code} className="flex cursor-pointer items-start gap-3 text-sm text-neutral-700"><input className="mt-1 h-4 w-4 accent-orange-600" type="checkbox" name="codes" value={q.code}/><span><strong className="mr-2 text-orange-700">{q.code}</strong>{q.prompt}</span></label>)}</div>
-      </details>)}
-     </div>
-    </div>
-    <button type="submit" className="rounded-xl bg-orange-600 px-6 py-3 font-bold text-white hover:bg-orange-700">Crear pulso en borrador</button>
+    <PulseThemePicker questions={questions.data||[]}/>
    </form>
   </section>
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
