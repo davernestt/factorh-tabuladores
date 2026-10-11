@@ -24,6 +24,9 @@ export async function updateC3NotificationSettings(formData:FormData){
   }
   if((deadlineEnabled||weeklyEnabled)&&distinct.length===0)throw Error("Configura al menos un destinatario antes de activar avisos.");
   if(!Number.isInteger(weekday)||weekday<1||weekday>5)throw Error("Día semanal inválido.");
+  if((deadlineEnabled||weeklyEnabled) && (!process.env.CRON_SECRET || !process.env.RESEND_API_KEY || !process.env.C3_FROM_EMAIL)){
+    throw Error("No es posible activar los envíos hasta configurar la clave del programador, proveedor de correo y remitente verificado en Vercel.");
+  }
   const {error}=await db.from("c3_notification_settings").upsert({
     organization_id:organizationId,recipient_emails:distinct,
     deadline_enabled:deadlineEnabled,weekly_enabled:weeklyEnabled,
