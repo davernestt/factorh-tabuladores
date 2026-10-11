@@ -58,6 +58,7 @@ async function C3TrackingContent() {
     <Link href="/protected/c3" className="text-sm font-bold text-orange-600 hover:text-orange-700">
       ← Volver a C3 PRO
     </Link>
+    <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-wide text-neutral-500">Gestión integral de compromisos</p><Link href="/protected/c3/alertas" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">Centro de alertas y agenda semanal →</Link></div>
     <header className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[.17em] text-orange-600">
         FactoRH · Consultoría organizacional
