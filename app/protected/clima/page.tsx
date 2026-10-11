@@ -29,12 +29,12 @@ const instruments = [
   {
     name:"C3 Esencial",
     subtitle:"Diagnóstico breve",
-    detail:"Versión reducida en diseño para obtener una lectura general de las 13 dimensiones con menos carga de respuesta.",
-    count:"29 reactivos propuestos",
-    duration:"Duración por verificar",
-    status:"En diseño metodológico",
-    available:false,
-    href:"/protected/clima/instrumentos/esencial",
+    detail:"Diagnóstico breve de 29 reactivos: 13 dimensiones, eNPS y preguntas abiertas. Campañas, ligas y reportes propios.",
+    count:"29 reactivos · 13 dimensiones",
+    duration:"Aplicación piloto",
+    status:"Piloto funcional",
+    available:true,
+    href:"/protected/clima/encuestas?variant=esencial",
     icon:ClipboardList,
   },
   {
@@ -51,12 +51,12 @@ const instruments = [
   {
     name:"Módulos especializados",
     subtitle:"Diagnósticos temáticos",
-    detail:"Ocho módulos disponibles en el banco maestro: bienestar, liderazgo, reconocimiento, desarrollo y otros cuatro frentes.",
+    detail:"Ocho diagnósticos temáticos: bienestar, liderazgo, reconocimiento, desarrollo, experiencia del colaborador, cambio, colaboración y compensación.",
     count:"8 módulos · 96 reactivos",
-    duration:"Reglas por módulo",
-    status:"Banco cargado · configuración pendiente",
-    available:false,
-    href:"/protected/clima/instrumentos/modulos",
+    duration:"8–16 preguntas por módulo",
+    status:"Piloto funcional",
+    available:true,
+    href:"/protected/clima/encuestas?variant=module",
     icon:Layers3,
   },
 ];
@@ -105,7 +105,7 @@ async function ClimaLandingContent(){
               <span className="rounded-lg bg-neutral-100 px-3 py-2 text-xs text-neutral-600">{item.duration}</span>
             </div>
             <Link href={item.href} className="mt-6 inline-flex items-center gap-2 self-start rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white hover:bg-orange-600">
-              {item.available?"Ver C3 PRO y sus preguntas":"Ver especificación"}<ArrowRight className="h-4 w-4"/>
+              {item.available?"Entrar al instrumento":"Ver especificación"}<ArrowRight className="h-4 w-4"/>
             </Link>
           </article>;
         })}
@@ -125,6 +125,6 @@ async function ClimaLandingContent(){
         <p className="mt-2 text-sm leading-6 text-neutral-500">Instrumentos preliminares; no son escalas psicométricamente validadas ni sustituyen NOM-035.</p>
       </div>
     </section>
-    <p className="flex items-center gap-2 text-xs leading-6 text-neutral-500"><BookOpen className="h-4 w-4 shrink-0"/>El pulso permite seleccionar preguntas del banco maestro y se considera preliminar; C3 Esencial continúa en diseño y requiere revisión metodológica.</p>
+    <p className="flex items-center gap-2 text-xs leading-6 text-neutral-500"><BookOpen className="h-4 w-4 shrink-0"/>C3 Esencial, Pulso y los ocho módulos especializados se encuentran en fase piloto metodológico: cuentan con aplicación independiente pero aún requieren validación. No sustituyen NOM-035.</p>
   </div>;
 }
