@@ -114,6 +114,19 @@ async function Content({params}:{params:Promise<{id:string}>}){
    </div>
   </section>
 
+  <section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm">
+    <p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Guía de Referencia I · Fase 2</p>
+    <h2 className="mt-2 text-xl font-black text-neutral-800">Identificación de acontecimientos traumáticos severos</h2>
+    <p className="mt-3 text-sm leading-7 text-neutral-600">
+      Prepara campañas independientes con preguntas condicionales, un servicio de canalización identificado y
+      un manejo minimizado de información sensible. No se almacenan síntomas individuales en el expediente administrativo.
+    </p>
+    <Link href={"/protected/nom035/"+id+"/guia-i"}
+      className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">
+      Configurar Guía I y sus campañas →
+    </Link>
+  </section>
+
   <Nom035CenterForm organizations={organizations} center={center}/>
   <Nom035EvidenceTracker centerId={id} requirements={requirements} progress={progress}/>
 
