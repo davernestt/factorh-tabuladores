@@ -40,7 +40,7 @@ export default function ClimaPublicForm({token,questions}:{token:string;question
   }
   setBusy(true);setError("");
   try{
-   const answers=questions.flatMap(q=>{
+   const answers=questions.flatMap<{position:number;score?:number;text?:string}>(q=>{
     if(q.response_type==="open"){
      const text=(comments[q.position]||"").trim();
      return text?[{position:q.position,text}]:[];
