@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CalendarClock, Check, ClipboardCopy, ListFilter, RefreshCw, UserRoundX } from "lucide-react";
 import {
-  C3_ALERT_LABELS, c3AlertCounts, c3SortAlerts,
-  type C3AlertItem, type C3AlertKind
+  c3AlertCounts, c3SortAlerts,
+  type C3AlertItem
 } from "@/lib/c3/action-alerts";
 
 type Filter="attention"|"overdue"|"today"|"upcoming"|"no_date"|"no_owner"|"all";
@@ -53,7 +53,7 @@ function digestFor(items:C3AlertItem[],today:string){
     data.push("   Responsable: "+(a.owner||"POR ASIGNAR")+
       " | Fecha: "+dateDisplay(a.dueOn)+
       " | Etapa: "+a.phaseDays+" días");
-    data.push("   Seguimiento: /protected/c3/"+a.campaignId+"/plan");
+    data.push("   Seguimiento interno: FactoRH > C3 PRO > "+a.campaign.name+" > Plan de acción");
   });
   data.push("","Agenda administrativa; no contiene respuestas de encuestados.",
     "Preparada para revisión semanal. No se enviaron notificaciones automáticamente.");
