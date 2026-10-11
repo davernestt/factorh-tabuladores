@@ -19,15 +19,20 @@ export async function createGuide1Campaign(form:FormData){
  const contact=text(form,"referral_contact");
  const instructions=text(form,"referral_instructions");
  const confirmed=form.get("coordinator_confirmed")==="on";
+ const coverageMode=text(form,"coverage_mode");
+ const basis=text(form,"identification_basis");
  if(!isGuide1Uuid(centerId)||name.length<4||name.length>140||
   !Number.isInteger(population)||population<1||
   contact.length<8||contact.length>200||
-  instructions.length<30||instructions.length>1400||!confirmed){
+  instructions.length<30||instructions.length>1400||!confirmed||
+  !["all","previously_identified"].includes(coverageMode)||
+  (coverageMode==="previously_identified"&&(basis.length<12||basis.length>350))){
   throw Error("Configura el centro, la población y el canal de atención; confirma el protocolo antes de continuar.");
  }
  const db=createAdminClient();
- const {data,error}=await db.rpc("nom035_g1_create_campaign",{
+ const {data,error}=await db.rpc("nom035_g1_create_campaign_v2",{
   p_center_id:centerId,p_name:name,p_population:population,
+  p_coverage_mode:coverageMode,p_identification_basis:basis,
   p_contact:contact,p_instructions:instructions,p_confirmed:true,p_actor:user.userId
  });
  if(error||!data)throw Error(error?.message||"No fue posible crear la campaña.");
