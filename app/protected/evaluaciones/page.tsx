@@ -8,7 +8,7 @@ const modules = [
   { name: 'PDL · Desarrollo de Líderes', description: 'Autoevaluaciones, liderazgo, casos y reportes individuales del programa.', icon: BookOpenCheck, href: '/protected', active: true, tag: 'Disponible' },
   { name: 'Evaluación 360°', description: 'Una persona evaluada; múltiples perspectivas. 12 competencias, 60 reactivos y un reporte consolidado.', icon: ChartNoAxesCombined, href: '/protected/360', active: true, tag: 'Módulo independiente' },
   { name: 'Psicometrías', description: 'Instrumentos propios FactoRH, aplicaciones, seguimiento y reportes psicométricos.', icon: ListChecks, href: '/protected/psicometrias', active: true, tag: 'Disponible · Experimental' },
-  { name: 'NOM-035', description: 'Evaluación de riesgos psicosociales y reportes organizacionales.', icon: HeartHandshake, href: null, active: false, tag: 'Próximamente' },
+  { name: 'NOM-035', description: 'Centros de trabajo, clasificación normativa, obligaciones y expediente documental. Guías y reportes en desarrollo.', icon: HeartHandshake, href: '/protected/nom035', active: true, tag: 'Fase 1 · Centros de trabajo' },
   { name: 'Clima Laboral', description: 'Elige entre C3 PRO, diagnóstico Esencial, encuestas Pulso y módulos especializados antes de crear campañas.', icon: MessagesSquare, href: '/protected/clima', active: true, tag: 'Catálogo de instrumentos' },
   { name: 'Próximas herramientas', description: 'Desempeño, DNC y People Review, entre otras soluciones.', icon: CircleHelp, href: null, active: false, tag: 'Planeación' },
 ];
