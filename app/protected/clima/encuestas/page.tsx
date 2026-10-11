@@ -32,7 +32,7 @@ async function Content({searchParams}:Params){
  const dims=[...new Set(base.filter(i=>i.response_type==="likert").map(i=>i.dimension_code))];
  const essential=dims.flatMap(d=>{
   const q=base.filter(i=>i.dimension_code===d&&i.response_type==="likert");
-  return [q[0],q[2]].filter(Boolean);
+  return q.length===4?[q[0],q[2]]:[];
  }).concat(base.filter(i=>["C3-53","C3-54","C3-55"].includes(i.code)));
  const moduleItems=modules.map(m=>({code:m.code,name:m.name,count:allItems.filter(i=>i.instrument_code===m.code).length}));
  const valid=modules.length===8&&essential.length===29&&dims.length===13;
