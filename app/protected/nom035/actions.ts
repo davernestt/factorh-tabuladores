@@ -83,6 +83,7 @@ export async function updateNom035Evidence(form:FormData){
  const reference=limit(field(form,"proof_reference"),350,"Referencia documental");
  const notes=limit(field(form,"notes"),700,"Observaciones");
  if(!uuid.test(centerId)||!statuses.has(status))throw Error("Datos de seguimiento inválidos.");
+ if(status==="documented"&&!reference)throw Error("Para marcar documentado agrega una referencia verificable de la evidencia.");
  const db=createAdminClient();
  const {data:center,error:centerError}=await db.from("nom035_work_centers")
   .select("id,worker_count,active").eq("id",centerId).maybeSingle();
