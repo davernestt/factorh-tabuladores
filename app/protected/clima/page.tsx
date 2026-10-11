@@ -40,12 +40,12 @@ const instruments = [
   {
     name:"Pulso FactoRH",
     subtitle:"Seguimiento ágil",
-    detail:"Encuestas breves de temas concretos para monitorear cambios y compromisos sin reaplicar todo C3 PRO.",
-    count:"8–12 reactivos propuestos",
+    detail:"Encuestas breves de 8 a 12 preguntas seleccionadas del banco C3 para monitorear temas concretos sin reaplicar todo el diagnóstico.",
+    count:"8–12 reactivos seleccionables",
     duration:"Duración por verificar",
-    status:"En diseño metodológico",
-    available:false,
-    href:"/protected/clima/instrumentos/pulso",
+    status:"Piloto funcional",
+    available:true,
+    href:"/protected/clima/pulsos",
     icon:Activity,
   },
   {
@@ -125,6 +125,6 @@ async function ClimaLandingContent(){
         <p className="mt-2 text-sm leading-6 text-neutral-500">Instrumentos preliminares; no son escalas psicométricamente validadas ni sustituyen NOM-035.</p>
       </div>
     </section>
-    <p className="flex items-center gap-2 text-xs leading-6 text-neutral-500"><BookOpen className="h-4 w-4 shrink-0"/>La cantidad y selección de reactivos de Esencial y Pulso son propuestas sujetas a revisión y pilotaje.</p>
+    <p className="flex items-center gap-2 text-xs leading-6 text-neutral-500"><BookOpen className="h-4 w-4 shrink-0"/>El pulso permite seleccionar preguntas del banco maestro y se considera preliminar; C3 Esencial continúa en diseño y requiere revisión metodológica.</p>
   </div>;
 }
