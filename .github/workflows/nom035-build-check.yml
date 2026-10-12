@@ -25,5 +25,7 @@ jobs:
         run: npm ci
       - name: Validate synthetic NOM-035 demos
         run: npx --yes tsx scripts/nom035-demo-smoke.ts
+      - name: Verify Word DOCX archive
+        run: unzip -t /tmp/factorh_nom035_report_smoke.docx
       - name: Build app
         run: npm run build
