@@ -1,6 +1,7 @@
 import { AuthButton } from "@/components/auth-button";
 import FactoRHLogo from "@/components/factorh-logo";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import { hasNom035Subscription } from "@/lib/nom035/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,6 +35,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   if (!appUser) redirect("/auth/login");
 
   const isClient = appUser.role === "client";
+  const nom035Enabled = isClient ? await hasNom035Subscription(appUser) : true;
 
   let expiryNotices: Array<{
     module_key: string;
@@ -82,6 +84,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   const clientItems = [
     { href: "/protected/psicometrias", name: "Psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
+    ...(nom035Enabled ? [{href:"/protected/nom035",name:"NOM-035"}] : []),
   ];
 
   const items = isClient ? clientItems : adminItems;
