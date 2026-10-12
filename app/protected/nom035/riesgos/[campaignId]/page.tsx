@@ -3,6 +3,7 @@ import Link from "next/link";
 import {notFound,redirect} from "next/navigation";
 import {ShieldCheck,Users,ClipboardCheck,BarChart3} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription,requireNom035Organization} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {validRiskId} from "@/lib/nom035/risk-invitations";
 import {changeRiskCampaignStatus} from "../actions";
@@ -54,7 +55,8 @@ function MetricCard({group}:{group:Group}){
 }
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!user||!["super_admin","client"].includes(user.role))redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {campaignId}=await params;
  if(!validRiskId(campaignId))notFound();
  const db=createAdminClient();
@@ -78,7 +80,9 @@ async function Content({params}:Props){
  const campaign=campaignR.data;
  const {data:center}=await db.from("nom035_work_centers")
   .select("name,organization_id").eq("id",campaign.center_id).maybeSingle();
- const {data:org}=center?.organization_id?await db.from("organizations")
+ if(!center)notFound();
+ requireNom035Organization(user,center.organization_id);
+ const {data:org}=center.organization_id?await db.from("organizations")
   .select("name").eq("id",center.organization_id).maybeSingle():{data:null};
  const aggregates=(aggregateR.data||[]) as Group[];
  const reportReady=campaign.status==="closed"&&campaign.completed_count>=10;
@@ -104,7 +108,7 @@ async function Content({params}:Props){
     <span className="rounded-lg bg-neutral-100 px-4 py-2 text-xs font-bold text-neutral-700">
      {campaign.status==="draft"?"Borrador":campaign.status==="open"?"Abierta":"Cerrada"}
     </span>
-    {(campaign.status==="draft"||campaign.status==="open")&&<form action={changeRiskCampaignStatus}>
+    {user.role==="super_admin"&&(campaign.status==="draft"||campaign.status==="open")&&<form action={changeRiskCampaignStatus}>
      <input type="hidden" name="campaign_id" value={campaignId}/>
      <input type="hidden" name="next" value={campaign.status==="draft"?"open":"closed"}/>
      <button type="submit" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white">
@@ -185,6 +189,22 @@ async function Content({params}:Props){
     </div>
    </details>
   </section>
-  <RiskInviteManager campaignId={campaignId} open={campaign.status==="open"}/>
+  <section className="rounded-2xl border border-neutral-200 bg-white p-6">
+    <h2 className="text-lg font-black text-neutral-900">Informes y acciones de seguimiento</h2>
+    <p className="mt-2 text-sm leading-6 text-neutral-600">
+     Consulta el informe ejecutivo o técnico de la campaña y vincula medidas con responsables y fechas.
+    </p>
+    <div className="mt-4 flex flex-wrap gap-3">
+     <Link href={"/protected/nom035/riesgos/"+campaignId+"/informe"}
+      className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white">
+      Informe ejecutivo / técnico · PDF y Word
+     </Link>
+     <Link href={"/protected/nom035/"+campaign.center_id+"/intervenciones"}
+      className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-black text-neutral-800">
+      Programa de intervención
+     </Link>
+    </div>
+   </section>
+  {user.role==="super_admin"&&<RiskInviteManager campaignId={campaignId} open={campaign.status==="open"}/>}
  </div>;
 }
