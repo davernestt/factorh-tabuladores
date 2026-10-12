@@ -3,6 +3,7 @@ import {Suspense} from "react";
 import {notFound,redirect} from "next/navigation";
 import {ShieldCheck,ArrowLeft} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription,requireNom035Organization} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {isGuide1Uuid} from "@/lib/nom035/guide1-invitations";
 import Guide1CampaignCreateForm from "./campaign-form";
@@ -15,7 +16,8 @@ export default function Guide1ByCenter(props:Props){
 }
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!user||!["super_admin","client"].includes(user.role))redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {id}=await params;
  if(!isGuide1Uuid(id))notFound();
  const db=createAdminClient();
@@ -26,6 +28,7 @@ async function Content({params}:Props){
    .eq("center_id",id).order("created_at",{ascending:false})
  ]);
  if(centerR.error||!centerR.data)notFound();
+ requireNom035Organization(user,centerR.data.organization_id);
  if(campaignsR.error)return <div className="p-8 text-red-700">Error al cargar campañas: {campaignsR.error.message}</div>;
  const center=centerR.data;
  const {data:org}=await db.from("organizations").select("name")
@@ -59,14 +62,14 @@ async function Content({params}:Props){
     dependerá de la información confiable de exposición disponible.
    </div>
   </header>
-  <section className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
+  {user.role==="super_admin"&&<section className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
    <h2 className="text-xl font-black text-neutral-800">Crear nueva aplicación</h2>
    <p className="mt-2 text-sm leading-6 text-neutral-600">
     Define la cobertura y un canal de atención antes de generar ligas.
     La campaña permanecerá en borrador hasta que tú la abras.
    </p>
    <div className="mt-6"><Guide1CampaignCreateForm centerId={id} workerCount={center.worker_count}/></div>
-  </section>
+  </section>}
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black text-neutral-800">Aplicaciones de este centro</h2>
    {!campaigns.length?<p className="mt-4 text-sm text-neutral-600">Todavía no hay campañas de Guía I.</p>:
