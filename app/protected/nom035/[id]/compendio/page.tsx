@@ -7,7 +7,7 @@ import {canNom035Organization,NOM035_UUID} from "@/lib/nom035/access";
 import {nom035EvidenceGuide} from "@/lib/nom035/evidence-guides";
 import {nom035Requirements,NOM035_SOURCE} from "@/lib/nom035/rules";
 import Nom035PrintButton from "./print-button";
-export const dynamic="force-dynamic";
+// Session and route params already make this page request-scoped.
 type Props={params:Promise<{id:string}>};
 export default function CompendiumPage(props:Props){
  return <Suspense fallback={<p className="p-8">Preparando compendio NOM-035...</p>}><Content {...props}/></Suspense>;
