@@ -7,7 +7,7 @@ import {nom035RiskHash} from "@/lib/nom035/risk-invitations";
 import type {Nom035Guide,Nom035Question} from "@/lib/nom035/official-bank";
 import Nom035RiskSurvey from "./risk-survey-form";
 
-export const dynamic="force-dynamic";
+// Session and route params already make this page request-scoped.
 export const metadata:Metadata={title:"Evaluación NOM-035 · FactoRH",
  robots:{index:false,follow:false,noarchive:true}};
 type Props={params:Promise<{token:string}>};
