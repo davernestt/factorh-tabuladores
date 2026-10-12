@@ -31,6 +31,11 @@ export type Nom035Progress={
  status:"pending"|"in_progress"|"documented";
  proof_reference:string;
  notes:string;
+ responsible:string;
+ next_review_on:string|null;
+ internal_review:"not_reviewed"|"verified"|"changes_requested";
+ internal_reviewed_at:string|null;
+ internal_reviewed_by:string|null;
  updated_at:string;
 };
 
