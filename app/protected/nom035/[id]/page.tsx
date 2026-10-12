@@ -132,7 +132,6 @@ async function Content({params}:{params:Promise<{id:string}>}){
    </div>
   </section>
 
-  {user.role==="super_admin"&&<>
   <section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm">
     <p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Guía de Referencia I · Fase 2</p>
     <h2 className="mt-2 text-xl font-black text-neutral-800">Identificación de acontecimientos traumáticos severos</h2>
@@ -142,7 +141,7 @@ async function Content({params}:{params:Promise<{id:string}>}){
     </p>
     <Link href={"/protected/nom035/"+id+"/guia-i"}
       className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">
-      Configurar Guía I y sus campañas →
+      {user.role==="super_admin"?"Configurar Guía I":"Consultar aplicaciones de Guía I"} →
     </Link>
   </section>
 
@@ -157,11 +156,16 @@ async function Content({params}:{params:Promise<{id:string}>}){
     </p>
     <Link href={"/protected/nom035/"+id+"/riesgos"}
       className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">
-      Gestionar Guía {guide==="none"?"II / III":guide} →
+      {user.role==="super_admin"?"Gestionar":"Consultar"} Guía {guide==="none"?"II / III":guide} →
     </Link>
   </section>
 
-  </>}
+  <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+   <p className="text-xs font-black uppercase tracking-wide text-orange-700">Gestión continua · Numeral 8.4</p>
+   <h2 className="mt-2 text-xl font-black text-neutral-800">Programa de intervención y seguimiento</h2>
+   <p className="mt-3 text-sm leading-7 text-neutral-600">Asigna responsables, actividades, fechas, evidencias y evaluaciones posteriores a las medidas que deban implementarse.</p>
+   <Link href={"/protected/nom035/"+id+"/intervenciones"} className="mt-5 inline-flex rounded-xl bg-neutral-800 px-5 py-3 text-sm font-black text-white">Abrir programa de intervención →</Link>
+  </section>
 
   <Nom035EvidenceTracker centerId={id} requirements={requirements}
     progress={progress} tasks={tasks} documents={docs}/>
