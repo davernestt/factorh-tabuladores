@@ -3,6 +3,7 @@ import {Suspense} from "react";
 import {notFound,redirect} from "next/navigation";
 import {Building2,CalendarDays,ClipboardList,ExternalLink,LockKeyhole,ShieldCheck} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
  nom035AssessmentScope,nom035Guide,nom035NextAssessment,nom035Requirements,
@@ -20,6 +21,7 @@ async function Content({params}:{params:Promise<{id:string}>}){
  const user=await getCurrentAppUser();
  if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId))
   redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {id}=await params;
  if(!uuid.test(id))notFound();
  const db=createAdminClient();
@@ -163,7 +165,7 @@ async function Content({params}:{params:Promise<{id:string}>}){
 
   <Nom035EvidenceTracker centerId={id} requirements={requirements}
     progress={progress} tasks={tasks} documents={docs}/>
-  <Nom035CenterForm organizations={organizations} center={center}/>
+  {user.role==="super_admin"&&<Nom035CenterForm organizations={organizations} center={center}/>}
 
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <div className="flex items-start gap-3">
