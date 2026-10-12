@@ -110,10 +110,16 @@ export default function Nom035EvidenceTracker({
      <option value="review">Sin revisión aprobada</option>
     </select>
    </div>
-   <p className="mt-3 text-xs text-neutral-500">
-    Mostrando {visible.length} de {requirements.length} obligaciones según el tamaño de este centro.
-    Abre una ficha para consultar la guía y registrar actividades.
-   </p>
+   <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+    <p className="text-xs leading-6 text-neutral-500">
+     Mostrando {visible.length} de {requirements.length} obligaciones según el tamaño de este centro.
+     Abre una ficha para consultar la guía y registrar actividades.
+    </p>
+    <a href={"/protected/nom035/"+centerId+"/compendio"} target="_blank" rel="noopener noreferrer"
+     className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-xs font-black text-orange-700">
+     <FileText className="h-4 w-4"/>Ver compendio e imprimir a PDF
+    </a>
+   </div>
   </header>
   <div className="space-y-3">
    {visible.map(req=><RequirementCard key={req.key}
