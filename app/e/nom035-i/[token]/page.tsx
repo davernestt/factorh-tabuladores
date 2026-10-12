@@ -6,7 +6,7 @@ import {createAdminClient} from "@/lib/supabase/admin";
 import {guide1TokenHash} from "@/lib/nom035/guide1-invitations";
 import Guide1PrivateForm from "./guide1-private-form";
 
-export const dynamic="force-dynamic";
+// Session and route params already make this page request-scoped.
 export const metadata:Metadata={
  title:"Guía I · NOM-035 | FactoRH",
  robots:{index:false,follow:false,noarchive:true}
