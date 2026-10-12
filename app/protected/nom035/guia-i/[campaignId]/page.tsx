@@ -3,6 +3,7 @@ import {Suspense} from "react";
 import {notFound,redirect} from "next/navigation";
 import {ClipboardCheck,Users,LockKeyhole} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription,requireNom035Organization} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {isGuide1Uuid} from "@/lib/nom035/guide1-invitations";
 import {updateGuide1CampaignStatus} from "../actions";
@@ -16,7 +17,8 @@ export default function Nom035Guide1Campaign(props:Props){
 }
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!user||!["super_admin","client"].includes(user.role))redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {campaignId}=await params;
  if(!isGuide1Uuid(campaignId))notFound();
  const db=createAdminClient();
@@ -32,6 +34,7 @@ async function Content({params}:Props){
  const {data:center,error:centerError}=await db.from("nom035_work_centers")
   .select("id,name,organization_id,worker_count").eq("id",c.center_id).maybeSingle();
  if(centerError||!center)notFound();
+ requireNom035Organization(user,center.organization_id);
  const {data:organization}=await db.from("organizations")
   .select("name").eq("id",center.organization_id).maybeSingle();
  const invites=linksR.count||0;
@@ -53,7 +56,7 @@ async function Content({params}:Props){
     <span className="rounded-xl bg-neutral-100 px-4 py-2 text-sm font-bold text-neutral-700">
      {c.status==="draft"?"Borrador":c.status==="open"?"Aplicación abierta":c.status==="closed"?"Campaña cerrada":"Cancelada"}
     </span>
-    {(c.status==="draft"||c.status==="open")&&<form action={updateGuide1CampaignStatus}>
+    {user.role==="super_admin"&&(c.status==="draft"||c.status==="open")&&<form action={updateGuide1CampaignStatus}>
       <input type="hidden" name="campaign_id" value={c.id}/>
       <input type="hidden" name="next" value={c.status==="draft"?"open":"closed"}/>
       <button type="submit" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">
@@ -115,6 +118,6 @@ async function Content({params}:Props){
      </p>
     </div>}
   </section>
-  <Guide1InviteManager campaignId={campaignId} open={c.status==="open"}/>
+  {user.role==="super_admin"&&<Guide1InviteManager campaignId={campaignId} open={c.status==="open"}/>}
  </div>;
 }
