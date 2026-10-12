@@ -17,15 +17,23 @@ export default function Nom035Page(){
 }
 async function Nom035Dashboard(){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId))
+  redirect("/auth/login");
  const db=createAdminClient();
- const [organizationsR,centersR,evidenceR]=await Promise.all([
-  db.from("organizations").select("id,name").eq("active",true).order("name"),
-  db.from("nom035_work_centers")
-   .select("id,organization_id,name,worker_count,state,municipality,assessment_method,last_assessment_on,active,created_at")
-   .eq("active",true).order("created_at",{ascending:false}),
-  db.from("nom035_evidence_progress").select("center_id,status")
+ const orgQuery=db.from("organizations").select("id,name").eq("active",true);
+ const centerQuery=db.from("nom035_work_centers")
+  .select("id,organization_id,name,worker_count,state,municipality,assessment_method,last_assessment_on,active,created_at")
+  .eq("active",true);
+ const [organizationsR,centersR]=await Promise.all([
+  user.role==="client"?orgQuery.eq("id",user.organizationId!):orgQuery.order("name"),
+  user.role==="client"?centerQuery.eq("organization_id",user.organizationId!).order("created_at",{ascending:false}):
+   centerQuery.order("created_at",{ascending:false})
  ]);
+ const scopedIds=(centersR.data||[]).map(center=>center.id);
+ const evidenceR=scopedIds.length?
+  await db.from("nom035_evidence_progress").select("center_id,status")
+   .in("center_id",scopedIds):
+  {data:[] as Array<{center_id:string;status:string}>,error:null};
  const error=organizationsR.error||centersR.error||evidenceR.error;
  if(error)return <section className="rounded-3xl border border-red-100 bg-red-50 p-7 text-red-800">
   No se pudo consultar NOM-035: {error.message}
@@ -96,7 +104,7 @@ async function Nom035Dashboard(){
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <div className="flex flex-wrap items-center justify-between gap-3">
     <div><h2 className="text-xl font-black text-neutral-800">Centros y expediente</h2>
-     <p className="mt-2 text-sm text-neutral-500">Accede al checklist y la información normativa de cada sede.</p></div>
+     <p className="mt-2 text-sm text-neutral-500">Accede al compendio guiado, las actividades, evidencias y revisiones por centro.</p></div>
     <span className="rounded-xl bg-neutral-100 px-4 py-2 text-xs font-bold text-neutral-600">{centers.length} centros</span>
    </div>
    {!centers.length?<p className="mt-5 rounded-xl bg-neutral-50 p-5 text-sm text-neutral-600">
