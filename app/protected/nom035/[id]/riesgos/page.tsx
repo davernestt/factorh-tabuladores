@@ -2,6 +2,7 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {notFound,redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription,requireNom035Organization} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {nom035Guide} from "@/lib/nom035/rules";
 import {validRiskId} from "@/lib/nom035/risk-invitations";
@@ -14,7 +15,8 @@ export default function Nom035RiskCenter(props:Props){
 }
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!user||!["super_admin","client"].includes(user.role))redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {id}=await params;
  if(!validRiskId(id))notFound();
  const db=createAdminClient();
@@ -26,6 +28,7 @@ async function Content({params}:Props){
    .eq("center_id",id).order("created_at",{ascending:false})
  ]);
  if(!centerR.data||centerR.error)notFound();
+ requireNom035Organization(user,centerR.data.organization_id);
  if(campaignR.error)return <p className="rounded-xl bg-red-50 p-6 text-red-700">{campaignR.error.message}</p>;
  const c=centerR.data,guide=nom035Guide(c.worker_count);
  const {data:org}=await db.from("organizations").select("name")
@@ -57,14 +60,14 @@ async function Content({params}:Props){
     mediante Guía II o III no corresponde a su tamaño. Continúa con el
     expediente preventivo y la Guía I.
    </section>:
-   <section className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
+   user.role==="super_admin"?<section className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm">
     <h2 className="text-xl font-black text-neutral-800">Nueva aplicación · Guía {guide}</h2>
     <p className="mt-2 text-sm text-neutral-600">
      Selecciona la cobertura y el número de personas antes de abrir la campaña.
      La aplicación se creará primero como borrador.
     </p>
     <div className="mt-6"><RiskCampaignForm centerId={id} workerCount={c.worker_count} guide={guide}/></div>
-   </section>}
+   </section>:<p className="rounded-xl bg-white p-5 text-sm text-neutral-600">FactoRH administra la creación y apertura de campañas del piloto. Puedes consultar las aplicaciones de tu empresa.</p>}
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black text-neutral-800">Campañas registradas</h2>
    {!(campaignR.data||[]).length?<p className="mt-4 text-sm text-neutral-600">
