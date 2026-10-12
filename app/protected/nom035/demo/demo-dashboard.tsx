@@ -581,6 +581,18 @@ export default function Nom035DemoDashboard({data,initialAudience="admin"}:{
     </button>)}
    </div>
   </section>}
+  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-200 bg-orange-50 p-5 print:hidden">
+   <div>
+    <p className="text-sm font-black text-neutral-900">Nuevo · Informe técnico de prueba</p>
+    <p className="mt-1 text-xs leading-5 text-neutral-600">
+     Revisa el documento terminado y descarga el Word sin aplicar encuestas reales.
+    </p>
+   </div>
+   <Link href="/protected/nom035/demo/informe"
+    className="rounded-xl bg-orange-600 px-5 py-3 text-xs font-black text-white">
+    Ver informe técnico ficticio →
+   </Link>
+  </div>
   <nav className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200 bg-white p-3 shadow-sm"
    aria-label="Secciones de demostración NOM-035">
    {labels.filter(tab=>!client||tab.id!=="questionnaire").map(tab=><button key={tab.id} type="button" onClick={()=>select(tab.id)}
