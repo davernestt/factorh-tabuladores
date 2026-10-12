@@ -3,6 +3,7 @@ import {notFound,redirect} from "next/navigation";
 import {Suspense} from "react";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription} from "@/lib/nom035/access";
 import {canNom035Organization,NOM035_UUID} from "@/lib/nom035/access";
 import {nom035EvidenceGuide} from "@/lib/nom035/evidence-guides";
 import {nom035Requirements,NOM035_SOURCE} from "@/lib/nom035/rules";
@@ -16,6 +17,7 @@ const dateText=(str:string|null|undefined)=>str?str.slice(0,10).split("-").rever
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
  if(!user||!["super_admin","client"].includes(user.role))redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {id}=await params;
  if(!NOM035_UUID.test(id))notFound();
  const db=createAdminClient();
