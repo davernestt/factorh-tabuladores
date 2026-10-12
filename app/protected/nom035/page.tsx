@@ -57,6 +57,16 @@ async function Nom035Dashboard(){
     obligaciones y registra referencias documentales para dar seguimiento a la implementación.
    </p>
    <div className="mt-5 flex flex-wrap gap-3">
+    {user.role==="super_admin"&&<>
+      <Link href="/protected/nom035/demo"
+       className="inline-flex items-center rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">
+       Ver demostración con respuestas virtuales →
+      </Link>
+      <Link href="/protected/nom035/demo?view=cliente"
+       className="inline-flex items-center rounded-xl border border-orange-200 bg-white px-5 py-3 text-sm font-bold text-orange-700">
+       Previsualizar acceso de cliente
+      </Link>
+    </>}
     <a href={NOM035_SOURCE} target="_blank" rel="noopener noreferrer"
      className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
      Consultar NOM-035 en el Diario Oficial <ExternalLink className="h-4 w-4"/>
