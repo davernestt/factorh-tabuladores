@@ -22,7 +22,7 @@ function assessmentDate(value:string):string|null{
  candidate.getTime()>Date.now()+86400000)throw Error("La fecha de evaluación no es válida o está en el futuro.");
  return value;
 }
-async function onlyAdmin(){return requireNom035User();}
+async function onlyAdmin(){const user=await requireNom035User();if(user.role!=="super_admin")throw Error("Solo el administrador puede configurar centros.");return user;}
 function parseCenter(form:FormData){
  const organization_id=field(form,"organization_id");
  const name=limit(field(form,"name"),160,"Nombre");
@@ -74,7 +74,7 @@ export async function updateNom035Center(form:FormData){
  revalidatePath("/protected/nom035/"+centerId);
 }
 export async function updateNom035Evidence(form:FormData){
- const user=await onlyAdmin();
+ const user=await requireNom035User();
  const centerId=field(form,"center_id");
  const requirement=field(form,"requirement_key") as Nom035RequirementKey;
  const status=field(form,"status");
