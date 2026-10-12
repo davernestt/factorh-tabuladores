@@ -42,3 +42,24 @@ console.log("NOM035_DEMO_OK",JSON.stringify({
   levels:first.guideIII.total.counts.map(x=>({name:x.level,count:x.count}))},
  totalDocuments:first.totalDocuments
 }));
+
+
+// Verify a structurally valid Office Open XML report can be generated
+// without connecting to a real center or accessing personal data.
+import {writeFileSync} from "node:fs";
+import {buildNom035WordReport} from "../lib/nom035/word-export";
+const word=buildNom035WordReport({
+ kind:"technical",company:"Empresa Ficticia",center:"Planta Demostración",
+ address:"Calle Prueba 10, Guadalajara, Jalisco",activity:"Servicio de prueba",
+ guide:"III",version:"DOF-2018-v1",population:120,target:94,completed:94,
+ covered:true,validated:false,objective:"Ejemplo de objetivo de identificación de riesgos",
+ activities:"Ejemplo de aplicación de instrumentos oficiales",
+ method:"Muestreo de ejemplo con respuestas ficticias y criterios de calificación",
+ conclusions:"Conclusiones ficticias sujetas a validación profesional",
+ recommendations:"Medidas de prevención simuladas",interventions:"",
+ responsible:"Consultor de prueba",license:"",aggregates:[],actions:[]
+});
+assert(word.subarray(0,4).toString("latin1")==="PK\x03\x04","DOCX ZIP file signature");
+assert(word.length>1000,"DOCX minimum size");
+writeFileSync("/tmp/factorh_nom035_report_smoke.docx",word);
+console.log("NOM035_WORD_OK "+word.length+" bytes");
