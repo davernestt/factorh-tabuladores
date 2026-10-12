@@ -1,7 +1,7 @@
 import {NextResponse} from "next/server";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getCurrentAppUser} from "@/lib/app-auth";
-import {canNom035Organization,NOM035_UUID} from "@/lib/nom035/access";
+import {canNom035Organization,NOM035_UUID,hasNom035Subscription} from "@/lib/nom035/access";
 
 type Props={params:Promise<{id:string}>};
 export async function GET(_request:Request,{params}:Props){
@@ -9,6 +9,8 @@ export async function GET(_request:Request,{params}:Props){
  const user=await getCurrentAppUser();
  if(!NOM035_UUID.test(id)||!user||!["super_admin","client"].includes(user.role))
   return NextResponse.json({error:"No autorizado"},{status:403});
+ if(!await hasNom035Subscription(user))
+  return NextResponse.json({error:"Módulo no habilitado"},{status:403});
  const db=createAdminClient();
  const {data:file,error}=await db.from("nom035_evidence_files")
   .select("id,center_id,storage_bucket,storage_path")
