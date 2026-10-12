@@ -9,7 +9,7 @@ import {
  nom035Tier,NOM035_TIER_LABELS,NOM035_SOURCE,type Nom035Center,type Nom035Progress
 } from "@/lib/nom035/rules";
 import Nom035CenterForm from "../center-form";
-import Nom035EvidenceTracker from "../evidence-tracker";
+import Nom035EvidenceTracker,{type Nom035TaskProgress,type Nom035Document} from "../evidence-tracker";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export default function Nom035CenterDetails(props:{params:Promise<{id:string}>}){
  return <Suspense fallback={<p className="rounded-3xl bg-white p-8 text-neutral-600">Preparando expediente NOM-035...</p>}>
@@ -18,24 +18,39 @@ export default function Nom035CenterDetails(props:{params:Promise<{id:string}>})
 }
 async function Content({params}:{params:Promise<{id:string}>}){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId))
+  redirect("/auth/login");
  const {id}=await params;
  if(!uuid.test(id))notFound();
  const db=createAdminClient();
- const [centerR,evidenceR,organizationsR]=await Promise.all([
-  db.from("nom035_work_centers").select("*").eq("id",id).eq("active",true).maybeSingle(),
-  db.from("nom035_evidence_progress")
-   .select("center_id,requirement_key,status,proof_reference,notes,updated_at")
-   .eq("center_id",id).order("requirement_key"),
-  db.from("organizations").select("id,name").eq("active",true).order("name")
- ]);
+ const scopedCenter=db.from("nom035_work_centers").select("*")
+  .eq("id",id).eq("active",true);
+ const centerR=await (user.role==="client"?
+  scopedCenter.eq("organization_id",user.organizationId!).maybeSingle():
+  scopedCenter.maybeSingle());
  if(centerR.error||!centerR.data)notFound();
- const error=evidenceR.error||organizationsR.error;
+ const [evidenceR,tasksR,docsR,organizationsR]=await Promise.all([
+  db.from("nom035_evidence_progress")
+   .select("center_id,requirement_key,status,proof_reference,notes,responsible,next_review_on,internal_review,internal_reviewed_at,internal_reviewed_by,updated_at")
+   .eq("center_id",id).order("requirement_key"),
+  db.from("nom035_evidence_task_progress")
+   .select("center_id,requirement_key,task_key,status,responsible,target_date,evidence_reference,notes,updated_at")
+   .eq("center_id",id).order("requirement_key"),
+  db.from("nom035_evidence_files")
+   .select("id,requirement_key,title,original_file_name,size_bytes,created_at")
+   .eq("center_id",id).order("created_at",{ascending:false}),
+  user.role==="client"?
+   db.from("organizations").select("id,name").eq("id",user.organizationId!).eq("active",true):
+   db.from("organizations").select("id,name").eq("active",true).order("name")
+ ]);
+ const error=evidenceR.error||tasksR.error||docsR.error||organizationsR.error;
  if(error)return <section className="rounded-2xl bg-red-50 p-6 text-red-800">{error.message}</section>;
  const center=centerR.data as Nom035Center;
  const organizations=organizationsR.data||[];
  const org=organizations.find(o=>o.id===center.organization_id);
  const progress=(evidenceR.data||[]) as Nom035Progress[];
+ const tasks=(tasksR.data||[]) as Nom035TaskProgress[];
+ const docs=(docsR.data||[]) as Nom035Document[];
  const tier=nom035Tier(center.worker_count);
  const guide=nom035Guide(center.worker_count);
  const next=nom035NextAssessment(center.last_assessment_on,center.worker_count);
@@ -125,7 +140,7 @@ async function Content({params}:{params:Promise<{id:string}>}){
       className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">
       Configurar Guía I y sus campañas →
     </Link>
-  </section>
+  </section>}}
 
   <section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm">
     <p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Fase 3 · Riesgos psicosociales</p>
@@ -142,8 +157,9 @@ async function Content({params}:{params:Promise<{id:string}>}){
     </Link>
   </section>
 
+  <Nom035EvidenceTracker centerId={id} requirements={requirements}
+    progress={progress} tasks={tasks} documents={docs}/>
   <Nom035CenterForm organizations={organizations} center={center}/>
-  <Nom035EvidenceTracker centerId={id} requirements={requirements} progress={progress}/>
 
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black text-neutral-800">Próximas funciones del módulo</h2>
