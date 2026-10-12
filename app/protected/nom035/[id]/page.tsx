@@ -114,8 +114,9 @@ async function Content({params}:{params:Promise<{id:string}>}){
    </div>
    <p className="mt-4 text-sm leading-7 text-neutral-700">{nom035AssessmentScope(center.worker_count)}</p>
    {tier==="large"&&<p className="mt-3 rounded-xl bg-orange-50 p-4 text-sm leading-6 text-neutral-700">
-    La opción de muestra representativa requiere cálculo y selección conforme a la Guía de Referencia III.
-    Esta fase todavía no realiza ese cálculo; no debe usarse una cantidad arbitraria de participantes.
+    La opción de muestra representativa requiere cálculo, selección aleatoria
+    y documentación conforme a la Guía III. La plataforma calcula el mínimo
+    pero no verifica por sí sola el procedimiento de selección realizado.
    </p>}
    {tier==="small"&&<p className="mt-3 rounded-xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">
     Aunque no se exige evaluar los factores de riesgo mediante las Guías II o III por tamaño,
@@ -129,6 +130,7 @@ async function Content({params}:{params:Promise<{id:string}>}){
    </div>
   </section>
 
+  {user.role==="super_admin"&&<>
   <section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm">
     <p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Guía de Referencia I · Fase 2</p>
     <h2 className="mt-2 text-xl font-black text-neutral-800">Identificación de acontecimientos traumáticos severos</h2>
@@ -157,33 +159,32 @@ async function Content({params}:{params:Promise<{id:string}>}){
     </Link>
   </section>
 
+  </>}
+
   <Nom035EvidenceTracker centerId={id} requirements={requirements}
     progress={progress} tasks={tasks} documents={docs}/>
   <Nom035CenterForm organizations={organizations} center={center}/>
 
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
-   <h2 className="text-xl font-black text-neutral-800">Próximas funciones del módulo</h2>
-   <div className="mt-4 grid gap-4 sm:grid-cols-2">
-    {[
-     ["Cuestionarios oficiales","Guía I y, cuando corresponda, Guía II o III, con sus rutas condicionales. En diseño y verificación normativa."],
-     ["Calificaciones normativas","Cálculos invertidos, categorías, dominios, niveles y metodología documentada. No disponible todavía."],
-     ["Muestreo representativo","Herramienta de cálculo y selección de muestra para centros de más de 50 trabajadores."],
-     ["Informe y plan de intervención","Expediente técnico, medidas de control, seguimiento y versiones para consulta autorizada."]
-    ].map(([name,description])=><div key={name} className="rounded-2xl bg-neutral-50 p-5">
-     <p className="font-black text-neutral-800">{name}</p>
-     <p className="mt-2 text-sm leading-6 text-neutral-600">{description}</p>
-     <p className="mt-3 text-xs font-bold text-orange-700">En desarrollo</p>
-    </div>)}
-   </div>
-   <div className="mt-5 flex gap-2 rounded-xl bg-amber-50 p-4 text-xs leading-6 text-amber-900">
-    <LockKeyhole className="mt-1 h-4 w-4 shrink-0"/>
-    <p>Los acontecimientos traumáticos severos pueden implicar datos personales sensibles.
-     El registro clínico o de canalizaciones individuales no forma parte del expediente
-     administrativo actual y requerirá permisos, confidencialidad y protocolos específicos.</p>
+   <div className="flex items-start gap-3">
+    <LockKeyhole className="mt-1 h-5 w-5 shrink-0 text-orange-600"/>
+    <div>
+     <h2 className="text-lg font-black text-neutral-800">Protección de información confidencial</h2>
+     <p className="mt-3 text-sm leading-7 text-neutral-600">
+      Este compendio solo admite evidencias administrativas no sensibles.
+      La atención individual de acontecimientos traumáticos, expedientes
+      clínicos y reportes nominales de violencia requieren un canal
+      separado y acceso especialmente restringido.
+     </p>
+     <p className="mt-2 text-xs leading-6 text-neutral-500">
+      Los estados y la revisión interna del expediente no sustituyen la
+      evaluación de conformidad ni son una certificación de la STPS.
+     </p>
+    </div>
    </div>
   </section>
-  <p className="text-xs leading-6 text-neutral-500">Estado: configuración documental. Las marcas
-   «documentado» son manifestaciones del usuario y no sustituyen una revisión jurídica,
-   sanitaria ni una verificación oficial de cumplimiento.</p>
+  <p className="text-xs leading-6 text-neutral-500">Estado: expediente documental guiado. Las marcas «documentado» y
+   «revisado internamente» son controles administrativos de FactoRH, no
+   una verificación oficial de cumplimiento.</p>
  </div>;
 }
