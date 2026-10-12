@@ -10,6 +10,7 @@ import {
  nom035NextAssessment,nom035Requirements
 } from "@/lib/nom035/rules";
 import Nom035CenterForm from "./center-form";
+import Nom035PilotManager from "./pilot-manager";
 
 export default function Nom035Page(){
  return <Suspense fallback={<p className="rounded-3xl bg-white p-8 text-neutral-600">Cargando módulo NOM-035...</p>}>
@@ -41,6 +42,10 @@ async function Nom035Dashboard(){
   No se pudo consultar NOM-035: {error.message}
  </section>;
  const organizations=organizationsR.data||[],centers=centersR.data||[];
+ const pilotsR=user.role==="super_admin"?
+  await db.from("organization_module_subscriptions")
+   .select("organization_id,status,starts_on,ends_on").eq("module_key","nom035"):
+  {data:[] as Array<{organization_id:string;status:string;starts_on:string|null;ends_on:string|null}>,error:null};
  const orgMap=new Map(organizations.map(o=>[o.id,o.name]));
  const evidences=(evidenceR.data||[]).filter(e=>e.status==="documented");
  const documentedCount=new Map<string,number>();
@@ -111,6 +116,8 @@ async function Nom035Dashboard(){
    </div>
   </section>
 
+  {user.role==="super_admin"&&<Nom035PilotManager organizations={organizations}
+    pilots={pilotsR.data||[]}/>}
   {user.role==="super_admin"&&<Nom035CenterForm organizations={organizations}/>}
 
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
