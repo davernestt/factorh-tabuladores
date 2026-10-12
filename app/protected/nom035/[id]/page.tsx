@@ -142,7 +142,7 @@ async function Content({params}:{params:Promise<{id:string}>}){
       className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">
       Configurar Guía I y sus campañas →
     </Link>
-  </section>}}
+  </section>
 
   <section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm">
     <p className="text-xs font-black uppercase tracking-[.16em] text-orange-600">Fase 3 · Riesgos psicosociales</p>
