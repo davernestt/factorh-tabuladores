@@ -3,6 +3,7 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {Building2,ClipboardList,FileCheck2,ShieldCheck,ExternalLink} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasNom035Subscription} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
  NOM035_TIER_LABELS,NOM035_SOURCE,nom035Tier,nom035Guide,
@@ -19,6 +20,7 @@ async function Nom035Dashboard(){
  const user=await getCurrentAppUser();
  if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId))
   redirect("/auth/login");
+ if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const db=createAdminClient();
  const orgQuery=db.from("organizations").select("id,name").eq("active",true);
  const centerQuery=db.from("nom035_work_centers")
@@ -109,7 +111,7 @@ async function Nom035Dashboard(){
    </div>
   </section>
 
-  <Nom035CenterForm organizations={organizations}/>
+  {user.role==="super_admin"&&<Nom035CenterForm organizations={organizations}/>}
 
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <div className="flex flex-wrap items-center justify-between gap-3">
