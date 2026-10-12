@@ -23,5 +23,7 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Validate synthetic NOM-035 demos
+        run: npx --yes tsx scripts/nom035-demo-smoke.ts
       - name: Build app
         run: npm run build
