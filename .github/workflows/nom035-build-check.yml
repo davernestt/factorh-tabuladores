@@ -4,6 +4,7 @@ on:
     branches:
       - nom035-v1
       - 'nom035-*'
+      - 'client-subusers-*'
       - 'feature/portal-*'
   workflow_dispatch:
 
