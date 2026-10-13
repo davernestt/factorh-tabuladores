@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
+import ClientCatalog from "./client-catalog";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -45,12 +46,10 @@ export default function CatalogPage() {
 }
 
 async function CatalogContent() {
-  const authClient = await createClient();
-  const { data: authData, error: authError } = await authClient.auth.getClaims();
-
-  if (authError || !authData?.claims) {
-    redirect("/auth/login");
-  }
+  const user = await getCurrentAppUser();
+  if (!user) redirect("/auth/login");
+  if (user.role === "client") return <ClientCatalog />;
+  if (user.role !== "super_admin") redirect("/protected/psicometrias");
 
   const db = createAdminClient();
 
