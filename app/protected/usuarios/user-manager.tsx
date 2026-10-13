@@ -11,7 +11,7 @@ type AppUser = {
   role: string;
   organization_id: string | null;
   active: boolean;
-  client_access_level?: "administrator" | "collaborator";
+  client_access_level?: string;
 };
 
 export default function UserManager({
