@@ -70,14 +70,9 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   const adminItems = [
     { href: "/protected/evaluaciones", name: "Evaluaciones" },
-    { href: "/protected", name: "PDL" },
-    { href: "/protected/360", name: "360°" },
-    { href: "/protected/psicometrias", name: "Psicometrías" },
     { href: "/protected/candidatos", name: "Candidatos" },
-    { href: "/protected/catalogo", name: "Catálogo" },
     { href: "/protected/empresas", name: "Empresas" },
     { href: "/protected/usuarios", name: "Usuarios" },
-    { href: "/protected/baterias", name: "Baterías" },
   ];
 
   const clientItems = [
