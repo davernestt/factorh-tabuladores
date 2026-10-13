@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.redirect(
-      new URL("/protected/psicometrias", request.url),
+      new URL("/protected/catalogo", request.url),
       { status: 303 },
     );
   }
