@@ -46,6 +46,11 @@ async function Nom035Dashboard(){
   await db.from("organization_module_subscriptions")
    .select("organization_id,status,starts_on,ends_on").eq("module_key","nom035"):
   {data:[] as Array<{organization_id:string;status:string;starts_on:string|null;ends_on:string|null}>,error:null};
+ const activeClientUsersR=user.role==="super_admin"?
+  await db.from("app_users").select("organization_id").eq("role","client").eq("active",true):
+  {data:[] as Array<{organization_id:string}>,error:null};
+ const clientOrganizationIds=[...new Set((activeClientUsersR.data||[]).map(x=>x.organization_id))];
+ const centerOrganizationIds=[...new Set(centers.map(x=>x.organization_id))];
  const orgMap=new Map(organizations.map(o=>[o.id,o.name]));
  const evidences=(evidenceR.data||[]).filter(e=>e.status==="documented");
  const documentedCount=new Map<string,number>();
@@ -121,7 +126,8 @@ async function Nom035Dashboard(){
   </section>
 
   {user.role==="super_admin"&&<Nom035PilotManager organizations={organizations}
-    pilots={pilotsR.data||[]}/>}
+    pilots={pilotsR.data||[]} clientOrganizationIds={clientOrganizationIds}
+    centerOrganizationIds={centerOrganizationIds}/>} 
   {user.role==="super_admin"&&<Nom035CenterForm organizations={organizations}/>}
 
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">

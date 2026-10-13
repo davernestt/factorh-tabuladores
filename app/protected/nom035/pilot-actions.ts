@@ -3,6 +3,7 @@ import {revalidatePath} from "next/cache";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {NOM035_UUID,nom035ValidDate} from "@/lib/nom035/access";
+import {requireNom035PilotReadiness} from "@/lib/nom035/pilot-readiness";
 
 export async function updateNom035PilotAccess(form:FormData){
  const user=await getCurrentAppUser();
@@ -23,9 +24,10 @@ export async function updateNom035PilotAccess(form:FormData){
  }else{
   const ends=nom035ValidDate(String(form.get("ends_on")||""));
   const today=new Date().toISOString().slice(0,10);
-  const future=new Date(Date.now()+62*86400000).toISOString().slice(0,10);
+  const future=new Date(Date.now()+90*86400000).toISOString().slice(0,10);
   if(!ends||ends<today||ends>future)
-   throw Error("Indica una fecha de vigencia entre hoy y los próximos 62 días.");
+   throw Error("Indica una fecha de vigencia entre hoy y los próximos 90 días.");
+  await requireNom035PilotReadiness(organizationId);
   const {error}=await db.from("organization_module_subscriptions").upsert({
    organization_id:organizationId,module_key:"nom035",status:"trial",
    plan_name:"Piloto controlado · NOM-035",starts_on:today,ends_on:ends,
