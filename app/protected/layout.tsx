@@ -95,7 +95,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-7xl px-5 py-4">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
             <Link
-              href={isClient ? "/protected/psicometrias" : "/protected/evaluaciones"}
+              href={isClient ? "/protected/catalogo" : "/protected/evaluaciones"}
               aria-label="FactoRH · Inicio"
               className="inline-flex min-w-0 items-center gap-4 rounded-xl px-2 py-1 transition-colors hover:bg-orange-50"
             >
