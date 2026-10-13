@@ -3,6 +3,7 @@ import {revalidatePath} from "next/cache";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {NOM035_UUID} from "@/lib/nom035/access";
+import {requireNom035PilotReadiness} from "@/lib/nom035/pilot-readiness";
 async function requireOwner(){
  const user=await getCurrentAppUser();
  if(user?.role!=="super_admin")throw Error("Solo FactoRH puede autorizar pilotos.");
@@ -30,6 +31,7 @@ export async function setNom035Pilot(form:FormData){
    .eq("organization_id",organizationId).eq("module_key","nom035");
   if(error)throw Error("No fue posible pausar el piloto.");
  }else{
+  await requireNom035PilotReadiness(organizationId);
   const now=new Date();
   const start=now.toISOString().slice(0,10);
   const end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),
