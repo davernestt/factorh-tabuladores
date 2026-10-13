@@ -44,7 +44,7 @@ export default function CompanyManager({ organization }: Props) {
     phone: organization?.phone ?? "",
     commercial_email: organization?.commercial_email ?? "",
     notes: organization?.notes ?? "",
-    enable_psychometrics: true,
+    enable_psychometrics: false,
   });
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export default function CompanyManager({ organization }: Props) {
       phone: organization.phone ?? "",
       commercial_email: organization.commercial_email ?? "",
       notes: organization.notes ?? "",
-      enable_psychometrics: true,
+      enable_psychometrics: false,
     });
     setSlugTouched(true);
     setMessage(null);
@@ -84,7 +84,7 @@ export default function CompanyManager({ organization }: Props) {
         phone: "",
         commercial_email: "",
         notes: "",
-        enable_psychometrics: true,
+        enable_psychometrics: false,
       });
       setSlugTouched(false);
     }
@@ -154,7 +154,7 @@ export default function CompanyManager({ organization }: Props) {
                 <p className="mt-1 text-sm text-neutral-500">
                   {editing
                     ? "Actualiza datos comerciales y estatus. No se elimina el historial de la empresa."
-                    : "Al crearla puedes dejar listas las psicometrías FactoRH desde el primer momento."}
+                    : "Crea la empresa sin acceso a evaluaciones; las demos se conceden sólo si las autorizas."}
                 </p>
               </div>
               <button
@@ -270,10 +270,10 @@ export default function CompanyManager({ organization }: Props) {
                   />
                   <span>
                     <span className="block text-sm font-bold text-neutral-900">
-                      Habilitar psicometrías FactoRH
+                      Autorizar 2 aplicaciones demo de psicometrías
                     </span>
                     <span className="mt-1 block text-xs leading-5 text-neutral-600">
-                      Deja disponibles automáticamente las pruebas psicométricas generales para esta empresa. Después puedes encender o apagar instrumentos desde esta misma pantalla.
+                      Opcional. Activa un piloto de 30 días con dos aplicaciones (una psicometría por liga). Si no marcas esta casilla, el cliente sólo podrá explorar el catálogo hasta que autorices el acceso.
                     </span>
                   </span>
                 </label>

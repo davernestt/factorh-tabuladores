@@ -81,9 +81,10 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   ];
 
   const clientItems = [
-    { href: "/protected/psicometrias", name: "Psicometrías" },
+    { href: "/protected/catalogo", name: "Explorar catálogo" },
+    { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
-    ...(nom035Enabled ? [{href:"/protected/nom035",name:"NOM-035"}] : []),
+    ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 
   const items = isClient ? clientItems : adminItems;
@@ -94,7 +95,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-7xl px-5 py-4">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
             <Link
-              href={isClient ? "/protected/psicometrias" : "/protected/evaluaciones"}
+              href={isClient ? "/protected/catalogo" : "/protected/evaluaciones"}
               aria-label="FactoRH · Inicio"
               className="inline-flex min-w-0 items-center gap-4 rounded-xl px-2 py-1 transition-colors hover:bg-orange-50"
             >
