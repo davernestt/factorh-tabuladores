@@ -263,6 +263,7 @@ async function NewPsychometricAssessmentContent() {
           scope="psychometrics"
           maxTemplateSelections={maxTemplateSelections}
           creditNotice={creditNotice}
+          canConfigureBatteries={currentUser.role === "super_admin"}
         />
       </div>
     </div>

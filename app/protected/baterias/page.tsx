@@ -1,10 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import BatteriesManager from "./batteries-manager";
 
-export default function BatteriesPage() {
+type SearchProps = { searchParams: Promise<{ tipo?: string }> };
+
+export default function BatteriesPage({ searchParams }: SearchProps) {
   return (
     <Suspense
       fallback={
@@ -14,12 +17,12 @@ export default function BatteriesPage() {
         </div>
       }
     >
-      <BatteriesContent />
+      <BatteriesContent searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function BatteriesContent() {
+async function BatteriesContent({searchParams}:SearchProps) {
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
@@ -27,7 +30,14 @@ async function BatteriesContent() {
     redirect("/auth/login");
   }
 
+  const psychometricOnly = (await searchParams).tipo === "psicometrias";
   const db = createAdminClient();
+  let templateQuery = db
+    .from("assessment_templates")
+    .select("id,name,description,assessment_type")
+    .eq("active",true)
+    .order("name");
+  if(psychometricOnly) templateQuery = templateQuery.like("assessment_type","psychometric_%");
   const [
     organizationsResult,
     templatesResult,
@@ -40,11 +50,7 @@ async function BatteriesContent() {
       .select("id,name")
       .eq("active", true)
       .order("name"),
-    db
-      .from("assessment_templates")
-      .select("id,name,description")
-      .eq("active", true)
-      .order("name"),
+    templateQuery,
     db
       .from("organization_assessment_templates")
       .select("organization_id,template_id,enabled,participant_sendable"),
@@ -75,19 +81,43 @@ async function BatteriesContent() {
     );
   }
 
+  const allowedIds = new Set((templatesResult.data ?? []).map(template => template.id));
+  const visibleBatteries = psychometricOnly
+    ? (batteriesResult.data ?? []).filter(battery => {
+        const items = (batteryItemsResult.data ?? []).filter(item => item.battery_id === battery.id);
+        return items.length > 0 && items.every(item => allowedIds.has(item.template_id));
+      })
+    : (batteriesResult.data ?? []);
+
   return (
     <div>
       <div>
-        <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-          Administración
+        <Link href="/protected/psicometrias" className="text-sm font-semibold text-neutral-500 hover:text-orange-700">
+          ← Volver a Psicometrías
+        </Link>
+        <div className="mt-5 text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
+          Psicometrías · Herramienta de configuración
         </div>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
-          Baterías de evaluación
+          {psychometricOnly ? "Configurar baterías psicométricas" : "Baterías de evaluación"}
         </h1>
         <p className="mt-2 max-w-3xl text-neutral-600">
-          Crea combinaciones predeterminadas de pruebas para asignarlas después
-          con una sola liga.
+          Guarda combinaciones de pruebas para reutilizarlas al asignar una evaluación.
+          Una batería no es un módulo independiente: es una selección de instrumentos
+          que después se aplica desde Psicometrías.
         </p>
+        {psychometricOnly && (
+          <p className="mt-3 text-xs leading-5 text-neutral-500">
+            Aquí se muestran solo instrumentos y baterías psicométricas. Las combinaciones
+            del programa PDL permanecen intactas.
+          </p>
+        )}
+        <Link
+          href="/protected/psicometrias/nueva?fresh=1"
+          className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700"
+        >
+          Asignar psicometrías →
+        </Link>
       </div>
 
       <div className="mt-7">
@@ -95,7 +125,7 @@ async function BatteriesContent() {
           organizations={organizationsResult.data ?? []}
           templates={templatesResult.data ?? []}
           access={accessResult.data ?? []}
-          batteries={batteriesResult.data ?? []}
+          batteries={visibleBatteries}
           batteryItems={batteryItemsResult.data ?? []}
         />
       </div>

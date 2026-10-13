@@ -2,14 +2,12 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChecks, MessagesSquare, MoveUpRight, Layers3, LibraryBig } from 'lucide-react';
+import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChecks, MessagesSquare, MoveUpRight } from 'lucide-react';
 
 const modules = [
   { name: 'PDL · Desarrollo de Líderes', description: 'Autoevaluaciones, liderazgo, casos y reportes individuales del programa.', icon: BookOpenCheck, href: '/protected', active: true, tag: 'Disponible' },
   { name: 'Evaluación 360°', description: 'Una persona evaluada; múltiples perspectivas. 12 competencias, 60 reactivos y un reporte consolidado.', icon: ChartNoAxesCombined, href: '/protected/360', active: true, tag: 'Módulo independiente' },
-  { name: 'Psicometrías', description: 'Instrumentos propios FactoRH, aplicaciones, seguimiento y reportes psicométricos.', icon: ListChecks, href: '/protected/psicometrias', active: true, tag: 'Disponible' },
-  { name: 'Catálogo de evaluaciones', description: 'Consulta el inventario de instrumentos, sus dimensiones y características antes de asignarlos.', icon: LibraryBig, href: '/protected/catalogo', active: true, tag: 'Administración' },
-  { name: 'Baterías de evaluación', description: 'Organiza combinaciones de pruebas para asignarlas de forma más práctica.', icon: Layers3, href: '/protected/baterias', active: true, tag: 'Configuración' },
+  { name: 'Psicometrías', description: 'Consulta los instrumentos, prepara baterías y asigna psicometrías desde un solo lugar. Da seguimiento a aplicaciones y reportes.', icon: ListChecks, href: '/protected/psicometrias', active: true, tag: 'Disponible' },
   { name: 'NOM-035', description: 'Centros de trabajo, guías de referencia, reportes y seguimiento de intervenciones.', icon: HeartHandshake, href: '/protected/nom035', active: true, tag: 'Piloto controlado' },
   { name: 'Clima Laboral', description: 'Elige entre C3 PRO, diagnóstico Esencial, encuestas Pulso y módulos especializados antes de crear campañas.', icon: MessagesSquare, href: '/protected/clima', active: true, tag: 'Catálogo de instrumentos' },
   { name: 'Próximas herramientas', description: 'Desempeño, DNC y People Review, entre otras soluciones.', icon: CircleHelp, href: null, active: false, tag: 'Planeación' },
