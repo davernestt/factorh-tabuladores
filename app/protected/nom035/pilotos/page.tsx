@@ -14,20 +14,23 @@ async function PilotList(){
  const user=await getCurrentAppUser();
  if(user?.role!=="super_admin")redirect("/protected/nom035");
  const db=createAdminClient();
- const [companiesR,subscriptionsR,usersR]=await Promise.all([
+ const [companiesR,subscriptionsR,usersR,centersR]=await Promise.all([
   db.from("organizations").select("id,name,active").eq("active",true).order("name"),
   db.from("organization_module_subscriptions")
    .select("organization_id,status,starts_on,ends_on")
    .eq("module_key","nom035"),
-  db.from("app_users").select("organization_id").eq("role","client").eq("active",true)
+  db.from("app_users").select("organization_id").eq("role","client").eq("active",true),
+  db.from("nom035_work_centers").select("organization_id").eq("active",true)
  ]);
- if(companiesR.error||subscriptionsR.error||usersR.error)
+ if(companiesR.error||subscriptionsR.error||usersR.error||centersR.error)
   return <p className="rounded-2xl bg-red-50 p-6 text-sm text-red-700">
    No pudieron cargarse las organizaciones y suscripciones.
   </p>;
  const companies=companiesR.data||[];
  const subs=new Map((subscriptionsR.data||[]).map(s=>[s.organization_id,s]));
  const clientOrgs=new Set((usersR.data||[]).map(s=>s.organization_id));
+ const centerOrgs=new Set((centersR.data||[]).map(s=>s.organization_id));
+ const today=new Date().toISOString().slice(0,10);
  return <div className="space-y-6">
   <Link href="/protected/nom035" className="text-sm font-bold text-orange-700">
    ← Módulo NOM-035
@@ -53,20 +56,24 @@ async function PilotList(){
   <div className="space-y-4">
    {companies.map(org=>{
     const sub=subs.get(org.id);
-    const enabled=sub&&["trial","active"].includes(sub.status);
+    const enabled=Boolean(sub&&["trial","active"].includes(sub.status)&&
+     (!sub.starts_on||sub.starts_on<=today)&&(!sub.ends_on||sub.ends_on>=today));
+    const ready=clientOrgs.has(org.id)&&centerOrgs.has(org.id);
     return <article key={org.id} className="rounded-2xl border border-neutral-200 bg-white p-5 sm:p-6">
      <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex items-start gap-3">
        <Building2 className="mt-1 h-5 w-5 text-orange-600"/>
        <div><h2 className="text-base font-black text-neutral-900">{org.name}</h2>
         <p className="mt-2 text-xs text-neutral-500">
-         {clientOrgs.has(org.id)?"Cuenta cliente registrada":"Sin usuario cliente activo"}
+         {clientOrgs.has(org.id)?"Usuario cliente activo":"Falta usuario cliente activo"}
+         {" · "}{centerOrgs.has(org.id)?"Centro de trabajo registrado":"Falta centro de trabajo activo"}
         </p></div>
       </div>
       <div className="text-right text-xs">
        <p className={"rounded-lg px-3 py-2 font-bold "+(enabled?
         "bg-emerald-50 text-emerald-800":"bg-neutral-100 text-neutral-700")}>
-        {sub?.status==="trial"?"Piloto habilitado":
+        {sub?.ends_on&&sub.ends_on<today?"Piloto vencido":
+         sub?.status==="trial"?"Piloto habilitado":
          sub?.status==="active"?"Activo":
          sub?.status==="paused"?"Pausado":"Sin autorización"}
        </p>
@@ -83,10 +90,13 @@ async function PilotList(){
        </select>
       </label>
       <button type="submit" name="operation" value="enable"
-       disabled={!clientOrgs.has(org.id)}
+       disabled={!ready}
        className="rounded-xl bg-orange-600 px-5 py-3 text-xs font-black text-white disabled:opacity-40">
        {enabled?"Renovar piloto":"Habilitar piloto"}
       </button>
+      {!ready&&<p className="w-full text-xs font-semibold text-amber-800">
+       Completa los requisitos señalados antes de habilitar este piloto.
+      </p>}
       {enabled&&<button type="submit" name="operation" value="pause"
        className="rounded-xl border border-neutral-300 px-5 py-3 text-xs font-bold text-neutral-700">
        Pausar acceso
