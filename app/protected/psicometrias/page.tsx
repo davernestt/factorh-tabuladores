@@ -377,7 +377,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
             Evaluación psicométrica
           </h1>
           <p className="mt-3 max-w-3xl text-neutral-600">
-            Administración de candidatos, aplicaciones, avances, resultados y catálogo de instrumentos FactoRH.
+            Desde aquí consultas qué mide cada prueba, preparas baterías, asignas psicometrías y revisas avances y resultados.
           </p>
         </div>
         {clientCanAssign ? (
@@ -451,8 +451,16 @@ async function PsychometricsContent({ searchParams }: PageProps) {
               : "rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
           }
         >
-          Catálogo de pruebas
+          Consultar instrumentos
         </Link>
+        {isOwner && (
+          <Link
+            href="/protected/baterias"
+            className="rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-orange-50 hover:text-orange-700"
+          >
+            Configurar baterías
+          </Link>
+        )}
         <Link
           href="/protected/psicometrias/perfiles-puesto"
           className="rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
@@ -460,6 +468,14 @@ async function PsychometricsContent({ searchParams }: PageProps) {
           Perfiles de puesto
         </Link>
       </nav>
+
+      {isOwner && (
+        <p className="text-sm leading-6 text-neutral-500">
+          Para asignar pruebas puedes consultar los instrumentos, guardar combinaciones en
+          <Link href="/protected/baterias" className="ml-1 font-semibold text-orange-700 hover:underline">Configurar baterías</Link>
+          o seleccionar las pruebas directamente al crear una aplicación.
+        </p>
+      )}
 
       <section className="grid gap-4 sm:grid-cols-4">
         <Metric label="Personas evaluadas" value={String(personGroups.length)} />
@@ -674,10 +690,10 @@ async function PsychometricsContent({ searchParams }: PageProps) {
         <section className="space-y-6">
           <div>
             <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-              Catálogo psicométrico
+              Información de instrumentos
             </div>
             <h2 className="mt-2 text-2xl font-black text-neutral-900">
-              Pruebas disponibles
+              Conoce las pruebas antes de asignarlas
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
               Consulta qué evalúa cada instrumento, para qué perfiles resulta útil y en qué procesos puede utilizarse.
