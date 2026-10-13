@@ -8,7 +8,7 @@ import {createAdminClient} from "@/lib/supabase/admin";
 export async function requireNom035PilotReadiness(organizationId:string){
  const db=createAdminClient();
  const [clients,centers]=await Promise.all([
-  db.from("app_users").select("id",{count:"exact",head:true})
+  db.from("app_users").select("user_id",{count:"exact",head:true})
    .eq("organization_id",organizationId).eq("role","client").eq("active",true),
   db.from("nom035_work_centers").select("id",{count:"exact",head:true})
    .eq("organization_id",organizationId).eq("active",true)
