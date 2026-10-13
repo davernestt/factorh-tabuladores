@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: insertResult.error.message }, { status: 500 });
   }
 
-  if (body.enable_psychometrics !== false && lifecycleStage !== "inactive") {
+  if (body.enable_psychometrics === true && lifecycleStage !== "inactive") {
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 30);
 
