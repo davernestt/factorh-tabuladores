@@ -68,6 +68,7 @@ type Props = {
   scope?: "pdl" | "psychometrics";
   maxTemplateSelections?: number | null;
   creditNotice?: string | null;
+  canConfigureBatteries?: boolean;
 };
 
 type DeliveryLink = {
@@ -111,6 +112,7 @@ export default function NewAssessmentForm({
   scope = "pdl",
   maxTemplateSelections = null,
   creditNotice = null,
+  canConfigureBatteries = false,
 }: Props) {
   const initialOrganizationId = organizations[0]?.id ?? "";
   const isPsychometrics = scope === "psychometrics";
@@ -723,10 +725,45 @@ export default function NewAssessmentForm({
           </p>
         </div>
 
+        {isPsychometrics && (
+          <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-sm">
+            <span className="font-semibold text-neutral-700">¿Qué prueba necesito?</span>
+            <Link
+              href="/protected/psicometrias?view=pruebas"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-bold text-orange-700 hover:underline"
+            >
+              Consultar qué evalúa cada instrumento ↗
+            </Link>
+            {canConfigureBatteries && (
+              <Link
+                href="/protected/baterias?tipo=psicometrias"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-orange-700 hover:underline"
+              >
+                Configurar baterías predeterminadas ↗
+              </Link>
+            )}
+            <p className="w-full text-xs leading-5 text-neutral-500">
+              Estos enlaces se abren en otra pestaña para conservar los datos de esta asignación.
+              También puedes seleccionar pruebas manualmente sin crear una batería.
+            </p>
+          </div>
+        )}
+
         {creditNotice && (
           <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-sm leading-6 text-orange-900">
             {creditNotice}
           </div>
+        )}
+
+        {isPsychometrics && maxTemplateSelections === 1 && (
+          <p className="mb-4 text-xs leading-5 text-neutral-500">
+            En la demo se selecciona una sola prueba por aplicación. Las baterías de varias pruebas
+            se utilizan en los paquetes que FactoRH habilite para tu empresa.
+          </p>
         )}
 
         {availableBatteries.length > 0 && maxTemplateSelections !== 1 && (
@@ -745,6 +782,17 @@ export default function NewAssessmentForm({
                 ))}
               </select>
             </Field>
+            {selectedBatteryId && (
+              <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-4 text-xs leading-6 text-orange-950">
+                <strong>Batería aplicada:</strong> {templateIds.length} pruebas incluidas:
+                <span className="ml-1">
+                  {availableTemplates
+                    .filter((template) => templateIds.includes(template.id))
+                    .map((template) => template.name)
+                    .join(" · ")}
+                </span>
+              </div>
+            )}
           </div>
         )}
 
