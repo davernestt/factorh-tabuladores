@@ -73,13 +73,17 @@ async function Nom035Dashboard(){
        className="inline-flex items-center rounded-xl border border-orange-200 bg-white px-5 py-3 text-sm font-bold text-orange-700">
        Previsualizar acceso de cliente
       </Link>
+      <Link href="/protected/nom035/pilotos"
+       className="inline-flex items-center rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-bold text-neutral-800">
+       Administrar pilotos de clientes
+      </Link>
     </>}
     <a href={NOM035_SOURCE} target="_blank" rel="noopener noreferrer"
      className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">
      Consultar NOM-035 en el Diario Oficial <ExternalLink className="h-4 w-4"/>
     </a>
     <span className="rounded-xl bg-neutral-100 px-4 py-3 text-xs font-bold text-neutral-600">
-     Fase 1 · Configuración y expediente administrativo
+     Piloto controlado · Evaluación y expediente
     </span>
    </div>
   </header>
@@ -156,9 +160,10 @@ async function Nom035Dashboard(){
    </div>}
   </section>
   <p className="text-xs leading-6 text-neutral-500">
-   Esta pantalla es una herramienta de organización documental, no una constancia automática de
-   cumplimiento ni una verificación de la STPS. El módulo de aplicación oficial, el cómputo de
-   calificaciones y la atención individual de acontecimientos traumáticos se desarrollan por separado.
+   Esta pantalla organiza la evaluación, el informe técnico, las medidas y el expediente documental,
+   sin sustituir una evaluación de conformidad por la STPS. La canalización clínica se
+   gestiona por medios confidenciales separados y la revisión normativa independiente
+   es necesaria antes de emitir informes definitivos.
   </p>
  </div>;
 }
