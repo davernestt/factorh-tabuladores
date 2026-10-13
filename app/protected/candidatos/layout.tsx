@@ -6,6 +6,6 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 export default async function AdminOnlyLayout({children}:{children:ReactNode}){
   const user=await getCurrentAppUser();
   if(!user)redirect("/auth/login");
-  if(user.role!=="super_admin")redirect("/protected/catalogo");
+  if(user.role==="client")redirect("/protected/catalogo");
   return <>{children}</>;
 }
