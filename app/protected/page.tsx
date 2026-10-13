@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentAppUser } from "@/lib/app-auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -114,12 +114,9 @@ async function AdminDashboardContent({
 }: {
   searchParams: Promise<DashboardSearchParams>;
 }) {
-  const authClient = await createClient();
-  const { data: authData, error: authError } = await authClient.auth.getClaims();
-
-  if (authError || !authData?.claims) {
-    redirect("/auth/login");
-  }
+  const appUser = await getCurrentAppUser();
+  if (!appUser) redirect("/auth/login");
+  if (appUser.role === "client") redirect("/protected/catalogo");
 
   const params = await searchParams;
   const query = normalizeSearch(paramValue(params.q));
