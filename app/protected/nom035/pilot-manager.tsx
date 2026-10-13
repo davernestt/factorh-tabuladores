@@ -4,8 +4,8 @@ import {useRouter} from "next/navigation";
 import {updateNom035PilotAccess} from "./pilot-actions";
 type Org={id:string;name:string};
 type Pilot={organization_id:string;status:string;starts_on:string|null;ends_on:string|null};
-export default function Nom035PilotManager({organizations,pilots}:{
- organizations:Org[];pilots:Pilot[]
+export default function Nom035PilotManager({organizations,pilots,clientOrganizationIds,centerOrganizationIds}:{
+ organizations:Org[];pilots:Pilot[];clientOrganizationIds:string[];centerOrganizationIds:string[]
 }){
  const [organizationId,setOrganizationId]=useState("");
  const [ends,setEnds]=useState(()=>{
@@ -16,6 +16,9 @@ export default function Nom035PilotManager({organizations,pilots}:{
  const [pending,start]=useTransition();
  const router=useRouter();
  const actual=pilots.find(x=>x.organization_id===organizationId);
+ const hasClient=clientOrganizationIds.includes(organizationId);
+ const hasCenter=centerOrganizationIds.includes(organizationId);
+ const ready=Boolean(organizationId&&hasClient&&hasCenter);
  function submit(operation:"enable"|"pause"){
   setError("");setNotice("");
   const f=new FormData();f.set("operation",operation);
@@ -49,12 +52,17 @@ export default function Nom035PilotManager({organizations,pilots}:{
      type="date" className="mt-2 w-full rounded-xl border border-neutral-300 p-3 text-sm"/>
    </label>
   </div>
+  {organizationId&&<p className={"mt-4 rounded-xl p-4 text-xs "+(ready?
+    "bg-neutral-50 text-neutral-700":"bg-amber-50 text-amber-900")}>
+   {hasClient?"✓ Usuario cliente activo":"• Falta usuario cliente activo"}
+   {" · "}{hasCenter?"✓ Centro de trabajo configurado":"• Falta registrar un centro activo"}
+  </p>}
   {actual&&<p className="mt-4 rounded-xl bg-neutral-50 p-4 text-xs text-neutral-700">
    Situación actual: <strong>{actual.status}</strong>
    {actual.ends_on?" · Vence "+actual.ends_on:""}
   </p>}
   <div className="mt-4 flex flex-wrap gap-2">
-   <button type="button" disabled={pending||!organizationId}
+   <button type="button" disabled={pending||!ready}
     onClick={()=>submit("enable")} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white disabled:opacity-40">
     {pending?"Guardando...":"Habilitar piloto de esta empresa"}
    </button>
