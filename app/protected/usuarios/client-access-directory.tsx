@@ -7,7 +7,7 @@ import UserManager from "./user-manager";
 type Organization={id:string;name:string;active:boolean;slug:string};
 type AppUser={
   user_id:string;email:string;display_name:string|null;role:string;
-  organization_id:string|null;active:boolean;created_at:string;
+  organization_id:string|null;active:boolean;created_at:string;client_access_level:string;
 };
 
 export default function ClientAccessDirectory({users,organizations}:{
