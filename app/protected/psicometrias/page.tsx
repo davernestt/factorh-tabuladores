@@ -455,7 +455,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
         </Link>
         {isOwner && (
           <Link
-            href="/protected/baterias"
+            href="/protected/baterias?tipo=psicometrias"
             className="rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-orange-50 hover:text-orange-700"
           >
             Configurar baterías
@@ -472,7 +472,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
       {isOwner && (
         <p className="text-sm leading-6 text-neutral-500">
           Para asignar pruebas puedes consultar los instrumentos, guardar combinaciones en
-          <Link href="/protected/baterias" className="ml-1 font-semibold text-orange-700 hover:underline">Configurar baterías</Link>
+          <Link href="/protected/baterias?tipo=psicometrias" className="ml-1 font-semibold text-orange-700 hover:underline">Configurar baterías</Link>
           o seleccionar las pruebas directamente al crear una aplicación.
         </p>
       )}
