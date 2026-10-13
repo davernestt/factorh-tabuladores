@@ -7,6 +7,7 @@ type Body = {
   display_name?: string;
   organization_id?: string;
   active?: boolean;
+  client_access_level?: "administrator" | "collaborator";
 };
 
 function clean(value: unknown) {
@@ -23,6 +24,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   const body = (await request.json()) as Body;
   const displayName = clean(body.display_name);
   const organizationId = clean(body.organization_id);
+  const clientLevel = body.client_access_level;
+  if(clientLevel && !["administrator","collaborator"].includes(clientLevel))
+    return NextResponse.json({error:"Nivel de acceso inválido."},{status:400});
 
   if (!displayName || !organizationId) {
     return NextResponse.json(
@@ -72,6 +76,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       display_name: displayName,
       organization_id: organizationId,
       active: body.active !== false,
+      ...(clientLevel ? {client_access_level:clientLevel} : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", id);
