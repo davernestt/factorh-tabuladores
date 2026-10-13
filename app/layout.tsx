@@ -8,8 +8,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "FactorRH Evaluaciones",
-  description: "Plataforma de evaluaciones y desarrollo de talento de FactorRH.",
+  title: "FactoRH Evaluaciones",
+  description: "Plataforma de evaluaciones y desarrollo de talento de FactoRH.",
 };
 
 export default function RootLayout({
