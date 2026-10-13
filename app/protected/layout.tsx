@@ -81,9 +81,10 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   ];
 
   const clientItems = [
-    { href: "/protected/psicometrias", name: "Psicometrías" },
+    { href: "/protected/catalogo", name: "Explorar catálogo" },
+    { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
-    ...(nom035Enabled ? [{href:"/protected/nom035",name:"NOM-035"}] : []),
+    ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 
   const items = isClient ? clientItems : adminItems;
