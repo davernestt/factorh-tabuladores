@@ -1,5 +1,4 @@
 import { AuthButton } from "@/components/auth-button";
-import FactoRHLogo from "@/components/factorh-logo";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { hasNom035Subscription } from "@/lib/nom035/access";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -91,45 +90,50 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="min-h-screen bg-neutral-100">
-      <nav className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex min-h-20 max-w-7xl flex-wrap items-center justify-between gap-5 px-5 py-3">
-          <Link
-            href={isClient ? "/protected/psicometrias" : "/protected/evaluaciones"}
-            className="flex shrink-0 items-center rounded-2xl px-2 py-1 transition-colors hover:bg-orange-50"
-          >
-            <div className="flex items-center gap-3">
-              <FactoRHLogo className="h-12 w-auto max-w-[225px] object-contain object-left sm:h-14 sm:max-w-[250px]" priority />
-              <span className="hidden border-l border-neutral-200 pl-3 text-xs font-medium text-neutral-500 lg:inline">
+      <nav className="border-b border-neutral-200 bg-white" aria-label="Navegación principal">
+        <div className="mx-auto max-w-7xl px-5 py-4">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <Link
+              href={isClient ? "/protected/psicometrias" : "/protected/evaluaciones"}
+              aria-label="FactoRH · Inicio"
+              className="inline-flex min-w-0 items-center gap-4 rounded-xl px-2 py-1 transition-colors hover:bg-orange-50"
+            >
+              <span className="shrink-0 whitespace-nowrap text-[28px] font-extrabold leading-none tracking-tight sm:text-[30px]">
+                <span className="text-neutral-500">Facto</span>
+                <span className="text-orange-600">RH</span>
+              </span>
+              <span className="hidden max-w-[240px] truncate border-l border-neutral-200 pl-3 text-xs font-medium text-neutral-500 sm:inline-block">
                 {isClient ? appUser.organizationName ?? "Portal de empresa" : "Administración"}
               </span>
-            </div>
-          </Link>
+            </Link>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex flex-wrap items-center gap-1 rounded-xl bg-neutral-100 p-1">
+            <div className="flex shrink-0 items-center gap-4">
+              {!isClient && (
+                <Link
+                  href="/"
+                  className="hidden text-sm font-medium text-neutral-500 hover:text-neutral-800 lg:inline"
+                >
+                  Sitio público
+                </Link>
+              )}
+              <Suspense>
+                <AuthButton />
+              </Suspense>
+            </div>
+          </div>
+
+          <div className="mt-4 min-w-0 rounded-xl bg-neutral-100 p-1">
+            <div className="flex gap-1 overflow-x-auto whitespace-nowrap">
               {items.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 hover:bg-white hover:text-orange-600"
+                  className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-white hover:text-orange-600"
                 >
                   {item.name}
                 </Link>
               ))}
             </div>
-
-            {!isClient && (
-              <Link
-                href="/"
-                className="hidden text-sm font-medium text-neutral-500 hover:text-neutral-800 xl:block"
-              >
-                Sitio público
-              </Link>
-            )}
-
-            <Suspense>
-              <AuthButton />
-            </Suspense>
           </div>
         </div>
       </nav>
