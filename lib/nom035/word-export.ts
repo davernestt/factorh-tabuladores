@@ -70,7 +70,7 @@ export type WordReportPayload={
 export function buildNom035WordReport(data:WordReportPayload):Buffer{
  const rows:string[]=[];
  const add=(t:string,bold=false,pt=21)=>rows.push(para(t,bold,pt));
- add("FACToRH  |  NOM-035-STPS-2018",true,21);
+ add("FactoRH  |  NOM-035-STPS-2018",true,21);
  add(data.kind==="executive"?"INFORME EJECUTIVO":"INFORME TÉCNICO · NUMERAL 7.7",true,32);
  add("DOCUMENTO PARA REVISIÓN · NO CONSTITUYE CERTIFICADO DE CUMPLIMIENTO",true,18);
  add("Razón social: "+data.company,true);
