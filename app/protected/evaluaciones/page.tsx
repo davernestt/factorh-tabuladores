@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChecks, MessagesSquare, MoveUpRight } from 'lucide-react';
+import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChecks, MessagesSquare, MoveUpRight, Layers3, LibraryBig } from 'lucide-react';
 
 const modules = [
   { name: 'PDL · Desarrollo de Líderes', description: 'Autoevaluaciones, liderazgo, casos y reportes individuales del programa.', icon: BookOpenCheck, href: '/protected', active: true, tag: 'Disponible' },
