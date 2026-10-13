@@ -130,6 +130,11 @@ export default function NewAssessmentForm({
   const [existingPersonId, setExistingPersonId] = useState("");
   const [templateIds, setTemplateIds] = useState<string[]>([]);
   const [selectedBatteryId, setSelectedBatteryId] = useState("");
+  const [newBatteryName, setNewBatteryName] = useState("");
+  const [savingBattery, setSavingBattery] = useState(false);
+  const [batteryFeedback, setBatteryFeedback] = useState("");
+  const [savedBatteries, setSavedBatteries] = useState<Battery[]>([]);
+  const [savedBatteryItems, setSavedBatteryItems] = useState<BatteryItem[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -251,7 +256,7 @@ export default function NewAssessmentForm({
   );
 
   const availableBatteries = useMemo(() => {
-    return batteries.filter((battery) => {
+    return [...batteries, ...savedBatteries].filter((battery) => {
       if (
         battery.organization_id !== null &&
         battery.organization_id !== organizationId
@@ -259,7 +264,7 @@ export default function NewAssessmentForm({
         return false;
       }
 
-      const items = batteryItems.filter(
+      const items = [...batteryItems, ...savedBatteryItems].filter(
         (item) => item.battery_id === battery.id,
       );
 
@@ -268,7 +273,7 @@ export default function NewAssessmentForm({
         items.every((item) => allowedTemplateIds.has(item.template_id))
       );
     });
-  }, [batteries, batteryItems, organizationId, allowedTemplateIds]);
+  }, [batteries, savedBatteries, batteryItems, savedBatteryItems, organizationId, allowedTemplateIds]);
 
   function changeOrganization(value: string) {
     setOrganizationId(value);
@@ -315,13 +320,51 @@ export default function NewAssessmentForm({
 
     if (!batteryId) return;
 
-    const ids = batteryItems
+    const ids = [...batteryItems, ...savedBatteryItems]
       .filter((item) => item.battery_id === batteryId)
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => item.template_id)
       .filter((id) => allowedTemplateIds.has(id));
 
     setTemplateIds(ids);
+  }
+
+  async function saveSelectedBattery() {
+    if (!isPsychometrics || !canConfigureBatteries || !organizationId ||
+        !templateIds.length || !newBatteryName.trim()) {
+      setBatteryFeedback("Selecciona la empresa, al menos una prueba y escribe el nombre de la batería.");
+      return;
+    }
+    setSavingBattery(true);
+    setBatteryFeedback("");
+    try {
+      const response = await fetch("/api/admin/baterias", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          organization_id: organizationId,
+          name: newBatteryName.trim(),
+          template_ids: templateIds,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.id) throw Error(result.error || "No se pudo guardar la batería.");
+      const batteryId = String(result.id);
+      setSavedBatteries(current => [...current, {
+        id: batteryId, organization_id: organizationId,
+        name: newBatteryName.trim(), description: null,
+      }]);
+      setSavedBatteryItems(current => [...current, ...templateIds.map((templateId,index) => ({
+        battery_id: batteryId, template_id: templateId, sort_order: index + 1,
+      }))]);
+      setSelectedBatteryId(batteryId);
+      setNewBatteryName("");
+      setBatteryFeedback("Batería guardada para esta empresa. Puedes utilizarla ahora o en futuras asignaciones.");
+    } catch (cause) {
+      setBatteryFeedback(cause instanceof Error ? cause.message : "No se pudo guardar la batería.");
+    } finally {
+      setSavingBattery(false);
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -836,6 +879,39 @@ export default function NewAssessmentForm({
               );
             })}
           </div>
+        )}
+
+        {isPsychometrics && canConfigureBatteries && availableTemplates.length > 0 && (
+          <details className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4">
+            <summary className="cursor-pointer text-sm font-bold text-neutral-800">
+              Guardar esta selección como batería reutilizable
+            </summary>
+            <p className="mt-3 text-xs leading-6 text-neutral-600">
+              Si esta combinación se repetirá, guárdala para la empresa seleccionada.
+              No crea evaluaciones ni consume créditos. Podrás volver a usarla en el selector de baterías.
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="min-w-52 flex-1 text-xs font-semibold text-neutral-600">
+                Nombre de la batería
+                <input
+                  type="text"
+                  value={newBatteryName}
+                  onChange={(event) => setNewBatteryName(event.target.value)}
+                  placeholder="Ej. Batería de ingreso · Ventas"
+                  maxLength={120}
+                  className="mt-2 w-full rounded-xl border border-neutral-300 px-4 py-3 text-sm"
+                />
+              </label>
+              <button type="button" onClick={() => void saveSelectedBattery()}
+                disabled={savingBattery || templateIds.length === 0 || !newBatteryName.trim()}
+                className="rounded-xl bg-neutral-800 px-5 py-3 text-sm font-bold text-white hover:bg-neutral-700 disabled:opacity-40">
+                {savingBattery ? "Guardando..." : "Guardar combinación"}
+              </button>
+            </div>
+            {batteryFeedback && (
+              <p role="status" className="mt-3 text-xs leading-6 text-neutral-700">{batteryFeedback}</p>
+            )}
+          </details>
         )}
 
         <div className="mt-5 rounded-2xl bg-neutral-50 p-4 text-sm">
