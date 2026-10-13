@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - nom035-v1
+      - 'nom035-*'
   workflow_dispatch:
 
 jobs:
