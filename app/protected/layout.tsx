@@ -79,6 +79,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     { href: "/protected/catalogo", name: "Explorar catálogo" },
     { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
+    { href: "/protected/usuarios", name: "Usuarios de mi empresa" },
     ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 

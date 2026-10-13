@@ -7,7 +7,7 @@ import UserManager from "./user-manager";
 type Organization={id:string;name:string;active:boolean;slug:string};
 type AppUser={
   user_id:string;email:string;display_name:string|null;role:string;
-  organization_id:string|null;active:boolean;created_at:string;
+  organization_id:string|null;active:boolean;created_at:string;client_access_level:string;
 };
 
 export default function ClientAccessDirectory({users,organizations}:{
@@ -96,6 +96,7 @@ export default function ClientAccessDirectory({users,organizations}:{
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <span className="rounded-lg bg-neutral-100 px-3 py-1.5 font-bold text-neutral-700">{org?.name||"Empresa sin asignar"}</span>
                 <span className="rounded-lg bg-neutral-100 px-3 py-1.5 font-semibold text-neutral-600">{user.active?"Activo":"Suspendido"}</span>
+                <span className="rounded-lg bg-neutral-100 px-3 py-1.5 font-semibold text-neutral-600">{user.client_access_level==="administrator"?"Administrador de empresa":"Colaborador"}</span>
                 <span className="text-neutral-400">Creado: {new Date(user.created_at).toLocaleDateString("es-MX")}</span>
               </div>
             </div>

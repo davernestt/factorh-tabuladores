@@ -3,6 +3,7 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 import { redirect } from "next/navigation";
 import UserManager from "./user-manager";
 import ClientAccessDirectory from "./client-access-directory";
+import CompanySubusers from "./company-subusers";
 
 type Organization = { id: string; name: string; active: boolean; slug: string };
 type AppUserRow = {
@@ -13,19 +14,27 @@ type AppUserRow = {
   organization_id: string | null;
   active: boolean;
   created_at: string;
+  client_access_level: string;
 };
 
 export default async function UsersPage() {
   const currentUser = await getCurrentAppUser();
-  if (!currentUser || currentUser.role !== "super_admin") {
-    redirect("/protected/psicometrias");
-  }
-
+  if (!currentUser) redirect("/auth/login");
   const db = createAdminClient();
+  if(currentUser.role==="client"){
+    if(!currentUser.organizationId)redirect("/protected/catalogo");
+    const {data:access}=await db.from("app_users").select("client_access_level").eq("user_id",currentUser.userId).maybeSingle();
+    if(access?.client_access_level!=="administrator")redirect("/protected/catalogo");
+    const {data:companyUsers,error:companyError}=await db.from("app_users").select("user_id,email,display_name,active,client_access_level")
+      .eq("organization_id",currentUser.organizationId).eq("role","client").order("created_at");
+    if(companyError)return <p className="rounded-2xl bg-white p-6 text-red-700">No fue posible cargar los usuarios.</p>;
+    return <CompanySubusers users={companyUsers||[]}/>;
+  }
+  if(currentUser.role!=="super_admin")redirect("/protected/catalogo");
   const [usersR, organizationsR] = await Promise.all([
     db
       .from("app_users")
-      .select("user_id,email,display_name,role,organization_id,active,created_at")
+      .select("user_id,email,display_name,role,organization_id,active,created_at,client_access_level")
       .order("created_at", { ascending: false }),
     db
       .from("organizations")

@@ -11,6 +11,7 @@ type AppUser = {
   role: string;
   organization_id: string | null;
   active: boolean;
+  client_access_level?: string;
 };
 
 export default function UserManager({
@@ -32,6 +33,7 @@ export default function UserManager({
     email: user?.email ?? "",
     organization_id: user?.organization_id ?? organizations[0]?.id ?? "",
     active: user?.active ?? true,
+    client_access_level: user?.client_access_level ?? "administrator",
   });
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function UserManager({
       email: user.email,
       organization_id: user.organization_id ?? organizations[0]?.id ?? "",
       active: user.active,
+      client_access_level: user.client_access_level ?? "administrator",
     });
     setMessage(null);
     setInviteUrl(null);
@@ -108,6 +111,7 @@ export default function UserManager({
         email: "",
         organization_id: organizations[0]?.id ?? "",
         active: true,
+        client_access_level: "administrator",
       });
     }
     router.refresh();
@@ -207,6 +211,16 @@ export default function UserManager({
                 </select>
               </label>
 
+              {editing && (
+                <label className="block">
+                  <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-500">Nivel de acceso</span>
+                  <select value={form.client_access_level} onChange={(e) => setForm((c) => ({...c, client_access_level:e.target.value as "administrator" | "collaborator"}))}
+                    className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm">
+                    <option value="administrator">Administrador de empresa</option>
+                    <option value="collaborator">Colaborador</option>
+                  </select>
+                </label>
+              )}
               {editing && (
                 <label className="flex items-start gap-3 rounded-2xl bg-neutral-50 p-4">
                   <input
