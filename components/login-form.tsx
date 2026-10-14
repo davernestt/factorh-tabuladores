@@ -17,8 +17,9 @@ import { useEffect, useState } from "react";
 
 export function LoginForm({
   className,
+  showBrand = true,
   ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+}: React.ComponentPropsWithoutRef<"div"> & { showBrand?: boolean }) {
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<"error" | "success">("error");
 
@@ -44,12 +45,12 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <div className="text-center">
+      {showBrand && <div className="text-center">
         <FactoRHLogo className="mx-auto h-16 w-auto" full priority />
         <div className="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
-          Plataforma de evaluaciones
+          Plataforma FactoRH
         </div>
-      </div>
+      </div>}
 
       <Card>
         <CardHeader>
