@@ -11,6 +11,11 @@ function para(value:string,bold=false,pt=21){
  (bold?"<w:b/>":"")+'<w:sz w:val="'+pt+'"/></w:rPr><w:t xml:space="preserve">'+
  esc(value)+'</w:t></w:r></w:p>';
 }
+function brandPara(){
+ return '<w:p><w:pPr><w:spacing w:after="120"/></w:pPr>'+
+   '<w:r><w:rPr><w:b/><w:sz w:val="30"/><w:color w:val="737373"/></w:rPr><w:t>Facto</w:t></w:r>'+
+   '<w:r><w:rPr><w:b/><w:sz w:val="30"/><w:color w:val="F05A14"/></w:rPr><w:t>RH</w:t></w:r></w:p>';
+}
 function crc32(buf:Buffer){
  let crc=0xffffffff;
  for(const byte of buf){
@@ -70,7 +75,8 @@ export type WordReportPayload={
 export function buildNom035WordReport(data:WordReportPayload):Buffer{
  const rows:string[]=[];
  const add=(t:string,bold=false,pt=21)=>rows.push(para(t,bold,pt));
- add("FactoRH  |  NOM-035-STPS-2018",true,21);
+ rows.push(brandPara());
+ add("NOM-035-STPS-2018",true,21);
  add(data.kind==="executive"?"INFORME EJECUTIVO":"INFORME TÉCNICO · NUMERAL 7.7",true,32);
  add("DOCUMENTO PARA REVISIÓN · NO CONSTITUYE CERTIFICADO DE CUMPLIMIENTO",true,18);
  add("Razón social: "+data.company,true);
