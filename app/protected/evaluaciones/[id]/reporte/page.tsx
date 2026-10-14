@@ -229,8 +229,10 @@ async function LeadershipReportContent({ params }: PageProps) {
         <header className="bg-[#4A4A4A] px-7 py-10 text-white md:px-10">
           <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
             <div>
-
-              <div className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-400">
+              <div className="inline-flex rounded-xl bg-white px-3 py-2">
+                <FactoRHLogo className="h-9 w-auto" priority />
+              </div>
+              <div className="mt-5 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-400">
                 Programa de Desarrollo de Líderes
               </div>
               <h1 className="mt-8 text-3xl font-black md:text-4xl">
