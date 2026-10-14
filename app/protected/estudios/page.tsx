@@ -38,10 +38,27 @@ async function Content(){
    <h1 className="mt-3 text-3xl font-black text-neutral-900">{client?"Solicitudes y seguimiento":admin?"Centro de investigaciones":"Mis estudios asignados"}</h1>
    <p className="mt-3 max-w-4xl text-sm leading-7 text-neutral-600">{client?"Solicita el servicio adecuado, da seguimiento a los hitos de tu estudio y descarga los reportes que FactoRH autorice.":admin?"Gestiona solicitudes, estudios, revisión documental y liberación final. Ningún PDF se entrega sin tu autorización.":"Consulta los estudios que te asignen y documenta únicamente tus tareas."}</p>
   </header>
+  <section className="grid gap-4 md:grid-cols-2">
+    <Link href="/protected/estudios/socioeconomicos"
+      className="group flex flex-col justify-between rounded-3xl border border-orange-200 bg-white p-6 shadow-sm transition-colors hover:border-orange-400 hover:bg-orange-50">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-wider text-orange-600">Módulo independiente</p>
+        <h2 className="mt-2 text-xl font-black text-neutral-900">Estudios Socioeconómicos</h2>
+        <p className="mt-3 text-sm leading-7 text-neutral-600">Tablero exclusivo para Express, Esencial, Integral y Ejecutivo. Control de expedientes, avances y entrega autorizada.</p>
+      </div>
+      <span className="mt-4 text-sm font-bold text-orange-700 group-hover:underline">Abrir módulo de socioeconómicos →</span>
+    </Link>
+    <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-wider text-neutral-500">Servicios complementarios</p>
+      <h2 className="mt-2 text-xl font-black text-neutral-900">Referencias e Investigaciones Laborales</h2>
+      <p className="mt-3 text-sm leading-7 text-neutral-600">Solicitudes y seguimiento de referencias e investigaciones de trayectoria. La verificación crediticia permanece deshabilitada hasta su validación jurídica.</p>
+      <a href="#servicios" className="mt-4 inline-flex text-sm font-bold text-orange-700 hover:underline">Ver catálogo y solicitudes →</a>
+    </div>
+  </section>
   <div className="grid gap-3 sm:grid-cols-3">
    {([["Estudios",cases.length],["En proceso",cases.length-completed],["Entregados",completed]] as const).map(([title,count])=><div key={title} className="rounded-2xl border border-neutral-200 bg-white p-5"><p className="text-xs font-bold uppercase text-neutral-500">{title}</p><p className="mt-2 text-3xl font-black">{count}</p></div>)}
   </div>
-  {(admin||client)&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+  {(admin||client)&&<section id="servicios" className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black">Catálogo de servicios</h2>
    <p className="mt-2 text-sm leading-6 text-neutral-600">Las solicitudes requieren confirmación del alcance. La verificación crediticia está deshabilitada hasta concluir su revisión legal.</p>
    <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{services.map(service=><article key={service.key} className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
