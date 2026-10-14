@@ -24,7 +24,7 @@ async function Content(){
   (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("organization_id",user.organizationId!).eq("is_demo",false):
     (operator?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("assigned_to",user.userId):db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo")))
    .order("created_at",{ascending:false}).limit(100),
-  (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").eq("organization_id",user.organizationId!).eq("is_demo",false):
+  (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").eq("organization_id",user.organizationId!):
     (operator?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").limit(0):db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)")))
    .order("created_at",{ascending:false}).limit(100),
   admin?db.from("organizations").select("id,name").order("name"):Promise.resolve({data:[],error:null})
