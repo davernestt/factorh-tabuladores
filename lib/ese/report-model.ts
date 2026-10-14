@@ -77,6 +77,8 @@ export function buildEseReport(input:ReportInput):Report{
  const ingresos=sum(v,[0,1,2,3].map(i=>"income."+i+".amount"));
  const egresos=sum(v,expenses.map((_,i)=>"expense."+i+".amount"));
  const personIncome=Number(v["income.0.amount"]||"0");
+ const hasIncome=[0,1,2,3].some(i=>v["income."+i+".amount"]?.trim());
+ const hasExpense=expenses.some((_,i)=>v["expense."+i+".amount"]?.trim());
  const outcome=val(a,"verdict.result");
  const state=input.approvedVisit&&input.approvedReferences&&outcome!==pending&&val(a,"verdict.rationale")!==pending?
   "VISTA PREVIA VALIDADA":"BORRADOR DE PRUEBA";
@@ -156,13 +158,13 @@ export function buildEseReport(input:ReportInput):Report{
    [0,1,2,3].map(i=>[val(v,"income."+i+".person"),money(val(v,"income."+i+".amount")),
     val(v,"income."+i+".source"),val(v,"income."+i+".support")]),[1.2,.85,1.1,2]),
   tbl(["Total de ingresos","Monto","Ingreso de la persona candidata","Monto"],
-   [[fmt(ingresos),fmt(ingresos),fmt(personIncome),fmt(personIncome)]],[1.4,.8,1.4,.8]),
+   [["Total de ingresos",hasIncome?fmt(ingresos):pending,"Ingreso de la persona candidata",v["income.0.amount"]?.trim()?fmt(personIncome):pending]],[1.4,.8,1.4,.8]),
   bar("GASTOS MENSUALES"),
   tbl(["Concepto","Monto mensual","Persona que paga","Observaciones"],
    expenses.map((name,i)=>[name,money(val(v,"expense."+i+".amount")),val(v,"expense."+i+".payer"),val(v,"expense."+i+".notes")]),
    [2.0,.7,1.1,2]),
   tbl(["Total de egresos","Monto","Balance mensual estimado","Monto"],
-   [["Total de egresos",fmt(egresos),"Balance mensual",fmt(ingresos-egresos)]],[1.6,.9,1.7,.9]),
+   [["Total de egresos",hasExpense?fmt(egresos):pending,"Balance mensual",hasIncome&&hasExpense?fmt(ingresos-egresos):pending]],[1.6,.9,1.7,.9]),
   box("OBSERVACIONES SOBRE INGRESOS Y EGRESOS\n"+val(v,"finance.notes"),72)
  ]};
  const page6:Page={heading:"PATRIMONIO Y OBLIGACIONES",blocks:[
