@@ -19,13 +19,13 @@ async function Content(){
  if(!user)redirect("/auth/login");
  if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
- const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client",operator=user.role==="ese_operator";
+ const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client";
  const [casesR,requestsR,orgsR]=await Promise.all([
   (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("organization_id",user.organizationId!).eq("is_demo",false):
-    (operator?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("assigned_to",user.userId):db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo")))
+    db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo"))
    .order("created_at",{ascending:false}).limit(100),
   (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").eq("organization_id",user.organizationId!):
-    (operator?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").limit(0):db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)")))
+    db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)"))
    .order("created_at",{ascending:false}).limit(100),
   admin?db.from("organizations").select("id,name").order("name"):Promise.resolve({data:[],error:null})
  ]);
