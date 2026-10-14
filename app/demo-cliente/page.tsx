@@ -1,4 +1,5 @@
 import Link from "next/link";
+import {Suspense} from "react";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import ClientCatalogView, {
@@ -6,8 +7,6 @@ import ClientCatalogView, {
 } from "@/app/protected/catalogo/client-catalog-view";
 import DemoAssign from "./demo-assign";
 import DemoParticipant from "./demo-participant";
-
-export const dynamic="force-dynamic";
 
 type Params={searchParams:Promise<{seccion?:string;modulo?:string}>};
 const instruments:ClientCatalogInstrument[]=[
@@ -125,7 +124,13 @@ function DemoSolution({moduleKey}:{moduleKey:string}){
  </div>;
 }
 
-export default async function DemoClientePage({searchParams}:Params){
+export default function DemoClientePage({searchParams}:Params){
+  return <Suspense fallback={<main className="min-h-screen bg-neutral-100 p-8 text-sm text-neutral-500">Cargando vista demo de cliente...</main>}>
+    <DemoClienteContent searchParams={searchParams}/>
+  </Suspense>;
+}
+
+async function DemoClienteContent({searchParams}:Params){
  const appUser=await getCurrentAppUser();
  if(!appUser)redirect("/auth/login");
  if(appUser.role!=="super_admin")redirect("/protected/catalogo");
