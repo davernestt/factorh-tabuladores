@@ -8,6 +8,7 @@ on:
       - 'feature/portal-*'
       - 'feature/demo-*'
       - 'feature/estudios-*'
+      - 'feature/vistas-*'
       - 'feature/catalogo-*'
       - 'feature/invitacion-*'
   workflow_dispatch:
