@@ -3,6 +3,7 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import PilotCreator from "./pilot-creator";
 
 const types:Record<string,{label:string;description:string}>={
  express:{label:"Express",description:"Verificación esencial de información del candidato."},
@@ -27,20 +28,21 @@ async function SocioeconomicosContent(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
  if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
+ if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
  const admin=user.role==="super_admin",client=user.role==="client";
  const db=createAdminClient();
  const casesQuery=db.from("ese_cases")
-   .select("id,case_name,organization_id,study_type,status,progress,created_at,assigned_to,delivery_status,client_visible")
+   .select("id,case_name,organization_id,study_type,status,progress,created_at,assigned_to,delivery_status,client_visible,is_demo")
    .order("created_at",{ascending:false}).limit(100);
  const requestsQuery=db.from("ese_service_requests")
    .select("id,organization_id,service_key,quantity,status,created_at")
    .in("service_key",Object.keys(types)).order("created_at",{ascending:false}).limit(100);
  const [casesR,requestsR,organizationsR]=await Promise.all([
-   client?casesQuery.eq("organization_id",user.organizationId!):
+   client?casesQuery.eq("organization_id",user.organizationId!).eq("is_demo",false):
      admin?casesQuery:casesQuery.eq("assigned_to",user.userId),
    client?requestsQuery.eq("organization_id",user.organizationId!):
      admin?requestsQuery:requestsQuery.limit(0),
-   admin?db.from("organizations").select("id,name").order("name"):
+   admin?db.from("organizations").select("id,name,active").order("name"):
      Promise.resolve({data:[] as Array<{id:string;name:string}>,error:null})
  ]);
  if(casesR.error||requestsR.error||organizationsR.error)
@@ -71,6 +73,7 @@ async function SocioeconomicosContent(){
      <Link href="/protected/estudios/vistas?perfil=referencias" className="rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-xs font-bold text-orange-700 hover:bg-orange-50">Vista de referencista</Link>
    </div>}
   </header>
+  {admin&&<PilotCreator organizations={(organizationsR.data||[]).filter(o=>o.active).map(o=>({id:o.id,name:o.name}))}/>}
   <div className="grid gap-3 sm:grid-cols-4">
    {([["Expedientes",cases.length],["En revisión",reviewing],["Entregados",released],["Solicitudes pendientes",requests.filter(r=>r.status==="requested").length]] as const)
     .map(([name,value])=><div key={name} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
@@ -105,7 +108,7 @@ async function SocioeconomicosContent(){
         <div>
          <p className="font-bold text-neutral-900">{c.case_name}</p>
          <p className="mt-1 text-xs text-neutral-500">
-          {types[c.study_type]?.label||c.study_type}
+          {types[c.study_type]?.label||c.study_type}{c.is_demo?" · PRUEBA INTERNA":""}
           {admin?` · ${names.get(c.organization_id)||"Empresa"}`:""}
          </p>
         </div>
@@ -116,7 +119,7 @@ async function SocioeconomicosContent(){
        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-neutral-500">Avance registrado: {c.progress}%</p>
         {admin?<Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">
-          Revisar y autorizar informe →
+          {c.is_demo?"Abrir expediente piloto →":"Revisar y autorizar informe →"}
         </Link>:client&&c.delivery_status==="released"&&c.client_visible?
           <Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">Descargar informes autorizados →</Link>:
           <span className="text-xs text-neutral-500">Entrega pendiente de autorización</span>}
