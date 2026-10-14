@@ -43,7 +43,7 @@ async function SocioeconomicosContent(){
    client?requestsQuery.eq("organization_id",user.organizationId!):
      admin?requestsQuery:requestsQuery.limit(0),
    admin?db.from("organizations").select("id,name,active").order("name"):
-     Promise.resolve({data:[] as Array<{id:string;name:string}>,error:null})
+     Promise.resolve({data:[] as Array<{id:string;name:string;active:boolean}>,error:null})
  ]);
  if(casesR.error||requestsR.error||organizationsR.error)
    return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
