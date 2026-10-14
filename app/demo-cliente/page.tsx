@@ -7,6 +7,7 @@ import ClientCatalogView, {
 } from "@/app/protected/catalogo/client-catalog-view";
 import DemoAssign from "./demo-assign";
 import DemoParticipant from "./demo-participant";
+import SolutionDetail from "@/app/protected/catalogo/solution-detail";
 
 type Params={searchParams:Promise<{seccion?:string;modulo?:string}>};
 const instruments:ClientCatalogInstrument[]=[
@@ -110,18 +111,10 @@ function DemoResults(){
 }
 
 function DemoSolution({moduleKey}:{moduleKey:string}){
- const module=modules.find(m=>m.module_key===moduleKey&&m.module_key!=="psychometrics");
- if(!module)return <p className="rounded-2xl bg-white p-6">Módulo no reconocido. <Link href={demoLink("inicio")} className="font-bold text-orange-600">Volver al catálogo</Link></p>;
- return <div className="space-y-6">
-  <Link href={demoLink("inicio")} className="text-sm font-bold text-neutral-500">← Explorar catálogo</Link>
-  <section className="rounded-3xl border border-neutral-200 bg-white p-8 shadow-sm">
-   <p className="text-xs font-black uppercase tracking-widest text-orange-600">FactoRH · Conoce nuestras soluciones</p>
-   <h1 className="mt-3 text-3xl font-black text-neutral-900">{module.name}</h1>
-   <p className="mt-4 max-w-3xl text-sm leading-7 text-neutral-600">{module.description}</p>
-   <p className="mt-6 rounded-xl bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">Esta solución está visible en el catálogo comercial, pero <strong>no está habilitada</strong> en el plan demo psicométrico. FactoRH debe autorizarla para que aparezcan sus funciones operativas.</p>
-   <Link href={demoLink("inicio")} className="mt-6 inline-flex rounded-xl border border-orange-200 px-5 py-3 text-sm font-bold text-orange-700">Volver al catálogo</Link>
-  </section>
- </div>;
+ const module=modules.find(m=>m.module_key===moduleKey);
+ if(!module)return <p className="rounded-2xl bg-white p-6">Solución no reconocida. <Link href={demoLink("inicio")} className="font-bold text-orange-600">Volver al catálogo</Link></p>;
+ return <SolutionDetail moduleKey={module.module_key} name={module.name}
+   organizationName="Empresa Demostración" mode="demo"/>;
 }
 
 export default function DemoClientePage({searchParams}:Params){

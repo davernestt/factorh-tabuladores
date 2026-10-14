@@ -1,4 +1,5 @@
 import Link from "next/link";
+import {solutionContent} from "./solution-content";
 
 export type ClientCatalogModule = {
   module_key: string; name: string; description: string | null;
@@ -11,15 +12,6 @@ export type ClientCatalogCredits = {
   credits_total: number; credits_used: number; active: boolean;
   valid_until: string | null; plan_type: string; plan_name: string;
 };
-const descriptions: Record<string,string> = {
-  psychometrics: "Pruebas para conocer aptitudes, personalidad, integridad, razonamiento y competencias. Genera reportes para apoyar decisiones de talento.",
-  pdl: "Diagnóstico de liderazgo, autopercepción, análisis de competencias y ruta individual de desarrollo.",
-  feedback360: "Retroalimentación de jefes, pares y colaboradores para fortalecer las competencias de liderazgo.",
-  climate: "C3: Clima, Cultura y Compromiso. Resultados organizacionales y planes de mejora.",
-  nom035: "Identificación de riesgos psicosociales, instrumentos de referencia, reportes y seguimiento de intervenciones.",
-  studies: "Estudios socioeconómicos e investigaciones con seguimiento documental.",
-};
-
 export default function ClientCatalogView({
   modules, instruments, credits, organizationName, availablePsychometrics,
   allowedIds, accessibleKeys, mode="live"
@@ -35,15 +27,14 @@ export default function ClientCatalogView({
 }){
   const remaining=credits?Math.max(0,credits.credits_total-credits.credits_used):0;
   const current=Boolean(credits?.active&&(!credits.valid_until||credits.valid_until>=new Date().toISOString().slice(0,10)));
-  const requestAddress="David@factorh.com.mx";
   return <div className="space-y-7">
     <header className="rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm sm:p-9">
       <p className="text-xs font-black uppercase tracking-[.18em] text-orange-600">FactoRH · Soluciones para empresas</p>
       <h1 className="mt-3 text-3xl font-black text-neutral-900">Explora nuestro catálogo de evaluaciones</h1>
       <p className="mt-4 max-w-3xl text-sm leading-7 text-neutral-600">
-        Conoce todo lo que FactoRH puede hacer por el talento de tu empresa.
-        Puedes explorar nuestras soluciones sin consumir aplicaciones.
-        La contratación y habilitación de nuevos módulos siempre requieren autorización de FactoRH.
+        Cada reto de Recursos Humanos tiene un impacto en la operación. Descubre cómo nuestras soluciones
+        pueden ayudarte a contratar con mayor evidencia, desarrollar líderes, escuchar a tus equipos y
+        organizar el seguimiento de las decisiones. Explorar el catálogo no consume aplicaciones ni activa módulos.
       </p>
       <div className="mt-5 rounded-2xl bg-neutral-50 px-5 py-4 text-sm text-neutral-700">
         <strong>{organizationName||"Tu empresa"}</strong> ·
@@ -57,32 +48,57 @@ export default function ClientCatalogView({
       {modules.map(module=>{
         const enabled=accessibleKeys.includes(module.module_key);
         const isPsych=module.module_key==="psychometrics";
-        const href=mode==="demo"?`/demo-cliente?seccion=${module.module_key==="psychometrics"?"psicometrias":"nom035"}`:module.module_key==="psychometrics"?"/protected/psicometrias":"/protected/nom035";
-        const subject=encodeURIComponent("Me interesa conocer "+module.name+" - "+(organizationName||"Mi empresa"));
-        return <article key={module.module_key} className="flex flex-col rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+        const content=solutionContent[module.module_key];
+        const href=mode==="demo"
+          ? `/demo-cliente?seccion=${isPsych?"psicometrias":"nom035"}`
+          : isPsych?"/protected/psicometrias":"/protected/nom035";
+        const detailHref=mode==="demo"
+          ? `/demo-cliente?seccion=solucion&modulo=${encodeURIComponent(module.module_key)}`
+          : `/protected/catalogo/${encodeURIComponent(module.module_key)}`;
+        return <article key={module.module_key}
+          className="flex flex-col rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <h2 className="max-w-[75%] text-xl font-black text-neutral-900">{module.name}</h2>
             <span className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700">
               {enabled?"Disponible en tu plan":"Conoce la solución"}
             </span>
           </div>
-          <p className="mt-4 flex-1 text-sm leading-7 text-neutral-600">{descriptions[module.module_key]||module.description}</p>
-          <div className="mt-6 border-t border-neutral-100 pt-5">
+          {content && <h3 className="mt-5 text-lg font-extrabold leading-snug text-orange-700">
+            {content.tagline}
+          </h3>}
+          <p className="mt-3 text-sm leading-7 text-neutral-700">
+            {content?.overview||module.description}
+          </p>
+          {content && <>
+            <div className="mt-5 rounded-2xl bg-neutral-50 px-4 py-4">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-neutral-600">¿Qué problema ayuda a resolver?</p>
+              <p className="mt-2 text-sm leading-6 text-neutral-700">{content.problem}</p>
+            </div>
+            <div className="mt-5 flex-1">
+              <p className="text-xs font-extrabold uppercase tracking-wider text-neutral-600">¿Cómo ayuda a tu empresa?</p>
+              <ul className="mt-3 space-y-2">
+                {content.benefits.map(benefit=><li key={benefit} className="flex items-start gap-2 text-sm leading-6 text-neutral-700">
+                  <span aria-hidden="true" className="mt-0.5 font-black text-orange-600">✓</span>
+                  <span>{benefit}</span>
+                </li>)}
+              </ul>
+            </div>
+          </>}
+          <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-neutral-100 pt-5">
             {enabled?
               <Link href={href} className="inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">
                 {isPsych?"Utilizar mis psicometrías":"Abrir módulo autorizado"} →
               </Link>:
-              mode==="demo"?
-              <Link href={`/demo-cliente?seccion=solucion&modulo=${encodeURIComponent(module.module_key)}`}
+              <Link href={detailHref}
                 className="inline-flex rounded-xl border border-orange-200 px-5 py-3 text-sm font-bold text-orange-700 hover:bg-orange-50">
-                Conocer solución →
-              </Link>:
-              <a href={`mailto:${requestAddress}?subject=${subject}`}
-                className="inline-flex rounded-xl border border-orange-200 px-5 py-3 text-sm font-bold text-orange-700 hover:bg-orange-50">
-                Solicitar información o demostración →
-              </a>}
+                Descubre cómo funciona →
+              </Link>}
+            {enabled && <Link href={detailHref} className="text-sm font-semibold text-orange-700 hover:underline">
+              Ver beneficios y alcance
+            </Link>}
           </div>
         </article>;
+
       })}
     </div>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 sm:p-8">
