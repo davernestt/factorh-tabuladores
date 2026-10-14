@@ -4,7 +4,6 @@ import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import RequestForm from "./request-form";
-import DeliveryManager from "./delivery-manager";
 const services=[
  {key:"express",name:"Estudio Express",desc:"Verificaciones esenciales para complementar procesos que requieren agilidad."},
  {key:"esencial",name:"Estudio Esencial",desc:"Revisión estructurada de datos, trayectoria y documentación según el alcance autorizado."},
@@ -19,13 +18,13 @@ async function Content(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
  if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
- const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client";
+ const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client",operator=user.role==="ese_operator";
  const [casesR,requestsR,orgsR]=await Promise.all([
   (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible").eq("organization_id",user.organizationId!):
-    db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible"))
+    (operator?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible").eq("assigned_to",user.userId):db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible")))
    .order("created_at",{ascending:false}).limit(100),
   (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at").eq("organization_id",user.organizationId!):
-    db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at"))
+    (operator?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at").limit(0):db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at")))
    .order("created_at",{ascending:false}).limit(100),
   admin?db.from("organizations").select("id,name").order("name"):Promise.resolve({data:[],error:null})
  ]);
