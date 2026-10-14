@@ -54,7 +54,7 @@ function content(block:Block):string{
  if(block.kind==="table")return table(block.headers,block.rows,block.widths);
  if(block.kind==="box")return '<w:tbl><w:tblPr><w:tblW w:w="10310" w:type="dxa"/></w:tblPr>'+
   '<w:tblGrid><w:gridCol w:w="10310"/></w:tblGrid>'+
-  '<w:tr><w:tc><w:tcPr><w:tcW w:w="10310" w:type="dxa"/>'+
+  '<w:tr><w:trPr><w:trHeight w:val="'+Math.round(Math.max(block.height||55,30)*20)+'" w:hRule="atLeast"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="10310" w:type="dxa"/>'+
   '<w:tcBorders><w:top w:val="single" w:sz="5" w:color="CFCFCF"/>'+
   '<w:bottom w:val="single" w:sz="5" w:color="CFCFCF"/>'+
   '<w:left w:val="single" w:sz="5" w:color="CFCFCF"/>'+
