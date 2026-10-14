@@ -1,35 +1,19 @@
 import {NextRequest,NextResponse} from "next/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {sanitizeEsePayload,eseTaskSubmittable} from "@/lib/ese/master-schema";
 type Params={params:Promise<{taskId:string}>};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const statuses=["pendiente","en_proceso","en_revision","correcciones","aprobado"];
 type Action="save"|"submit"|"request_changes"|"approve";
-const allowedKeys:Record<string,Record<string,(v:unknown)=>boolean>>={
- visita:{
-  housing:v=>typeof v==="string"&&["","propia","rentada","familiar","otra"].includes(v),
-  visit_result:v=>typeof v==="string"&&["","pendiente","realizada","no_realizada"].includes(v),
-  observations:v=>typeof v==="string"&&v.length<=1600
- },
- referencias:{
-  company:v=>typeof v==="string"&&v.length<=160,
-  source_role:v=>typeof v==="string"&&v.length<=120,
-  outcome:v=>typeof v==="string"&&["","corroborada","sin_contacto","aclaracion"].includes(v),
-  observations:v=>typeof v==="string"&&v.length<=1600
- }
-};
-function cleanPayload(value:unknown,type:string){
- if(!value||typeof value!=="object"||Array.isArray(value))return null;
- const data=value as Record<string,unknown>,validation=allowedKeys[type],keys=Object.keys(data);
- if(!validation||keys.length>4||keys.some(key=>!validation[key]||!validation[key](data[key])))return null;
- return Object.fromEntries(keys.map(k=>[k,String(data[k]).trim()]));
-}
 export async function PATCH(req:NextRequest,{params}:Params){
  const user=await getCurrentAppUser();
  if(!user||!["super_admin","ese_operator"].includes(user.role))
   return NextResponse.json({error:"No autorizado."},{status:403});
  if(req.headers.get("origin")!==req.nextUrl.origin)return NextResponse.json({error:"Origen no permitido."},{status:403});
  const {taskId}=await params;if(!uuid.test(taskId))return NextResponse.json({error:"Tarea inválida."},{status:400});
+ if(Number(req.headers.get("content-length")||"0")>100000)
+  return NextResponse.json({error:"La captura excede el tamaño permitido."},{status:413});
  let body:{action?:unknown;payload?:unknown;review_notes?:unknown};
  try{body=await req.json()}catch{return NextResponse.json({error:"Datos incorrectos."},{status:400})}
  const action=body.action;
@@ -50,14 +34,14 @@ export async function PATCH(req:NextRequest,{params}:Params){
  if(action==="save"||action==="submit"){
   if(task.status==="aprobado"||task.status==="en_revision")
    return NextResponse.json({error:"La tarea está bloqueada para captura."},{status:409});
-  const payload=cleanPayload(body.payload,task.task_type);
+  const payload=sanitizeEsePayload(body.payload,task.task_type);
   if(!payload)return NextResponse.json({error:"Campos no permitidos o texto demasiado largo."},{status:400});
-  if(action==="submit"){
-   if(task.task_type==="visita"&&(!payload.visit_result||!payload.observations))
-    return NextResponse.json({error:"Registra resultado de visita y observaciones."},{status:400});
-   if(task.task_type==="referencias"&&(!payload.company||!payload.outcome||!payload.observations))
-    return NextResponse.json({error:"Registra empresa, resultado y observaciones."},{status:400});
-  }
+  if(action==="submit"&&!eseTaskSubmittable(payload,task.task_type))
+    return NextResponse.json({
+     error:task.task_type==="visita"?
+      "Completa el resultado de visita y las observaciones del domicilio (apartado 6).":
+      "Captura al menos una referencia y su conclusión, conforme al formato maestro."
+    },{status:400});
   record.payload=payload;next=action==="submit"?"en_revision":"en_proceso";
   if(action==="submit")record.submitted_at=new Date().toISOString();
  }else{
