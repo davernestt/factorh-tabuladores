@@ -81,8 +81,8 @@ async function Content(){
   {(admin||client)&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black">{client?"Mis solicitudes":"Solicitudes recibidas"}</h2>
    {requests.length===0?<p className="mt-4 text-sm text-neutral-500">Todavía no hay solicitudes.</p>:<div className="mt-4 divide-y divide-neutral-100">{requests.map(req=><div key={req.id} className="flex flex-wrap justify-between gap-3 py-4 text-sm"><div><p className="font-bold">{services.find(s=>s.key===req.service_key)?.name||req.service_key} · {req.quantity} servicio(s)</p>
-   {req.ese_request_subjects&&<p className="mt-2 text-sm font-semibold text-neutral-800">{req.ese_request_subjects.full_name} · {req.ese_request_subjects.position_name}</p>}
-   {req.ese_request_subjects&&<p className="mt-1 text-xs text-neutral-500">{req.ese_request_subjects.person_relationship==="employee"?"Colaborador actual":"Candidato a ingreso"}</p>}
+   {req.ese_request_subjects?.length>0&&<p className="mt-2 text-sm font-semibold text-neutral-800">{req.ese_request_subjects[0]?.full_name} · {req.ese_request_subjects[0]?.position_name}</p>}
+   {req.ese_request_subjects?.length>0&&<p className="mt-1 text-xs text-neutral-500">{req.ese_request_subjects[0]?.person_relationship==="employee"?"Colaborador actual":"Candidato a ingreso"}</p>}
    <p className="mt-1 text-xs text-neutral-500">{new Date(req.created_at).toLocaleDateString("es-MX")}{admin?` · ${orgMap.get(req.organization_id)||"Empresa"}`:""}</p></div><span className="font-semibold text-neutral-600">{req.status==="requested"?"Por confirmar":req.status}</span></div>)}</div>}
   </section>}
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
