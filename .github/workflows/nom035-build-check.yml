@@ -49,5 +49,13 @@ jobs:
         run: |
           unzip -t /tmp/factorh_ese_master_smoke.docx
           test "$(grep -ao '/Type /Page /Parent' /tmp/factorh_ese_master_smoke.pdf | wc -l)" -ge 13
+      - name: Upload fictional ESE QA documents
+        uses: actions/upload-artifact@v4
+        with:
+          name: ese-master-qa
+          path: |
+            /tmp/factorh_ese_master_smoke.pdf
+            /tmp/factorh_ese_master_smoke.docx
+          retention-days: 2
       - name: Build app
         run: npm run build
