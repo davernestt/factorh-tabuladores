@@ -883,7 +883,7 @@ async function loadBrandLogo() {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("No fue posible cargar el logo de FactoRH."));
-    image.src = "/brand/factorh-wordmark.svg";
+    image.src = "/brand/factorh-lettering-v3.svg";
   });
 }
 

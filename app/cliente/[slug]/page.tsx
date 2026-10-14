@@ -78,7 +78,7 @@ async function ClientPortalContent({
                 </Link>
               </div>
             </div>
-            <LoginForm />
+            <LoginForm showBrand={false} />
           </>
         )}
       </div>
