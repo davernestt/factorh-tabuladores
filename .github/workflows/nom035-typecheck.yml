@@ -7,6 +7,7 @@ on:
       - 'nom035-*'
       - 'feature/portal-*'
       - 'feature/demo-*'
+      - 'feature/catalogo-*'
   workflow_dispatch:
 
 jobs:
