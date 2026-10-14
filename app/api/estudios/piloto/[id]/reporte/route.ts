@@ -5,8 +5,6 @@ import {buildEseReport,type ReportInput} from "@/lib/ese/report-model";
 import {makeEseDocx} from "@/lib/ese/export-docx";
 import {makeEsePdf} from "@/lib/ese/export-pdf";
 
-export const runtime="nodejs";
-export const dynamic="force-dynamic";
 type Params={params:Promise<{id:string}>};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
