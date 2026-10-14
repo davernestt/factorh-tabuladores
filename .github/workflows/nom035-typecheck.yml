@@ -13,6 +13,7 @@ on:
       - 'feature/invitacion-*'
       - 'feature/solicitudes-*'
       - 'feature/marca-*'
+      - 'fix/logotipo-*'
   workflow_dispatch:
 
 jobs:
