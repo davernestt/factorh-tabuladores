@@ -21,6 +21,12 @@ function paragraph(value:string|number,options:ParagraphOptions={}):string{
  ].join("");
  return `<w:p><w:pPr>${properties}</w:pPr><w:r><w:rPr>${rp}</w:rPr><w:t xml:space="preserve">${xml(value)}</w:t></w:r></w:p>`;
 }
+/** Marca tipográfica (sin iconos) compatible con Microsoft Word y LibreOffice. */
+function brandParagraph():string{
+ return '<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>'+
+  '<w:r><w:rPr><w:b/><w:sz w:val="50"/><w:color w:val="737373"/></w:rPr><w:t>Facto</w:t></w:r>'+
+  '<w:r><w:rPr><w:b/><w:sz w:val="50"/><w:color w:val="F05A14"/></w:rPr><w:t>RH</w:t></w:r></w:p>';
+}
 function table(headers:string[],rows:(string|number)[][],widths?:number[]):string{
  const n=headers.length;
  const shades=["FFF3EC","F3F5F7"];
@@ -93,7 +99,7 @@ export function createC3WordReport(report:C3Report):Buffer{
  const strengths=readout.strengths;
  const plan=readout.opportunities;
  const body:string[]=[
-  paragraph("FactoRH",{bold:true,size:50,color:"EC6D18",after:0}),
+  brandParagraph(),
   paragraph("C3 PRO  /  INTELIGENCIA ORGANIZACIONAL",{bold:true,size:19,color:"243142",after:120}),
   paragraph("REPORTE EJECUTIVO · EDICIÓN CONSULTIVA",{bold:true,size:19,color:"243142",after:120}),
   ...(report.demo?[paragraph("DEMOSTRACIÓN · CIFRAS FICTICIAS · NO ES UN REPORTE DE CLIENTES",{bold:true,size:20,color:"9A3412",after:200})]:[]),
