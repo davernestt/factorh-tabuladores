@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { buildCompanyWelcome } from "@/lib/client-invitation";
 
 type Organization = { id: string; name: string; active: boolean };
 type AppUser = {
@@ -25,8 +26,13 @@ export default function UserManager({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [invite, setInvite] = useState<{
+    url: string;
+    email: string;
+    companyName: string;
+  } | null>(null);
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [copied, setCopied] = useState<"link" | "message" | null>(null);
   const [form, setForm] = useState({
     display_name: user?.display_name ?? "",
     email: user?.email ?? "",
@@ -43,7 +49,8 @@ export default function UserManager({
       active: user.active,
     });
     setMessage(null);
-    setInviteUrl(null);
+    setInvite(null);
+    setWelcomeMessage("");
   }, [open, user, organizations]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -55,7 +62,8 @@ export default function UserManager({
 
     setSaving(true);
     setMessage(null);
-    setInviteUrl(null);
+    setInvite(null);
+    setWelcomeMessage("");
 
     try {
       const response = await fetch(
@@ -73,10 +81,25 @@ export default function UserManager({
       }
 
       if (!editing && payload.invite_url) {
-        setInviteUrl(payload.invite_url);
-        setMessage(
-          "Usuario creado. Copia el enlace de invitación y envíaselo a la persona para que establezca su contraseña.",
-        );
+        const invitation = {
+          url: String(payload.invite_url),
+          email: form.email.trim(),
+          companyName: String(payload.organization_name || organizations.find(
+            (organization) => organization.id === form.organization_id,
+          )?.name || "tu empresa"),
+        };
+        setInvite(invitation);
+        setWelcomeMessage(buildCompanyWelcome({
+          personName: form.display_name,
+          organizationName: invitation.companyName,
+          email: invitation.email,
+          inviteUrl: invitation.url,
+        }));
+        setMessage("Usuario creado. Revisa el mensaje de bienvenida y elige cómo compartir su invitación.");
+        router.refresh();
+      } else if (!editing) {
+        setMessage("Usuario creado, pero no se obtuvo el enlace. Cierra esta ventana y usa Recuperar acceso en el directorio de usuarios.");
+        router.refresh();
       } else {
         setOpen(false);
         router.refresh();
@@ -90,18 +113,29 @@ export default function UserManager({
     }
   }
 
-  async function copyInvite() {
-    if (!inviteUrl) return;
-    await navigator.clipboard.writeText(inviteUrl);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+  async function copyInvite(kind: "link" | "message") {
+    if (!invite) return;
+    try {
+      await navigator.clipboard.writeText(kind === "link" ? invite.url : welcomeMessage);
+      setCopied(kind);
+    } catch {
+      setMessage("No se pudo copiar automáticamente. Selecciona el texto y cópialo manualmente.");
+    }
   }
+
+  const shareByWhatsApp = invite
+    ? `https://wa.me/?text=${encodeURIComponent(welcomeMessage)}`
+    : "";
+  const shareByEmail = invite
+    ? `mailto:${invite.email}?subject=${encodeURIComponent("Bienvenida a FactoRH · Acceso a tu plataforma")}&body=${encodeURIComponent(welcomeMessage)}`
+    : "";
 
   function close() {
     setOpen(false);
     setMessage(null);
-    setInviteUrl(null);
-    setCopied(false);
+    setInvite(null);
+    setWelcomeMessage("");
+    setCopied(null);
     if (!editing) {
       setForm({
         display_name: "",
@@ -129,7 +163,7 @@ export default function UserManager({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="w-full max-w-2xl rounded-3xl bg-white shadow-2xl">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-neutral-200 p-6">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
@@ -231,7 +265,7 @@ export default function UserManager({
               {message && (
                 <div
                   className={
-                    inviteUrl
+                    invite
                       ? "rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
                       : "rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"
                   }
@@ -240,21 +274,55 @@ export default function UserManager({
                 </div>
               )}
 
-              {inviteUrl && (
-                <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
-                  <div className="text-xs font-bold uppercase tracking-wide text-orange-700">
-                    Enlace de invitación
+              {invite && (
+                <div className="space-y-5 rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-orange-700">
+                      Enlace personal de activación
+                    </p>
+                    <div className="mt-2 break-all rounded-xl bg-white p-3 text-xs text-neutral-600">
+                      {invite.url}
+                    </div>
+                    <button type="button" onClick={() => void copyInvite("link")}
+                      className="mt-3 rounded-xl border border-neutral-300 bg-white px-4 py-2.5 text-sm font-bold text-neutral-800 hover:bg-neutral-50">
+                      {copied === "link" ? "Enlace copiado" : "Copiar solo enlace"}
+                    </button>
                   </div>
-                  <div className="mt-2 break-all rounded-xl bg-white p-3 text-xs text-neutral-600">
-                    {inviteUrl}
+                  <div className="border-t border-orange-200 pt-4">
+                    <label htmlFor="company-welcome-text" className="block text-xs font-bold uppercase tracking-wide text-orange-700">
+                      Mensaje de bienvenida · Editable
+                    </label>
+                    <p className="mt-2 text-xs leading-6 text-neutral-600">
+                      El mensaje es general para cualquier servicio de FactoRH y contiene el
+                      enlace de activación. Puedes personalizarlo antes de compartirlo.
+                    </p>
+                    <textarea id="company-welcome-text" value={welcomeMessage}
+                      onChange={(event) => { setWelcomeMessage(event.target.value); setCopied(null); }}
+                      rows={11}
+                      className="mt-3 w-full resize-y rounded-xl border border-neutral-300 bg-white p-4 text-sm leading-6 text-neutral-800 outline-none focus:border-orange-500"/>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void copyInvite()}
-                    className="mt-3 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-bold text-white"
-                  >
-                    {copied ? "Copiado" : "Copiar invitación"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => void copyInvite("message")}
+                      disabled={!welcomeMessage.trim()}
+                      className="rounded-xl bg-neutral-900 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+                      {copied === "message" ? "Mensaje copiado" : "Copiar mensaje completo"}
+                    </button>
+                    <a href={shareByWhatsApp} target="_blank" rel="noopener noreferrer"
+                      aria-label="Preparar bienvenida por WhatsApp"
+                      className="rounded-xl bg-green-700 px-4 py-3 text-sm font-bold text-white hover:bg-green-800">
+                      Enviar por WhatsApp
+                    </a>
+                    <a href={shareByEmail} aria-label="Preparar correo de bienvenida"
+                      className="rounded-xl border border-orange-300 bg-white px-4 py-3 text-sm font-bold text-orange-700 hover:bg-orange-100">
+                      Preparar correo
+                    </a>
+                  </div>
+                  <p className="text-xs leading-6 text-neutral-600">
+                    WhatsApp abre el mensaje listo para elegir un contacto; el correo se
+                    abre en tu aplicación de correo. <strong>No se envía nada automáticamente.</strong>
+                    Revisa al destinatario antes de enviarlo. Comparte el enlace solo por un
+                    canal privado: permite establecer la contraseña de la cuenta.
+                  </p>
                 </div>
               )}
 
@@ -265,9 +333,9 @@ export default function UserManager({
                   disabled={saving}
                   className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-bold text-neutral-700 hover:bg-neutral-50"
                 >
-                  {inviteUrl ? "Cerrar" : "Cancelar"}
+                  {invite ? "Cerrar" : "Cancelar"}
                 </button>
-                {!inviteUrl && (
+                {!invite && (
                   <button
                     type="submit"
                     disabled={saving}
