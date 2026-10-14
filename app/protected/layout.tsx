@@ -70,6 +70,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   const adminItems = [
     { href: "/protected/evaluaciones", name: "Evaluaciones" },
+    { href: "/protected/estudios", name: "Estudios e Investigaciones" },
     { href: "/protected/candidatos", name: "Candidatos" },
     { href: "/protected/empresas", name: "Empresas" },
     { href: "/protected/usuarios", name: "Usuarios" },
@@ -77,6 +78,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   const clientItems = [
     { href: "/protected/catalogo", name: "Explorar catálogo" },
+    { href: "/protected/estudios", name: "Estudios e Investigaciones" },
     { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
     ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),

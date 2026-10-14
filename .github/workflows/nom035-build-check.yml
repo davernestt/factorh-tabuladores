@@ -6,6 +6,7 @@ on:
       - 'nom035-*'
       - 'feature/portal-*'
       - 'feature/demo-*'
+      - 'feature/estudios-*'
       - 'feature/catalogo-*'
       - 'feature/invitacion-*'
   workflow_dispatch:
