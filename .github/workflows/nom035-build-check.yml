@@ -11,6 +11,7 @@ on:
       - 'feature/catalogo-*'
       - 'feature/invitacion-*'
       - 'feature/solicitudes-*'
+      - 'feature/ese-*'
       - 'feature/marca-*'
       - 'fix/logotipo-*'
   workflow_dispatch:
