@@ -38,6 +38,16 @@ async function Content(){
    <h1 className="mt-3 text-3xl font-black text-neutral-900">{client?"Solicitudes y seguimiento":admin?"Centro de investigaciones":"Mis estudios asignados"}</h1>
    <p className="mt-3 max-w-4xl text-sm leading-7 text-neutral-600">{client?"Solicita el servicio adecuado, da seguimiento a los hitos de tu estudio y descarga los reportes que FactoRH autorice.":admin?"Gestiona solicitudes, estudios, revisión documental y liberación final. Ningún PDF se entrega sin tu autorización.":"Consulta los estudios que te asignen y documenta únicamente tus tareas."}</p>
   </header>
+  {admin&&<section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm">
+    <p className="text-xs font-black uppercase tracking-widest text-orange-600">Exclusivo de superadministración</p>
+    <h2 className="mt-2 text-xl font-black text-neutral-900">Vista por perfil · Recorrido de demostración</h2>
+    <p className="mt-3 text-sm leading-7 text-neutral-600">Visualiza la experiencia de cliente, aplicador y referencista sin entrar a cuentas de terceros. Las acciones son simuladas, usan datos ficticios y no modifican estudios reales.</p>
+    <div className="mt-5 flex flex-wrap gap-3">
+      <Link href="/protected/estudios/vistas?perfil=cliente" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Ver como cliente →</Link>
+      <Link href="/protected/estudios/vistas?perfil=aplicador" className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-bold text-neutral-700 hover:bg-neutral-50">Ver como aplicador →</Link>
+      <Link href="/protected/estudios/vistas?perfil=referencias" className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-bold text-neutral-700 hover:bg-neutral-50">Ver como referencista →</Link>
+    </div>
+  </section>}
   <section className="grid gap-4 md:grid-cols-2">
     <Link href="/protected/estudios/socioeconomicos"
       className="group flex flex-col justify-between rounded-3xl border border-orange-200 bg-white p-6 shadow-sm transition-colors hover:border-orange-400 hover:bg-orange-50">
