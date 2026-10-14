@@ -26,9 +26,14 @@ async function EvaluationModulesPageContent() {
   const { data, error } = await auth.auth.getClaims();
   if (error || !data?.claims) redirect('/auth/login');
   return <div className="space-y-8">
-    <div><div className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">FactoRH · Administración</div>
-      <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-800">Centro de evaluaciones</h1>
-      <p className="mt-3 max-w-3xl text-neutral-600">Cada herramienta funciona de manera independiente. Cuando sea pertinente, sus resultados se podrán integrar en un expediente o reporte global.</p>
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div><div className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">FactoRH · Administración</div>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-800">Centro de evaluaciones</h1>
+        <p className="mt-3 max-w-3xl text-neutral-600">Cada herramienta funciona de manera independiente. Cuando sea pertinente, sus resultados se podrán integrar en un expediente o reporte global.</p>
+      </div>
+      <Link href="/demo-cliente" className="inline-flex items-center rounded-xl border border-orange-200 bg-white px-5 py-3 text-sm font-bold text-orange-700 shadow-sm hover:bg-orange-50">
+        Vista Demo de Cliente ↗
+      </Link>
     </div>
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {modules.map(m => <div key={m.name} className="flex min-h-64 flex-col rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
