@@ -1,4 +1,4 @@
-import Image from "next/image";
+import FactoRHLogo from "@/components/factorh-logo";
 import type {C3Report} from "@/lib/c3/report";
 import {c3Format} from "@/lib/c3/report";
 import {c3OperationalBand,c3Readout} from "@/lib/c3/consulting";
@@ -17,7 +17,7 @@ export default function C3ReportContent({report}:{report:C3Report}){
  const sample=report.demo===true;
  return <article className="c3-print-document relative mx-auto max-w-5xl overflow-hidden rounded-3xl bg-white px-6 pb-10 pt-9 text-neutral-800 shadow-xl sm:px-12 sm:pt-12">
    <header className="c3-keep flex flex-wrap items-center justify-between gap-5 border-b-4 border-orange-500 pb-7">
-     <div><Image src="/brand/factorh-wordmark.svg" alt="FactoRH" width={220} height={55} className="h-auto w-52 object-contain object-left"/>
+     <div><FactoRHLogo className="h-12 w-auto" />
        <p className="mt-3 text-xs font-bold uppercase tracking-[.15em] text-orange-600">Inteligencia organizacional · C3 PRO</p></div>
      <div className="text-left sm:text-right">
        <p className="font-black text-neutral-800">Reporte ejecutivo</p>
