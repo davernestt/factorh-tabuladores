@@ -5,6 +5,7 @@ import {getCurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
 import DeliveryManager from "../delivery-manager";
 import PilotCollaboration from "./pilot-collaboration";
+import PilotMasterReview from "./pilot-master-review";
 type Params={params:Promise<{id:string}>};
 export default function StudyPage({params}:Params){return <Suspense fallback={<p className="rounded-xl bg-white p-6">Cargando expediente...</p>}><StudyContent params={params}/></Suspense>}
 async function StudyContent({params}:Params){
@@ -17,6 +18,10 @@ async function StudyContent({params}:Params){
  const {data:docs,error:docsError}=await db.from("ese_delivery_files").select("id,kind,title,client_deliverable,created_at").eq("case_id",id).order("created_at");
  if(docsError)return <p className="rounded-xl bg-red-50 p-5 text-red-700">Error al consultar los documentos.</p>;
  const files=u.role==="super_admin"?docs||[]:(docs||[]).filter(f=>f.client_deliverable&&c.delivery_status==="released");
+ const {data:masterR,error:masterError}=u.role==="super_admin"&&c.is_demo?
+   await db.from("ese_case_sections").select("data").eq("case_id",id).eq("section_key","master_review").maybeSingle():
+   {data:null,error:null};
+ if(masterError)return <p className="rounded-xl bg-red-50 p-5 text-red-700">No se pudo leer el borrador de revisión.</p>;
  const [tasksR,workersR]=u.role==="super_admin"&&c.is_demo?await Promise.all([
   db.from("ese_work_tasks").select("id,task_type,status,assignee_id,review_notes,updated_at").eq("case_id",id).order("created_at"),
   db.from("app_users").select("user_id,display_name,email,role,active").in("role",["super_admin","ese_operator"]).eq("active",true)
@@ -30,7 +35,12 @@ async function StudyContent({params}:Params){
  <p className="mt-2 text-sm text-neutral-600">Tipo: {c.study_type} · Avance: {c.progress}% · Estado: {c.status}</p>
  </header>
  {u.role==="super_admin"?(c.is_demo?
- <PilotCollaboration caseId={id} tasks={tasksR.data||[]} workers={workersR.data||[]}/>:
+ <div className="space-y-6">
+   <PilotCollaboration caseId={id} tasks={tasksR.data||[]} workers={workersR.data||[]}/>
+   <PilotMasterReview caseId={id}
+     initial={masterR?.data&&typeof masterR.data==="object"&&!Array.isArray(masterR.data)?
+       masterR.data as Record<string,string>:{}}/>
+  </div>:
  <DeliveryManager caseId={id} files={files} status={c.delivery_status}/>):
  <section className="rounded-3xl border border-neutral-200 bg-white p-7">
  <h2 className="text-xl font-black">Documentos autorizados por FactoRH</h2>
