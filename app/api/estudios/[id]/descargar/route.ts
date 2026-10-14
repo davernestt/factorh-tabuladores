@@ -7,10 +7,10 @@ export async function GET(req:NextRequest,{params}:Params){
  const {id}=await params,fileId=req.nextUrl.searchParams.get("archivo");
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)||!fileId||!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(fileId))return NextResponse.json({error:"Identificador inválido."},{status:400});
  const db=createAdminClient();
- const {data:c}=await db.from("ese_cases").select("organization_id,delivery_status,client_visible").eq("id",id).maybeSingle();
+ const {data:c}=await db.from("ese_cases").select("organization_id,delivery_status,client_visible,is_demo").eq("id",id).maybeSingle();
  if(!c)return NextResponse.json({error:"No encontrado"},{status:404});
  const admin=user.role==="super_admin";
- if(!admin&&(user.role!=="client"||!user.organizationId||user.organizationId!==c.organization_id||c.delivery_status!=="released"||!c.client_visible))return NextResponse.json({error:"Archivo no disponible."},{status:403});
+ if(!admin&&(c.is_demo||user.role!=="client"||!user.organizationId||user.organizationId!==c.organization_id||c.delivery_status!=="released"||!c.client_visible))return NextResponse.json({error:"Archivo no disponible."},{status:403});
  const {data:file}=await db.from("ese_delivery_files").select("id,title,storage_path,client_deliverable").eq("case_id",id).eq("id",fileId).maybeSingle();
  if(!file||(!admin&&!file.client_deliverable))return NextResponse.json({error:"Archivo no disponible."},{status:404});
  const download=await db.storage.from("ese-deliveries").download(file.storage_path);

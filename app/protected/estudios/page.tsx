@@ -18,13 +18,14 @@ async function Content(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
  if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
- const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client",operator=user.role==="ese_operator";
+ if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
+ const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client";
  const [casesR,requestsR,orgsR]=await Promise.all([
-  (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible").eq("organization_id",user.organizationId!):
-    (operator?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible").eq("assigned_to",user.userId):db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible")))
+  (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("organization_id",user.organizationId!).eq("is_demo",false):
+    db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo"))
    .order("created_at",{ascending:false}).limit(100),
   (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").eq("organization_id",user.organizationId!):
-    (operator?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").limit(0):db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)")))
+    db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)"))
    .order("created_at",{ascending:false}).limit(100),
   admin?db.from("organizations").select("id,name").order("name"):Promise.resolve({data:[],error:null})
  ]);
@@ -88,7 +89,7 @@ async function Content(){
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black">{client?"Mis estudios":"Expedientes de estudios"}</h2>
    {cases.length===0?<p className="mt-4 text-sm text-neutral-500">No hay estudios registrados todavía.</p>:<div className="mt-4 space-y-3">{cases.map(c=><article key={c.id} className="rounded-2xl border border-neutral-200 p-5">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{c.case_name}</p><p className="mt-1 text-xs text-neutral-500">{c.study_type} · {admin?orgMap.get(c.organization_id)||"Empresa":""}</p></div><span className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-bold">{labels[c.status]||c.status}</span></div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-bold">{c.case_name}</p><p className="mt-1 text-xs text-neutral-500">{c.study_type} · {admin?orgMap.get(c.organization_id)||"Empresa":""}{c.is_demo?" · PRUEBA INTERNA":""}</p></div><span className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-bold">{labels[c.status]||c.status}</span></div>
     <div className="mt-3 text-sm text-neutral-600">Avance operativo: {c.progress}%</div>
     {admin?<Link href={`/protected/estudios/${c.id}`} className="mt-3 inline-flex text-sm font-bold text-orange-700 hover:underline">Revisar expediente y entrega →</Link>:
      c.delivery_status==="released"&&c.client_visible?<Link href={`/protected/estudios/${c.id}`} className="mt-3 inline-flex text-sm font-bold text-orange-700 hover:underline">Ver archivos autorizados →</Link>:
