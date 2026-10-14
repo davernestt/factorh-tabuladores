@@ -11,6 +11,7 @@ on:
       - 'feature/catalogo-*'
       - 'feature/invitacion-*'
       - 'feature/solicitudes-*'
+      - 'feature/marca-*'
   workflow_dispatch:
 
 jobs:
@@ -31,6 +32,8 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Verify typographic brand
+        run: node scripts/check-brand-wordmark.cjs
       - name: Validate synthetic NOM-035 demos
         run: npx --yes tsx scripts/nom035-demo-smoke.ts
       - name: Verify Word DOCX archive

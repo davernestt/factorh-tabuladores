@@ -6,8 +6,8 @@ export default function Home() {
       <div className="mx-auto max-w-5xl">
         <header className="flex items-center justify-between">
           <div>
-            <div className="text-3xl font-black tracking-tight text-neutral-900">
-              Factor<span className="text-orange-500">RH</span>
+            <div className="text-3xl font-black tracking-tight">
+              <span className="text-neutral-500">Facto</span><span className="text-orange-600">RH</span>
             </div>
             <div className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500">
               Evaluaciones
