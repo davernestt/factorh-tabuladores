@@ -889,8 +889,8 @@ async function loadBrandLogo() {
 
 function imageToPngBase64(image: HTMLImageElement) {
   const canvas = document.createElement("canvas");
-  canvas.width = 820;
-  canvas.height = 180;
+  canvas.width = image.naturalWidth || 475;
+  canvas.height = image.naturalHeight || 130;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas no disponible.");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -905,7 +905,7 @@ function drawBrandLogoCard(
   y: number,
   width: number,
 ) {
-  const height = Math.round(width * (180 / 820));
+  const height = Math.round(width * (image.naturalHeight / image.naturalWidth));
   roundRect(ctx, x, y, width + 22, height + 16, 12, "#ffffff");
   ctx.drawImage(image, x + 11, y + 8, width, height);
 }
