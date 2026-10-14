@@ -23,8 +23,8 @@ async function Content(){
   (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible").eq("organization_id",user.organizationId!):
     (operator?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible").eq("assigned_to",user.userId):db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible")))
    .order("created_at",{ascending:false}).limit(100),
-  (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at").eq("organization_id",user.organizationId!):
-    (operator?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at").limit(0):db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at")))
+  (client?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").eq("organization_id",user.organizationId!):
+    (operator?db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)").limit(0):db.from("ese_service_requests").select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name,person_relationship)")))
    .order("created_at",{ascending:false}).limit(100),
   admin?db.from("organizations").select("id,name").order("name"):Promise.resolve({data:[],error:null})
  ]);
@@ -73,13 +73,17 @@ async function Content(){
    <p className="mt-2 text-sm leading-6 text-neutral-600">Las solicitudes requieren confirmación del alcance. La verificación crediticia está deshabilitada hasta concluir su revisión legal.</p>
    <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{services.map(service=><article key={service.key} className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
     <h3 className="font-black">{service.name}</h3><p className="mt-2 flex-1 text-sm leading-6 text-neutral-600">{service.desc}</p>
-    {client&&<RequestForm serviceKey={service.key} serviceName={service.name}/>}
+    {(client||admin)&&<RequestForm serviceKey={service.key} serviceName={service.name}
+      isAdmin={admin} organizations={orgsR.data||[]} liveEnabled={process.env.FACTORH_ESE_PERSONAL_REQUESTS_ENABLED==="true"}/>} 
    </article>)}</div>
    <div className="mt-4 rounded-xl border border-neutral-200 p-4 text-sm text-neutral-500">Consulta de Buró de Crédito — no disponible. Su activación dependerá de revisión jurídica, contratos y autorizaciones específicas.</div>
   </section>}
   {(admin||client)&&<section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black">{client?"Mis solicitudes":"Solicitudes recibidas"}</h2>
-   {requests.length===0?<p className="mt-4 text-sm text-neutral-500">Todavía no hay solicitudes.</p>:<div className="mt-4 divide-y divide-neutral-100">{requests.map(req=><div key={req.id} className="flex flex-wrap justify-between gap-3 py-4 text-sm"><div><p className="font-bold">{services.find(s=>s.key===req.service_key)?.name||req.service_key} · {req.quantity} servicio(s)</p><p className="mt-1 text-xs text-neutral-500">{new Date(req.created_at).toLocaleDateString("es-MX")}{admin?` · ${orgMap.get(req.organization_id)||"Empresa"}`:""}</p></div><span className="font-semibold text-neutral-600">{req.status==="requested"?"Por confirmar":req.status}</span></div>)}</div>}
+   {requests.length===0?<p className="mt-4 text-sm text-neutral-500">Todavía no hay solicitudes.</p>:<div className="mt-4 divide-y divide-neutral-100">{requests.map(req=><div key={req.id} className="flex flex-wrap justify-between gap-3 py-4 text-sm"><div><p className="font-bold">{services.find(s=>s.key===req.service_key)?.name||req.service_key} · {req.quantity} servicio(s)</p>
+   {req.ese_request_subjects&&<p className="mt-2 text-sm font-semibold text-neutral-800">{req.ese_request_subjects.full_name} · {req.ese_request_subjects.position_name}</p>}
+   {req.ese_request_subjects&&<p className="mt-1 text-xs text-neutral-500">{req.ese_request_subjects.person_relationship==="employee"?"Colaborador actual":"Candidato a ingreso"}</p>}
+   <p className="mt-1 text-xs text-neutral-500">{new Date(req.created_at).toLocaleDateString("es-MX")}{admin?` · ${orgMap.get(req.organization_id)||"Empresa"}`:""}</p></div><span className="font-semibold text-neutral-600">{req.status==="requested"?"Por confirmar":req.status}</span></div>)}</div>}
   </section>}
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black">{client?"Mis estudios":"Expedientes de estudios"}</h2>
