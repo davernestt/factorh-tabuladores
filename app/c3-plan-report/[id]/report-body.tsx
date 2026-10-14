@@ -1,4 +1,4 @@
-import Image from "next/image";
+import FactoRHLogo from "@/components/factorh-logo";
 import Link from "next/link";
 import PrintToolbar from "./print-toolbar";
 
@@ -63,7 +63,7 @@ export default function C3PlanReportBody({report}:{report:C3ActionReportData}){
   </div>
   <article className="c3r-paper mx-auto max-w-5xl rounded-3xl bg-white px-6 pb-12 pt-9 text-neutral-800 shadow-xl sm:px-12">
    <header className="c3r-keep flex flex-wrap items-center justify-between gap-5 border-b-4 border-orange-500 pb-7">
-    <div><Image src="/brand/factorh-wordmark.svg" alt="FactoRH" width={220} height={55} className="h-auto w-48 object-contain object-left"/>
+    <div><FactoRHLogo className="h-12 w-auto" />
      <p className="mt-3 text-xs font-bold uppercase tracking-[.15em] text-orange-600">Consultoría organizacional</p></div>
     <div className="text-left sm:text-right"><p className="font-black">Informe ejecutivo</p>
      <p className="mt-1 text-xs text-neutral-500">Corte: {todayLong}</p>
