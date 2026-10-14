@@ -11,6 +11,7 @@ on:
       - 'feature/vistas-*'
       - 'feature/catalogo-*'
       - 'feature/invitacion-*'
+      - 'feature/solicitudes-*'
   workflow_dispatch:
 
 jobs:

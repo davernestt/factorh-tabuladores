@@ -1,6 +1,7 @@
 "use client";
 import {useState} from "react";
 import {CheckCircle2, ClipboardList, Download, FilePlus2, FileText, Clock3} from "lucide-react";
+import RequestForm from "../request-form";
 
 type Tab="resumen"|"solicitar"|"seguimiento";
 const services=[
@@ -8,8 +9,8 @@ const services=[
  {key:"esencial",name:"Estudio Esencial",description:"Información estructurada y validación documental."},
  {key:"integral",name:"Estudio Integral",description:"Visita domiciliaria, referencias y evidencias autorizadas."},
  {key:"ejecutivo",name:"Estudio Ejecutivo",description:"Análisis y verificaciones adicionales según la necesidad."},
- {key:"referencias",name:"Referencias laborales",description:"Confirmación de trayectoria laboral y fuentes."},
- {key:"investigacion",name:"Investigación laboral",description:"Investigación ampliada de antecedentes profesionales."},
+ {key:"referencias_laborales",name:"Referencias laborales",description:"Confirmación de trayectoria laboral y fuentes."},
+ {key:"investigacion_laboral",name:"Investigación laboral",description:"Investigación ampliada de antecedentes profesionales."},
 ];
 const original=[
  {folio:"ESE-DEMO-001",name:"María Ejemplo",type:"Estudio Integral",status:"Referencias en proceso",progress:65,delivered:false},
@@ -18,19 +19,11 @@ const original=[
 export default function ClientPanel(){
  const [tab,setTab]=useState<Tab>("resumen");
  const [service,setService]=useState("integral");
- const [quantity,setQuantity]=useState(1);
  const [requests,setRequests]=useState<string[]>([]);
  const [notice,setNotice]=useState("");
  const [selected,setSelected]=useState("ESE-DEMO-001");
  const data=original.find(c=>c.folio===selected)||original[0];
- function request(){
-   const item=services.find(s=>s.key===service);
-   if(!item)return;
-   setRequests(prev=>[item.name+" · "+quantity+" servicio(s)",...prev]);
-   setNotice("Solicitud simulada. En la plataforma real se enviaría a FactoRH para confirmar el alcance.");
-   setTab("seguimiento");
- }
- return <div className="space-y-6">
+return <div className="space-y-6">
   <header className="rounded-3xl border border-neutral-200 bg-white p-7">
     <p className="text-xs font-black uppercase tracking-widest text-orange-600">FactoRH · Portal de empresa</p>
     <h1 className="mt-2 text-3xl font-black text-neutral-900">Estudios e Investigaciones</h1>
@@ -63,12 +56,18 @@ export default function ClientPanel(){
     <input type="radio" name="study-type" checked={service===s.key} onChange={()=>setService(s.key)} className="mt-1 accent-orange-600"/>
     <span><strong className="block text-sm text-neutral-900">{s.name}</strong><span className="mt-2 block text-xs leading-6 text-neutral-600">{s.description}</span></span>
    </label>)}</div>
-   <label className="mt-5 block text-sm font-semibold text-neutral-700">Cantidad de estudios
-     <input type="number" min={1} max={20} value={quantity} onChange={e=>setQuantity(Math.max(1,Math.min(20,Number(e.target.value)||1)))}
-      className="mt-2 block w-32 rounded-xl border border-neutral-300 px-4 py-3"/>
-   </label>
-   <p className="mt-4 text-xs leading-6 text-neutral-500">Verificación crediticia no habilitada, sujeta a revisión legal. Los datos personales se solicitarán posteriormente a través de un flujo protegido y con los consentimientos aplicables.</p>
-   <button type="button" onClick={request} className="mt-5 rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white">Simular solicitud de estudio →</button>
+   <div className="mt-5 rounded-2xl border border-orange-200 bg-orange-50 p-5">
+     <h3 className="text-sm font-black text-neutral-900">Datos de la persona que será investigada</h3>
+     <p className="mt-2 text-xs leading-6 text-neutral-700">Cada solicitud es para una persona. Abre el formulario para probar nombre completo, teléfono, CURP, domicilio, puesto y relación laboral. Utiliza datos inventados: esta vista no los almacena.</p>
+     <RequestForm key={service} serviceKey={service}
+       serviceName={services.find(s=>s.key===service)?.name||"Estudio"}
+       demoMode onDemoSubmitted={info=>{
+         setRequests(current=>[`${info.person} · ${info.service} · ${info.relationship==="employee"?"Colaborador actual":"Candidato"}`,...current]);
+         setNotice("Solicitud de demostración registrada solamente en esta pantalla. No se enviaron datos personales.");
+         setTab("seguimiento");
+       }}/>
+   </div>
+   <p className="mt-4 text-xs leading-6 text-neutral-500">Verificación crediticia no habilitada, sujeta a revisión legal y autorización específica.</p>
   </section>}
   {tab==="seguimiento"&&<>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6">
