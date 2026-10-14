@@ -52,6 +52,18 @@ export default function PilotMasterReview({caseId,initial}:{caseId:string;initia
     placeholder="Evidencia revisada, aclaraciones y justificación objetiva; no utilizar atributos protegidos."/>
   </label>
   {message&&<p role="status" className="rounded-xl bg-neutral-50 p-4 text-sm text-neutral-700">{message}</p>}
+  <div className="rounded-2xl border border-orange-200 bg-orange-50 p-5">
+    <p className="text-xs font-extrabold uppercase tracking-wider text-orange-700">Generador de documentos · Solo prueba interna</p>
+    <h3 className="mt-2 text-lg font-black text-neutral-900">Descargar borrador automático</h3>
+    <p className="mt-2 text-sm leading-7 text-neutral-700">Los documentos incluyen las 13 páginas del formato maestro, las capturas del aplicador y del referencista, los importes mensuales calculados y tu dictamen guardado. La información faltante permanece marcada como pendiente. Antes de exportar, guarda el resumen y las observaciones que hayas modificado.</p>
+    <div className="mt-4 flex flex-wrap gap-2">
+      <a href={`/api/estudios/piloto/${caseId}/reporte?formato=pdf`}
+        className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Descargar PDF</a>
+      <a href={`/api/estudios/piloto/${caseId}/reporte?formato=docx`}
+        className="rounded-xl border border-orange-300 bg-white px-5 py-3 text-sm font-bold text-orange-800 hover:bg-orange-50">Descargar Word editable</a>
+    </div>
+    <p className="mt-4 text-xs leading-6 text-orange-900">Esta descarga no entrega ni publica archivos a clientes. Los casos piloto son ficticios y las fotografías, croquis y coordenadas reales aún no están conectados.</p>
+  </div>
   <div className="flex flex-wrap items-center justify-between gap-3">
    <p className="text-xs text-neutral-500">Fase de prueba: el guardado no genera el PDF o Word ni libera el documento al cliente.</p>
    <button type="button" onClick={save} disabled={busy} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
