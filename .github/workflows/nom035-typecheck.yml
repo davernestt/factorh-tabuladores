@@ -12,6 +12,7 @@ on:
       - 'feature/catalogo-*'
       - 'feature/invitacion-*'
       - 'feature/solicitudes-*'
+      - 'feature/marca-*'
   workflow_dispatch:
 
 jobs:
