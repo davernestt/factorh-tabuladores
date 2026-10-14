@@ -43,5 +43,11 @@ jobs:
         run: npx --yes tsx scripts/nom035-demo-smoke.ts
       - name: Verify Word DOCX archive
         run: unzip -t /tmp/factorh_nom035_report_smoke.docx
+      - name: Validate ESE Word and PDF exports
+        run: npx --yes tsx scripts/ese-report-smoke.ts
+      - name: Verify ESE Word ZIP and PDF signature
+        run: |
+          unzip -t /tmp/factorh_ese_master_smoke.docx
+          test "$(grep -ao '/Type /Page /Parent' /tmp/factorh_ese_master_smoke.pdf | wc -l)" -ge 13
       - name: Build app
         run: npm run build
