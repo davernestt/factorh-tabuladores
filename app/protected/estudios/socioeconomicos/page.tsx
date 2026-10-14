@@ -65,6 +65,11 @@ async function SocioeconomicosContent(){
      client?"Consulta tus estudios, sigue las etapas de verificación y descarga únicamente los informes autorizados por FactoRH.":
      "Consulta los expedientes asignados a tu usuario y sus avances operativos."}
    </p>
+   {admin&&<div className="mt-5 flex flex-wrap gap-2">
+     <Link href="/protected/estudios/vistas?perfil=cliente" className="rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-xs font-bold text-orange-700 hover:bg-orange-50">Vista de cliente</Link>
+     <Link href="/protected/estudios/vistas?perfil=aplicador" className="rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-xs font-bold text-orange-700 hover:bg-orange-50">Vista de aplicador</Link>
+     <Link href="/protected/estudios/vistas?perfil=referencias" className="rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-xs font-bold text-orange-700 hover:bg-orange-50">Vista de referencista</Link>
+   </div>}
   </header>
   <div className="grid gap-3 sm:grid-cols-4">
    {([["Expedientes",cases.length],["En revisión",reviewing],["Entregados",released],["Solicitudes pendientes",requests.filter(r=>r.status==="requested").length]] as const)
