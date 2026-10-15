@@ -7,6 +7,7 @@ import {isClimaUuid} from "@/lib/clima/invitations";
 import {changeClimaStatus} from "../actions";
 import ClimaInviteManager from "./invite-manager";
 
+type DepartmentSummary={released:boolean;reason?:string;groups?:Array<{name:string;completed:number;score:number|null}>};
 type Summary={
  suppressed:boolean;ready:boolean;invitations:number;completed:number;population:number;
  score?:number|null;enps?:number|null;
@@ -24,14 +25,15 @@ async function Content({params}:Props){
  const {id}=await params;
  if(!isClimaUuid(id))notFound();
  const db=createAdminClient();
- const [campaignR,questionsR,summaryR]=await Promise.all([
+ const [campaignR,questionsR,summaryR,departmentsR]=await Promise.all([
   db.from("clima_campaigns").select("id,organization_id,title,variant,module_code,status,bank_version,planned_population")
    .eq("id",id).maybeSingle(),
   db.from("clima_questions").select("position,source_code,dimension_name,subdimension,prompt,response_type").eq("campaign_id",id).order("position"),
-  db.rpc("clima_aggregate",{p_campaign_id:id})
+  db.rpc("clima_aggregate",{p_campaign_id:id}),
+  db.rpc("clima_safe_department_summary",{p_campaign_id:id})
  ]);
  if(campaignR.error||!campaignR.data)notFound();
- if(questionsR.error||summaryR.error)return <p className="rounded-xl bg-red-50 p-6 text-red-700">No se pudo cargar la campaña: {questionsR.error?.message||summaryR.error?.message}</p>;
+ if(questionsR.error||summaryR.error||departmentsR.error)return <p className="rounded-xl bg-red-50 p-6 text-red-700">No se pudo cargar la campaña: {questionsR.error?.message||summaryR.error?.message}</p>;
  const c=campaignR.data;
  const [orgR,instrumentR]=await Promise.all([
   db.from("organizations").select("name").eq("id",c.organization_id).maybeSingle(),
@@ -39,6 +41,7 @@ async function Content({params}:Props){
  ]);
  const label=c.variant==="esencial"?"C3 Esencial":instrumentR.data?.name||"Módulo especializado";
  const summary=summaryR.data as Summary;
+ const departmentSummary=departmentsR.data as DepartmentSummary;
  const participation=c.planned_population>0?Math.round(summary.completed/c.planned_population*100):0;
  const showReport=c.status==="closed"&&!summary.suppressed&&summary.completed>=5;
  return <div className="space-y-7">
@@ -115,6 +118,18 @@ async function Content({params}:Props){
       Las preguntas abiertas no se incluyen como textos literales en este dashboard para evitar divulgar información identificable. Su análisis cualitativo requerirá una revisión específica de confidencialidad.
      </p>}
     </div>}
+   {showReport&&<section className="mt-7 rounded-2xl border border-neutral-200 p-5">
+    <h3 className="text-lg font-black text-neutral-800">Comparativo confidencial por departamento</h3>
+    <p className="mt-2 text-sm text-neutral-500">Se utilizan los departamentos corporativos. Sólo se publican grupos completos y comparables; no se muestran respuestas individuales.</p>
+    {!departmentSummary?.released?
+      <p className="mt-4 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600">{departmentSummary?.reason||"Sin suficientes datos para liberar comparativos."}</p>:
+      <div className="mt-5 grid gap-3 md:grid-cols-2">{(departmentSummary.groups||[]).map(d=>
+       <div key={d.name} className="rounded-xl border border-neutral-200 p-4">
+        <p className="font-bold text-neutral-800">{d.name}</p>
+        <p className="mt-1 text-xs text-neutral-500">{d.completed} cuestionarios agrupados</p>
+        <p className="mt-3 text-2xl font-black text-neutral-800">{fixed(d.score)} <span className="text-xs font-normal text-neutral-500">/ 100 · afirmaciones</span></p>
+       </div>)}</div>}
+   </section>}
    <p className="mt-6 text-xs leading-6 text-neutral-500">Etapa piloto: los resultados orientan conversaciones y decisiones de mejora, pero no constituyen instrumentos psicométricos validados ni equivalen al diagnóstico C3 PRO integral o a la NOM-035.</p>
   </section>
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
@@ -126,6 +141,6 @@ async function Content({params}:Props){
     </div>)}</div>
    </details>
   </section>
-  <ClimaInviteManager campaignId={id} open={c.status==="open"}/>
+  <ClimaInviteManager campaignId={id} organizationId={c.organization_id} open={c.status==="open"}/>
  </div>;
 }
