@@ -64,5 +64,7 @@ jobs:
         run: npx --yes tsx scripts/360-confidential-comments-smoke.ts
       - name: Validate 360 department privacy
         run: npx --yes tsx scripts/360-departments-smoke.ts
+      - name: Validate 360 demo and commercial visibility
+        run: npx --yes tsx scripts/360-commercial-smoke.ts
       - name: Build app
         run: npm run build
