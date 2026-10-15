@@ -13,6 +13,7 @@ on:
       - 'feature/invitacion-*'
       - 'feature/solicitudes-*'
       - 'feature/ese-*'
+      - 'feature/360-*'
       - 'feature/ese-formato-*'
       - 'feature/marca-*'
       - 'fix/logotipo-*'
