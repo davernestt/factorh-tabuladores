@@ -23,7 +23,10 @@ export async function PATCH(request:NextRequest,ctx:Context){
 }
 
 export async function POST(request:NextRequest,ctx:Context){
-  if(!await authorized360Admin())return NextResponse.json({error:'No autorizado.'},{status:403});
+  const user=await authorized360User();
+  if(!user)return NextResponse.json({error:'No autorizado.'},{status:403});
+  const origin=request.headers.get('origin');
+  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origen no autorizado.'},{status:403});
   const {randomBytes,createHash}=await import('node:crypto');
   const {id}=await ctx.params;
   let body:{rater_id?:string};try{body=await request.json()}catch{return NextResponse.json({error:'Solicitud inválida.'},{status:400})}
