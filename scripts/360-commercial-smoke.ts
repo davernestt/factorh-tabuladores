@@ -1,0 +1,12 @@
+import {strict as assert} from "node:assert";
+import {feedback360PurchaseHref,show360Purchase} from "../lib/feedback360-commercial";
+assert.equal(show360Purchase("super_admin","trial"),false);
+assert.equal(show360Purchase("super_admin",null),false);
+assert.equal(show360Purchase("client","active",true),false);
+assert.equal(show360Purchase("client","trial",true),true);
+assert.equal(show360Purchase("client",null,false),true);
+assert.equal(show360Purchase("client","active",false),true);
+const href=feedback360PurchaseHref("Compañía Álamo & Hijos");
+assert.equal(href.startsWith("mailto:David@factorh.com.mx?subject="),true);
+assert.ok(decodeURIComponent(href).includes("Compañía Álamo & Hijos"));
+console.log("360_PURCHASE_VISIBILITY_OK: administrador sin compra, prospecto con solicitud.");

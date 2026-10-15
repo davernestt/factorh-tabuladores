@@ -110,6 +110,62 @@ function DemoResults(){
  </div>;
 }
 
+function Demo360(){
+ const sample=[
+  {name:"Mariana Ejemplo",position:"Líder de Operaciones",area:"Operaciones",status:"Cerrada",progress:"8 / 8",done:true},
+  {name:"Carlos Demostración",position:"Coordinador Comercial",area:"Ventas",status:"En proceso",progress:"5 / 8",done:false},
+  {name:"Sofía Modelo",position:"Jefatura Administrativa",area:"Administración",status:"En proceso",progress:"3 / 7",done:false},
+ ];
+ return <div className="space-y-6">
+  <div className="flex flex-wrap items-end justify-between gap-4">
+   <div>
+    <p className="text-xs font-black uppercase tracking-[.18em] text-orange-600">FactoRH · Demo de RH cliente</p>
+    <h1 className="mt-2 text-3xl font-black text-neutral-800">Evaluación 360°</h1>
+    <p className="mt-2 max-w-3xl text-sm leading-7 text-neutral-600">Así conoce el cliente sus evaluaciones, evaluadores y resultados por persona y departamento.</p>
+   </div>
+   <Link href="/protected/360/demo" className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Ver reporte completo 360° →</Link>
+  </div>
+  <section className="rounded-2xl border border-orange-200 bg-orange-50 p-5">
+   <p className="text-xs font-black uppercase tracking-widest text-orange-700">Simulación comercial segura</p>
+   <p className="mt-2 text-sm leading-7 text-neutral-700">Nombres, evaluaciones y cantidades ficticias. Este recorrido no crea ciclos, no consume créditos, no envía ligas y no accede a los datos de clientes reales.</p>
+  </section>
+  <div className="grid gap-4 sm:grid-cols-3">
+   {([["Ciclos creados","3"],["Respuestas terminadas","16"],["Invitaciones pendientes","7"]] as const).map(([label,value])=>
+    <div key={label} className="rounded-2xl border border-neutral-200 bg-white p-5">
+     <div className="text-sm text-neutral-500">{label}</div><div className="mt-2 text-3xl font-black text-neutral-800">{value}</div>
+    </div>)}
+  </div>
+  <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
+   <div className="border-b border-neutral-200 p-6">
+    <h2 className="text-xl font-black text-neutral-800">Personas evaluadas · Ejemplo</h2>
+    <p className="mt-1 text-sm text-neutral-500">RH consulta un ciclo por persona, su departamento y el avance del entorno.</p>
+   </div>
+   <div className="divide-y divide-neutral-100">{sample.map(p=>
+    <div key={p.name} className="flex flex-wrap items-center justify-between gap-4 p-5">
+     <div><p className="font-bold text-neutral-800">{p.name}</p>
+      <p className="mt-1 text-xs text-neutral-500">{p.position} · {p.area}</p></div>
+     <div className="flex items-center gap-4">
+      <div className="text-xs text-neutral-500">{p.progress} · {p.status}</div>
+      {p.done?<Link href="/protected/360/demo" className="text-sm font-bold text-orange-600">Ver reporte →</Link>:
+       <span className="text-xs font-semibold text-neutral-400">Reporte al cerrar</span>}
+     </div>
+    </div>)}</div>
+  </section>
+  <section className="rounded-3xl border border-neutral-200 bg-white p-6">
+   <h2 className="text-xl font-black text-neutral-800">Cómo RH utiliza el módulo</h2>
+   <div className="mt-4 grid gap-3 md:grid-cols-3">
+    {[
+     ["01 · Preparar","RH administra departamentos y registra a la persona que será evaluada."],
+     ["02 · Invitar","Elige jefe, pares y colaboradores; cada evaluador recibe su propia liga."],
+     ["03 · Desarrollar","Al cerrar, consulta las brechas, el radar de 12 competencias y el plan de desarrollo."]
+    ].map(([name,description])=><div key={name} className="rounded-2xl bg-neutral-50 p-4">
+      <p className="font-bold text-neutral-800">{name}</p><p className="mt-2 text-sm leading-6 text-neutral-600">{description}</p>
+    </div>)}
+   </div>
+   <p className="mt-4 text-xs text-neutral-500">La solicitud de contratación aparece en las cuentas de RH de clientes que están en prueba o aún no han contratado. No aparece en tu panel administrador.</p>
+  </section>
+ </div>;
+}
 function DemoSolution({moduleKey}:{moduleKey:string}){
  const module=modules.find(m=>m.module_key===moduleKey);
  if(!module)return <p className="rounded-2xl bg-white p-6">Solución no reconocida. <Link href={demoLink("inicio")} className="font-bold text-orange-600">Volver al catálogo</Link></p>;
@@ -128,10 +184,11 @@ async function DemoClienteContent({searchParams}:Params){
  if(!appUser)redirect("/auth/login");
  if(appUser.role!=="super_admin")redirect("/protected/catalogo");
  const search=await searchParams;
- const section=["inicio","psicometrias","instrumentos","asignar","participante","resultados","solucion","nom035"].includes(search.seccion||"") ? search.seccion!:"inicio";
+ const section=["inicio","psicometrias","instrumentos","asignar","participante","resultados","solucion","nom035","360"].includes(search.seccion||"") ? search.seccion!:"inicio";
  const tabs=[
   {id:"inicio",name:"Explorar catálogo"},{id:"psicometrias",name:"Mis psicometrías"},
   {id:"asignar",name:"Asignar"},
+  {id:"360",name:"Demo 360°"},
  ];
  return <main className="min-h-screen bg-neutral-100 pb-12">
   <div className="border-b border-orange-200 bg-orange-50">
@@ -157,7 +214,7 @@ async function DemoClienteContent({searchParams}:Params){
   </header>
   <div className="mx-auto max-w-7xl px-5 py-7">
    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-5 py-3 text-xs text-neutral-600">
-    <span>Plan simulado: <strong>2 aplicaciones demo de psicometrías</strong> · 3 instrumentos habilitados</span>
+    <span>{section==="360"?<><strong>Demostración 360°</strong> · Empresa y resultados ficticios</>:<>Plan simulado: <strong>2 aplicaciones demo de psicometrías</strong> · 3 instrumentos habilitados</>}</span>
     <span>No hay cambios en Supabase, correos, contraseñas ni evaluaciones reales</span>
    </div>
    {section==="inicio"&&<ClientCatalogView mode="demo" modules={modules} instruments={instruments} credits={credits}
@@ -170,6 +227,7 @@ async function DemoClienteContent({searchParams}:Params){
    {section==="resultados"&&<DemoResults/>}
    {section==="solucion"&&<DemoSolution moduleKey={search.modulo||""}/>}
    {section==="nom035"&&<DemoSolution moduleKey="nom035"/>}
+   {section==="360"&&<Demo360/>}
   </div>
  </main>;
 }

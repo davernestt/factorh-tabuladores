@@ -1,6 +1,9 @@
 import Link from "next/link";
 import {redirect} from "next/navigation";
-import {authorized360User} from "@/lib/feedback360-access";
+import {getCurrentAppUser} from "@/lib/app-auth";
+import {has360Access} from "@/lib/feedback360-access";
+import {createAdminClient} from "@/lib/supabase/admin";
+import {feedback360PurchaseHref,show360Purchase} from "@/lib/feedback360-commercial";
 import {ALL_ITEMS_360,FEEDBACK_ROLES,type FeedbackRole} from "@/lib/feedback360";
 import {summarize360,professional360} from "@/lib/feedback360-report";
 import {Radar360,CompetencyBars,GapBars} from "../[id]/report-visuals";
@@ -22,14 +25,22 @@ const answers=roster.flatMap((person,index)=>
 );
 
 export default async function Feedback360DemoReport(){
- const user=await authorized360User();
- if(!user)redirect("/protected/catalogo");
+ const user=await getCurrentAppUser();
+ if(!user||!["super_admin","client"].includes(user.role)||(user.role==="client"&&!user.organizationId))redirect("/protected/catalogo");
+ const moduleAccess=await has360Access(user);
+ const db=createAdminClient();
+ const subscription=user.role==="client"?await db.from("organization_module_subscriptions").select("status")
+  .eq("organization_id",user.organizationId!).eq("module_key","feedback360").maybeSingle():null;
+ const purchaseVisible=show360Purchase(user.role,subscription?.data?.status,moduleAccess);
  const result=summarize360(roster,answers,true);
  const report=professional360(result.dimensions,result.facets);
  return <div className="space-y-6">
   <div className="no-print flex flex-wrap items-center justify-between gap-3">
-   <Link href="/protected/360" className="text-sm font-bold text-neutral-600">← Regresar a Evaluación 360°</Link>
-   <ReportActions fileName="FactoRH-360-REPORTE-DE-MUESTRA" elementId="reporte-360-demo"/>
+   <Link href={moduleAccess?"/protected/360":"/protected/catalogo"} className="text-sm font-bold text-neutral-600">← {moduleAccess?"Regresar a Evaluación 360°":"Volver a mi catálogo"}</Link>
+   <div className="flex flex-wrap items-center gap-3">
+    {purchaseVisible&&<a href={feedback360PurchaseHref(user.organizationName)} className="rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Solicitar contratación 360° →</a>}
+    <ReportActions fileName="FactoRH-360-REPORTE-DE-MUESTRA" elementId="reporte-360-demo"/>
+   </div>
   </div>
   <article id="reporte-360-demo" className="space-y-6">
    <header className="rounded-3xl bg-neutral-800 p-7 text-white">
