@@ -5,6 +5,7 @@ import {ALL_ITEMS_360,FEEDBACK_ROLES,type FeedbackRole} from "@/lib/feedback360"
 import {summarize360,professional360} from "@/lib/feedback360-report";
 import {Radar360,CompetencyBars,GapBars} from "../[id]/report-visuals";
 import ReportActions from "../report-actions";
+import GapInterpretation from "../gap-interpretation";
 
 const roleRows:FeedbackRole[]=["self","manager","peer","peer","peer","report","report","report"];
 const roster=roleRows.map((role,i)=>({id:"demo-rater-"+i,role,status:"completed"}));
@@ -64,6 +65,7 @@ export default async function Feedback360DemoReport(){
     <h2 className="text-xl font-black">Brechas entre autopercepción y entorno</h2>
     <div className="mt-5"><GapBars dimensions={result.dimensions}/></div>
    </section>
+   <GapInterpretation dimensions={result.dimensions} readings={report.competencyReadings}/>
    <div className="grid gap-5 md:grid-cols-2">
     <section className="rounded-3xl border border-neutral-200 bg-white p-6">
      <h2 className="text-lg font-black">Fortalezas de liderazgo</h2>
