@@ -12,6 +12,7 @@ create unique index if not exists organization_departments_org_name_ci_uq
  on public.organization_departments (organization_id, lower(btrim(name)));
 alter table public.organization_departments enable row level security;
 revoke all on public.organization_departments from anon, authenticated;
+grant all on public.organization_departments to service_role;
 
 alter table public.people add column if not exists department_id uuid;
 alter table public.feedback360_cycles add column if not exists department_id uuid;
