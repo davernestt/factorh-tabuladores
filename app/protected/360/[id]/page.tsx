@@ -9,6 +9,7 @@ import { FEEDBACK_ROLES, interpret360, type FeedbackRole } from '@/lib/feedback3
 import { band360, professional360, summarize360 } from '@/lib/feedback360-report';
 import { CompetencyBars, GapBars, Radar360 } from './report-visuals';
 import ReportActions from '../report-actions';
+import GapInterpretation from '../gap-interpretation';
 import CycleActions from './cycle-actions';
 import InviteActions from './invite-actions';
 import './print.css';
@@ -124,8 +125,10 @@ async function Feedback360DetailContent({ params }: PageProps) {
 
       {professional&&<section className="grid gap-5 xl:grid-cols-2">
         <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Mapa 360°</div><h2 className="mt-2 text-xl font-black text-neutral-800">Percepción por fuente</h2><p className="mt-1 text-sm text-neutral-500">Compara la forma en que la persona se observa con la experiencia de jefe, pares y colaboradores.</p><div className="mt-5"><Radar360 dimensions={summary.dimensions}/></div></div>
-        <div className="space-y-5"><div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Ranking</div><h2 className="mt-2 text-xl font-black text-neutral-800">Competencias según el entorno</h2><div className="mt-5"><CompetencyBars dimensions={summary.dimensions}/></div></div><div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Autopercepción</div><h2 className="mt-2 text-xl font-black text-neutral-800">Brechas Auto vs entorno</h2><p className="mt-1 text-xs text-neutral-500">Positivo = la persona se califica por encima del entorno. | ≥0.70 = conversación prioritaria.</p><div className="mt-5"><GapBars dimensions={summary.dimensions}/></div></div></div>
+        <div className="space-y-5"><div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Ranking</div><h2 className="mt-2 text-xl font-black text-neutral-800">Competencias según el entorno</h2><div className="mt-5"><CompetencyBars dimensions={summary.dimensions}/></div></div><div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Autopercepción</div><h2 className="mt-2 text-xl font-black text-neutral-800">Brechas Auto vs entorno</h2><p className="mt-1 text-xs text-neutral-500">La barra se orienta desde cero: hacia la derecha, AUTO más alto; hacia la izquierda, entorno más alto. La lectura detallada está a continuación.</p><div className="mt-5"><GapBars dimensions={summary.dimensions}/></div></div></div>
       </section>}
+
+      {professional&&<GapInterpretation dimensions={summary.dimensions} readings={professional.competencyReadings}/>}
 
       {analysis&&<section className="grid gap-5 lg:grid-cols-3">
         <Insight title="Fortalezas validadas" items={analysis.strengths.map(x=>`${x.name} · ${x.external.toFixed(2)}`)}/>
