@@ -17,9 +17,11 @@ const dimensions=[
 ];
 const cases=get360GapInsights(dimensions);
 assert.equal(cases.length,3,"prioriza solo las 3 brechas mayores");
-assert.deepEqual(cases.map(r=>r.name),["Equipo","Responsabilidad","Actitud"]);
+assert.deepEqual(cases.map(r=>r.name),["Responsabilidad","Equipo","Actitud"]);
 assert.equal(cases[0].direction,"auto_higher");
 assert.equal(cases[2].direction,"environment_higher");
+assert.equal(cases[0].gap,1.11);
+assert.equal(cases[1].gap,1.1);
 assert.equal(cases[2].gap,-0.44);
 assert.match(cases[0].suggestion,/conductas observables|conductas/i);
 assert.match(cases[2].suggestion,/fortalezas|reconociendo/i);
