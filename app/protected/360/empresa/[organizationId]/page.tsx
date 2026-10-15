@@ -76,14 +76,17 @@ async function Company360Content({params,searchParams}:PageProps){
     <p className="mt-3 text-sm text-neutral-500">Personas con evaluación cerrada: {selectedPeople.size}. Con datos comparables: {selectedScored.size}.</p>
    </section>
   </div>;
-  const dimensions=aggregateDimensions(summaries.map(x=>x.summary.dimensions));
-  const facets=aggregateFacets(summaries.map(x=>x.summary.facets));
+  const scopedSummaries=requestedDepartment?latest.filter(x=>x.cycle.department_id===requestedDepartment):summaries;
+  const dimensions=aggregateDimensions(scopedSummaries.map(x=>x.summary.dimensions));
+  const facets=aggregateFacets(scopedSummaries.map(x=>x.summary.facets));
   const professional=professional360(dimensions,facets);
-  const evaluatedPeople=new Set(cycles.map(c=>c.person_id)).size;
-  const completedRaters=raters.filter(r=>r.status==='completed').length;
-  const invited=raters.length;
+  const evaluatedPeople=new Set(scopedSummaries.map(x=>x.cycle.person_id)).size;
+  const scopeCycleIds=new Set(scopedSummaries.map(x=>x.cycle.id));
+  const scopeRaters=raters.filter(r=>scopeCycleIds.has(r.cycle_id));
+  const completedRaters=scopeRaters.filter(r=>r.status==='completed').length;
+  const invited=scopeRaters.length;
   const responseRate=invited?completedRaters/invited*100:0;
-  const personOverall=summaries.map(x=>{
+  const personOverall=scopedSummaries.map(x=>{
     const vals=x.summary.dimensions.flatMap(d=>{
       const ext=(['manager','peer','report'] as FeedbackRole[]).map(r=>d.scores[r]).filter((v):v is number=>v!=null);
       return ext.length?[ext.reduce((a,b)=>a+b,0)/ext.length]:[];
@@ -100,7 +103,7 @@ async function Company360Content({params,searchParams}:PageProps){
   return <div className="space-y-7">
     <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><Link href="/protected/360" className="text-sm font-bold text-neutral-500 hover:text-orange-600">← Volver a Evaluación 360°</Link><ReportActions fileName={fileName} elementId="company360-report"/></div>
     <article id="company360-report" className="space-y-7">
-      <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9"><div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactoRH · Inteligencia organizacional 360°</div><h1 className="mt-3 text-3xl font-black">{orgR.data.name}</h1><p className="mt-2 max-w-3xl text-neutral-300">Lectura consolidada de las evaluaciones 360° cerradas. El objetivo es identificar patrones compartidos, fortalezas culturales observables y prioridades de desarrollo colectivo.</p></header>
+      <header className="rounded-3xl bg-neutral-800 p-7 text-white md:p-9"><div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactoRH · Inteligencia organizacional 360°</div><h1 className="mt-3 text-3xl font-black">{orgR.data.name}{requestedDepartment?` · ${departmentById.get(requestedDepartment)}`:""}</h1><p className="mt-2 max-w-3xl text-neutral-300">Lectura consolidada de las evaluaciones 360° cerradas. El objetivo es identificar patrones compartidos, fortalezas culturales observables y prioridades de desarrollo colectivo.</p></header>
       <section className="no-print rounded-3xl border border-neutral-200 bg-white p-5">
        <h2 className="text-lg font-black text-neutral-800">Filtrar por departamento</h2>
        <form method="GET" className="mt-3 flex flex-wrap items-end gap-3">
@@ -136,7 +139,7 @@ async function Company360Content({params,searchParams}:PageProps){
       <section className="no-print rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
        <h2 className="text-xl font-black text-neutral-800">Resultados individuales</h2>
        <p className="mt-2 text-sm text-neutral-500">Abre el informe 360° de cada persona evaluada. Esta lista de navegación no forma parte de los reportes exportados.</p>
-       <div className="mt-4 space-y-2">{[...new Map(summaries.map(x=>[x.cycle.person_id,x])).values()].map(x=>{
+       <div className="mt-4 space-y-2">{[...new Map(scopedSummaries.map(x=>[x.cycle.person_id,x])).values()].map(x=>{
         const p=(peopleR.data??[]).find(y=>y.id===x.cycle.person_id);
         return <div key={x.cycle.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-neutral-50 p-3">
          <span className="font-semibold text-neutral-700">{p?`${p.first_name} ${p.last_name??''}`.trim():'Persona evaluada'} · {departmentById.get(x.cycle.department_id??'')??'Sin departamento'}</span>
