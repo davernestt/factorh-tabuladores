@@ -51,7 +51,7 @@ export default function ClientCatalogView({
         const content=solutionContent[module.module_key];
         const href=mode==="demo"
           ? `/demo-cliente?seccion=${isPsych?"psicometrias":"nom035"}`
-          : isPsych?"/protected/psicometrias":"/protected/nom035";
+          : isPsych?"/protected/psicometrias":module.module_key==="feedback360"?"/protected/360":"/protected/nom035";
         const detailHref=mode==="demo"
           ? `/demo-cliente?seccion=solucion&modulo=${encodeURIComponent(module.module_key)}`
           : `/protected/catalogo/${encodeURIComponent(module.module_key)}`;
