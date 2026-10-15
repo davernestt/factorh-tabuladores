@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { authorized360Admin } from '@/lib/feedback360-auth';
+import {authorized360User} from '@/lib/feedback360-access';
 import New360Form from './new-360-form';
 
 export default function New360Page() {
@@ -14,11 +14,11 @@ export default function New360Page() {
 }
 
 async function New360PageContent() {
-  if(!await authorized360Admin()) redirect('/auth/login');
+  const user=await authorized360User();if(!user)redirect('/protected/catalogo');
   const db=createAdminClient();
   const [organizations,people]=await Promise.all([
-    db.from('organizations').select('id,name').eq('active',true).order('name'),
-    db.from('people').select('id,first_name,last_name,email,job_title,organization_id').eq('active',true).order('first_name'),
+    user.role==='client'?db.from('organizations').select('id,name').eq('active',true).eq('id',user.organizationId!):db.from('organizations').select('id,name').eq('active',true).order('name'),
+    user.role==='client'?db.from('people').select('id,first_name,last_name,email,job_title,organization_id').eq('active',true).eq('organization_id',user.organizationId!).order('first_name'):db.from('people').select('id,first_name,last_name,email,job_title,organization_id').eq('active',true).order('first_name'),
   ]);
   if(organizations.error||people.error) return <p className="rounded-2xl bg-red-50 p-6 text-red-700">No fue posible cargar el catálogo. {organizations.error?.message??people.error?.message}</p>;
   return <div>

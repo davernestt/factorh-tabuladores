@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { authorized360Admin } from '@/lib/feedback360-auth';
+import {authorized360User,can360Organization} from '@/lib/feedback360-access';
 import { COMPETENCIES_360, FEEDBACK_ROLES, type DimensionScore, type FeedbackRole } from '@/lib/feedback360';
 import { professional360, summarize360, type FacetScore } from '@/lib/feedback360-report';
 import { CompetencyBars, Radar360 } from '../../[id]/report-visuals';
@@ -16,8 +16,9 @@ export default function Company360Page(props:PageProps){
 }
 
 async function Company360Content({params}:PageProps){
-  if(!await authorized360Admin())redirect('/auth/login');
+  const user=await authorized360User();if(!user)redirect('/protected/catalogo');
   const {organizationId}=await params;
+  if(!can360Organization(user,organizationId))notFound();
   const db=createAdminClient();
   const [orgR,cyclesR]=await Promise.all([
     db.from('organizations').select('id,name').eq('id',organizationId).maybeSingle(),

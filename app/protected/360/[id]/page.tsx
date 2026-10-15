@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { authorized360Admin } from '@/lib/feedback360-auth';
+import {authorized360User,can360Organization} from '@/lib/feedback360-access';
 import { FEEDBACK_ROLES, interpret360, type FeedbackRole } from '@/lib/feedback360';
 import { band360, professional360, summarize360 } from '@/lib/feedback360-report';
 import { CompetencyBars, GapBars, Radar360 } from './report-visuals';
@@ -24,14 +24,14 @@ export default function Feedback360Detail(props: PageProps) {
 }
 
 async function Feedback360DetailContent({ params }: PageProps) {
-  if(!await authorized360Admin()) redirect('/auth/login');
+  const user=await authorized360User();if(!user)redirect('/protected/catalogo');
   const {id}=await params;
   const db=createAdminClient();
   const {data:cycle,error:cycleError}=await db.from('feedback360_cycles')
     .select('id,organization_id,person_id,name,status,due_date,created_at,closed_at,instrument_version')
     .eq('id',id).maybeSingle();
   if(cycleError) return <ErrorBox message={cycleError.message}/>;
-  if(!cycle) notFound();
+  if(!cycle||!can360Organization(user,cycle.organization_id))notFound();
 
   const [personR,orgR,ratersR]=await Promise.all([
     db.from('people').select('first_name,last_name,job_title,area').eq('id',cycle.person_id).single(),
@@ -106,7 +106,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
     </section>:<>
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between"><div><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Reporte consolidado</div><h2 className="mt-2 text-2xl font-black text-neutral-800">12 competencias</h2></div><div className="text-sm font-semibold text-neutral-400">Escala conductual 1–4</div></div>
-        {summary.smallSampleGroups.length>0&&<p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-800"><strong>Muestra reducida:</strong> {summary.smallSampleGroups.map(r=>`${FEEDBACK_ROLES[r]} (n=${summary.byRole[r].completed})`).join(', ')}. Los resultados sí se muestran, pero deben interpretarse con cautela porque representan a menos de tres evaluadores.</p>}
+        {summary.smallSampleGroups.length>0&&<p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-800"><strong>Muestra reducida:</strong> {summary.smallSampleGroups.map(r=>`${FEEDBACK_ROLES[r]} (n=${summary.byRole[r].completed})`).join(', ')}. Los promedios individuales de esos grupos quedan ocultos para proteger la confidencialidad hasta contar con al menos tres respuestas válidas.</p>}
         <div className="mt-6 overflow-x-auto"><table className="min-w-full text-left text-sm"><thead className="bg-neutral-50 text-xs uppercase text-neutral-500"><tr><th className="px-4 py-3">Competencia</th><th className="px-4 py-3">AUTO</th><th className="px-4 py-3">Jefe</th><th className="px-4 py-3">Pares</th><th className="px-4 py-3">Colaboradores</th><th className="px-4 py-3">Brecha</th></tr></thead><tbody className="divide-y divide-neutral-100">{summary.dimensions.map(d=><tr key={d.key}><td className="px-4 py-4 font-bold text-neutral-800">{d.name}</td>{(['self','manager','peer','report'] as FeedbackRole[]).map(role=><td key={role} className="px-4 py-4 text-neutral-700">{d.scores[role]!==undefined?<><strong>{d.scores[role]!.toFixed(2)}</strong><div className="text-xs text-neutral-400">{band360(d.scores[role]!)}{(role==='peer'||role==='report')&&d.counts[role] ? ` · n=${d.counts[role]}` : ''}</div></>:'—'}</td>)}<td className="px-4 py-4 font-bold text-neutral-700">{d.gap===null?'—':d.gap>0?`+${d.gap.toFixed(2)}`:d.gap.toFixed(2)}</td></tr>)}</tbody></table></div>
       </section>
 

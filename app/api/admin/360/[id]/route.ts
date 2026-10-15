@@ -1,14 +1,21 @@
 import { NextRequest,NextResponse } from 'next/server';
-import { authorized360Admin } from '@/lib/feedback360-auth';
+import {authorized360User,can360Organization} from '@/lib/feedback360-access';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { build360Url } from '@/lib/feedback360-url';
 type Context={params:Promise<{id:string}>};
 export async function PATCH(request:NextRequest,ctx:Context){
-  if(!await authorized360Admin())return NextResponse.json({error:'No autorizado.'},{status:403});
+  const user=await authorized360User();
+  if(!user)return NextResponse.json({error:'No autorizado.'},{status:403});
+  const origin=request.headers.get('origin');
+  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origen no autorizado.'},{status:403});
   const {id}=await ctx.params;
   let input:{status?:string};try{input=await request.json()}catch{return NextResponse.json({error:'Petición inválida.'},{status:400})}
   if(input.status!=='closed')return NextResponse.json({error:'Estado no permitido.'},{status:400});
   const db=createAdminClient();
+  const {data:existing}=await db.from('feedback360_cycles').select('id,organization_id,status').eq('id',id).maybeSingle();
+  if(!existing||!can360Organization(user,existing.organization_id))return NextResponse.json({error:'Ciclo no encontrado.'},{status:404});
+  const {count}=await db.from('feedback360_raters').select('id',{count:'exact',head:true}).eq('cycle_id',id).eq('status','completed');
+  if(!count)return NextResponse.json({error:'Espera al menos una encuesta completada antes de cerrar el ciclo. Para la demostración puedes abrir el informe de muestra.'},{status:409});
   const {data,error}=await db.from('feedback360_cycles').update({status:'closed',closed_at:new Date().toISOString()}).eq('id',id).eq('status','open').select('id,status').maybeSingle();
   if(error)return NextResponse.json({error:error.message},{status:500});
   if(!data)return NextResponse.json({error:'Ciclo no encontrado.'},{status:404});
@@ -16,13 +23,17 @@ export async function PATCH(request:NextRequest,ctx:Context){
 }
 
 export async function POST(request:NextRequest,ctx:Context){
-  if(!await authorized360Admin())return NextResponse.json({error:'No autorizado.'},{status:403});
+  const user=await authorized360User();
+  if(!user)return NextResponse.json({error:'No autorizado.'},{status:403});
+  const origin=request.headers.get('origin');
+  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origen no autorizado.'},{status:403});
   const {randomBytes,createHash}=await import('node:crypto');
   const {id}=await ctx.params;
   let body:{rater_id?:string};try{body=await request.json()}catch{return NextResponse.json({error:'Solicitud inválida.'},{status:400})}
   if(!body.rater_id)return NextResponse.json({error:'Falta evaluador.'},{status:400});
   const db=createAdminClient();
-  const {data:cycle}=await db.from('feedback360_cycles').select('status').eq('id',id).maybeSingle();
+  const {data:cycle}=await db.from('feedback360_cycles').select('status,organization_id').eq('id',id).maybeSingle();
+  if(!cycle||!can360Organization(user,cycle.organization_id))return NextResponse.json({error:'Ciclo no encontrado.'},{status:404});
   if(cycle?.status!=='open')return NextResponse.json({error:'El ciclo no está abierto.'},{status:409});
   const token=randomBytes(32).toString('base64url');
   const token_hash=createHash('sha256').update(token).digest('hex');

@@ -1,6 +1,7 @@
 import { AuthButton } from "@/components/auth-button";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { hasNom035Subscription } from "@/lib/nom035/access";
+import { has360Access } from "@/lib/feedback360-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -34,7 +35,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   if (!appUser) redirect("/auth/login");
 
   const isClient = appUser.role === "client";
-  const nom035Enabled = isClient ? await hasNom035Subscription(appUser) : true;
+  const [nom035Enabled, feedback360Enabled] = isClient ? await Promise.all([hasNom035Subscription(appUser),has360Access(appUser)]) : [true,true];
 
   let expiryNotices: Array<{
     module_key: string;
@@ -81,6 +82,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     { href: "/protected/estudios", name: "Estudios e Investigaciones" },
     { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
+    ...(feedback360Enabled ? [{ href: "/protected/360", name: "Mi 360°" }] : []),
     ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 

@@ -12,11 +12,28 @@ const input='w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text
 let idx=1;
 const fresh=(role:FeedbackRole):Rater=>({id:idx++,role,name:'',email:''});
 export default function New360Form({organizations,people}:{organizations:Organization[];people:Person[]}){
-  const [org,setOrg]=useState('');const [person,setPerson]=useState('');const [name,setName]=useState('Evaluación 360°');
+  const [org,setOrg]=useState(organizations.length===1?organizations[0].id:'');const [person,setPerson]=useState('');const [name,setName]=useState('Evaluación 360°');
+  const [peopleList,setPeopleList]=useState(people);
+  const [showPersonForm,setShowPersonForm]=useState(false);
+  const [newPerson,setNewPerson]=useState({first_name:'',last_name:'',email:'',job_title:''});
+  const [addingPerson,setAddingPerson]=useState(false);
   const [dueDate,setDueDate]=useState('');const [raters,setRaters]=useState<Rater[]>([fresh('manager')]);
   const [saving,setSaving]=useState(false);const [error,setError]=useState('');const [invites,setInvites]=useState<Invite[]|null>(null);
   const [cycleId,setCycleId]=useState('');
-  const validPeople=people.filter(p=>p.organization_id===org);
+  const validPeople=peopleList.filter(p=>p.organization_id===org);
+  async function addPerson(){
+   setAddingPerson(true);setError('');
+   try{
+     const response=await fetch('/api/360/personas',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({...newPerson,organization_id:org})});
+     const result=await response.json();
+     if(!response.ok)throw Error(result.error||'No fue posible registrar.');
+     setPeopleList(prev=>[...prev,result.person as Person]);
+     setPerson(result.person.id);setShowPersonForm(false);
+     setNewPerson({first_name:'',last_name:'',email:'',job_title:''});
+   }catch(cause){setError(cause instanceof Error?cause.message:'No se pudo crear.');}
+   finally{setAddingPerson(false)}
+  }
   const selected=validPeople.find(p=>p.id===person);
   const personName=selected?`${selected.first_name} ${selected.last_name??''}`.trim():'';
   const update=(id:number,changes:Partial<Rater>)=>setRaters(rows=>rows.map(r=>r.id===id?{...r,...changes}:r));
@@ -38,7 +55,11 @@ export default function New360Form({organizations,people}:{organizations:Organiz
     <p className="mt-3 max-w-3xl text-sm text-neutral-600">Copia las ligas y envíalas a sus evaluadores. Por seguridad solo se muestran en este momento. Guárdalas antes de salir: la base de datos conserva únicamente la huella criptográfica del token.</p>
     <div className="mt-6 space-y-3">{invites.map((r,i)=><div key={i} className="rounded-2xl border border-neutral-200 bg-neutral-50 p-4 md:flex md:items-center md:justify-between md:gap-4">
       <div><p className="font-bold text-neutral-800">{r.name} <span className="ml-2 text-xs font-medium text-neutral-500">{FEEDBACK_ROLES[r.role]}</span></p><p className="mt-1 max-w-lg break-all text-xs text-neutral-500">{r.url}</p></div>
-      <button type="button" className="mt-3 rounded-xl border border-neutral-300 bg-white px-4 py-2 text-sm font-bold text-neutral-700 hover:border-orange-400 md:mt-0" onClick={()=>void navigator.clipboard.writeText(r.url)}>Copiar liga</button>
+      <div className="mt-3 flex flex-wrap gap-2 md:mt-0">
+       <button type="button" className="rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm font-bold text-neutral-700" onClick={()=>void navigator.clipboard.writeText(r.url)}>Copiar</button>
+       <a target="_blank" rel="noopener noreferrer" href={`https://wa.me/?text=${encodeURIComponent("Hola "+r.name+", te invitamos a participar en la Evaluación 360° de FactoRH. Ingresa en tu liga individual: "+r.url)}`} className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm font-bold text-green-800">WhatsApp</a>
+       <a href={`mailto:${encodeURIComponent(r.email||'')}?subject=${encodeURIComponent("Invitación a Evaluación 360° FactoRH")}&body=${encodeURIComponent("Hola "+r.name+",\n\nTe compartimos tu liga individual para participar en la Evaluación 360°:\n"+r.url+"\n\nGracias por tu participación.")}`} className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-bold text-orange-800">Correo</a>
+      </div>
     </div>)}</div>
     <div className="mt-7"><Link href={`/protected/360/${cycleId}`} className={btn}>Ver seguimiento y reporte →</Link></div>
   </section>;
@@ -49,7 +70,17 @@ export default function New360Form({organizations,people}:{organizations:Organiz
         <label className="text-sm font-bold text-neutral-700">Persona evaluada<select required className={`${input} mt-2`} value={person} onChange={e=>setPerson(e.target.value)}><option value="">Seleccionar persona</option>{validPeople.map(p=><option value={p.id} key={p.id}>{`${p.first_name} ${p.last_name??''}`.trim()} {p.job_title?`· ${p.job_title}`:''}</option>)}</select></label>
         <label className="text-sm font-bold text-neutral-700">Nombre del ciclo<input required maxLength={150} className={`${input} mt-2`} value={name} onChange={e=>setName(e.target.value)}/></label>
         <label className="text-sm font-bold text-neutral-700">Fecha límite (opcional)<input type="date" className={`${input} mt-2`} value={dueDate} onChange={e=>setDueDate(e.target.value)}/></label>
-      </div><p className="mt-4 text-sm text-neutral-500">Autoevaluación: {personName||'Se agregará al elegir a la persona'}. Su invitación se generará automáticamente.</p>
+      </div>
+      <div className="mt-5">
+       <button type="button" onClick={()=>setShowPersonForm(value=>!value)} className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">+ Agregar persona evaluada</button>
+       {showPersonForm&&<div className="mt-4 grid gap-3 rounded-2xl bg-neutral-50 p-4 md:grid-cols-2">
+        {([{key:'first_name',label:'Nombre(s)'},{key:'last_name',label:'Apellidos'},{key:'email',label:'Correo (opcional)'},{key:'job_title',label:'Puesto'}] as const).map(field=><label key={field.key} className="text-xs font-bold text-neutral-600">{field.label}
+          <input type={field.key==='email'?'email':'text'} value={newPerson[field.key]} onChange={event=>setNewPerson(p=>({...p,[field.key]:event.target.value}))} className={`${input} mt-1`} placeholder={field.label}/>
+        </label>)}
+        <button type="button" onClick={addPerson} disabled={addingPerson||!org||newPerson.first_name.trim().length<2} className={btn}>{addingPerson?'Guardando...':'Guardar persona y seleccionarla'}</button>
+       </div>}
+      </div>
+      <p className="mt-4 text-sm text-neutral-500">Autoevaluación: {personName||'Se agregará al elegir a la persona'}. Su invitación se generará automáticamente.</p>
     </section>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8"><h2 className="text-xl font-black text-neutral-800">2. Evaluadores externos</h2>
       <p className="mt-2 text-sm text-neutral-600">Agrega jefe, pares y colaboradores. Para reportar una categoría anónima por separado necesitamos al menos tres respuestas válidas de esa categoría.</p>

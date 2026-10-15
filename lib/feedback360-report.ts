@@ -19,7 +19,7 @@ export function summarize360(raters:ResultRater[], answers:ResultAnswer[], relea
         return values.length>=3?values.reduce((a,b)=>a+b,0)/values.length:null;
       }).filter((x):x is number=>x!==null);
       counts[role]=perRater.length;
-      if((releaseAggregates || (role!=='peer'&&role!=='report')) && perRater.length >= 1) scores[role]=perRater.reduce((a,b)=>a+b,0)/perRater.length;
+      if((role==='peer'||role==='report'?releaseAggregates&&perRater.length>=3:perRater.length>=1)) scores[role]=perRater.reduce((a,b)=>a+b,0)/perRater.length;
     }
     const external=(['manager','peer','report'] as FeedbackRole[]).map(role=>scores[role]).filter((v):v is number=>v!==undefined);
     const gap=scores.self!==undefined&&external.length?Number((scores.self-external.reduce((a,b)=>a+b,0)/external.length).toFixed(2)):null;
@@ -35,7 +35,7 @@ export function summarize360(raters:ResultRater[], answers:ResultAnswer[], relea
         .map(r=>byRater.get(r.id)?.get(key))
         .filter((v):v is number=>v!==undefined);
       counts[role]=values.length;
-      if((releaseAggregates || (role!=='peer'&&role!=='report')) && values.length >= 1){
+      if(role==='peer'||role==='report'?releaseAggregates&&values.length>=3:values.length>=1){
         scores[role]=values.reduce((a,b)=>a+b,0)/values.length;
       }
     }
