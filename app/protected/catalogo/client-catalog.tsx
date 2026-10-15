@@ -43,6 +43,8 @@ export default async function ClientCatalog(){
   const remaining=credits?Math.max(0,credits.credits_total-credits.credits_used):0;
   const current=Boolean(credits?.active&&(!credits.valid_until||credits.valid_until>=new Date().toISOString().slice(0,10)));
   const availablePsychometrics=current&&remaining>0&&allowed.size>0&&validSubscription(subs.get("psychometrics"));
+  const subscription360=subs.get("feedback360");
+  const canRequest360=!(subscription360?.status==="active"&&validSubscription(subscription360));
   const accessible=(module:Module)=>module.client_available&&(
     module.module_key==="psychometrics"?availablePsychometrics:
     module.module_key==="nom035"?validSubscription(subs.get("nom035")):
@@ -52,5 +54,6 @@ export default async function ClientCatalog(){
     modules={modules} instruments={instruments} credits={credits}
     organizationName={user.organizationName} availablePsychometrics={availablePsychometrics}
     allowedIds={[...allowed]} accessibleKeys={modules.filter(accessible).map(m=>m.module_key)}
+    canRequest360={canRequest360}
   />;
 }
