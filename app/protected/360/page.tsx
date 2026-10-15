@@ -16,7 +16,7 @@ async function Feedback360IndexContent() {
   const user=await authorized360User();if(!user)redirect('/protected/catalogo');
   const db=createAdminClient();
   const [cyclesR, peopleR, orgsR, ratersR, departmentsR] = await Promise.all([
-    (user.role==='client'?db.from('feedback360_cycles').select('id,person_id,organization_id,department_id,name,status,created_at').eq('organization_id',user.organizationId!):db.from('feedback360_cycles').select('id,person_id,organization_id,name,status,created_at')).order('created_at',{ascending:false}),
+    (user.role==='client'?db.from('feedback360_cycles').select('id,person_id,organization_id,department_id,name,status,created_at').eq('organization_id',user.organizationId!):db.from('feedback360_cycles').select('id,person_id,organization_id,department_id,name,status,created_at')).order('created_at',{ascending:false}),
     user.role==='client'?db.from('people').select('id,first_name,last_name,job_title,department_id').eq('organization_id',user.organizationId!):db.from('people').select('id,first_name,last_name,job_title'),
     user.role==='client'?db.from('organizations').select('id,name').eq('id',user.organizationId!):db.from('organizations').select('id,name'),
     user.role==='client'?db.from('feedback360_raters').select('cycle_id,role,status,feedback360_cycles!inner(organization_id)').eq('feedback360_cycles.organization_id',user.organizationId!):db.from('feedback360_raters').select('cycle_id,role,status'),
