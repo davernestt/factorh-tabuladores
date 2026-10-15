@@ -13,15 +13,19 @@ export async function POST(request:NextRequest){
  const text=(name:string,max:number)=>typeof body[name]==="string"?String(body[name]).trim().slice(0,max+1):"";
  const org=user.role==="client"?user.organizationId||"":text("organization_id",40);
  const first=text("first_name",100),last=text("last_name",100),email=text("email",254).toLowerCase(),job=text("job_title",160);
+ const departmentId=text("department_id",40);
  if(!uuid.test(org)||!can360Organization(user,org))return NextResponse.json({error:"Empresa no autorizada."},{status:403});
  if(first.length<2||first.length>100||last.length>100||job.length>160)return NextResponse.json({error:"Revisa nombre y puesto."},{status:400});
  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return NextResponse.json({error:"Correo inválido."},{status:400});
  const db=createAdminClient();
  const {data:company}=await db.from("organizations").select("id").eq("id",org).eq("active",true).maybeSingle();
  if(!company)return NextResponse.json({error:"Empresa no activa."},{status:403});
+ if(!uuid.test(departmentId))return NextResponse.json({error:"Selecciona un departamento para la persona."},{status:400});
+ const {data:department}=await db.from("organization_departments").select("id,name").eq("id",departmentId).eq("organization_id",org).eq("active",true).maybeSingle();
+ if(!department)return NextResponse.json({error:"El departamento no pertenece a esta empresa."},{status:400});
  const {data,error}=await db.from("people").insert({
-  organization_id:org,first_name:first,last_name:last||null,email:email||null,job_title:job||null,active:true
- }).select("id,organization_id,first_name,last_name,email,job_title").single();
+  organization_id:org,first_name:first,last_name:last||null,email:email||null,job_title:job||null,department_id:department.id,area:department.name,active:true
+ }).select("id,organization_id,first_name,last_name,email,job_title,department_id,area").single();
  if(error||!data)return NextResponse.json({error:"No se pudo crear a la persona."},{status:500});
  return NextResponse.json({ok:true,person:data},{status:201,headers:{"Cache-Control":"no-store"}});
 }
