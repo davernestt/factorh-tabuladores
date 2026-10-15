@@ -58,5 +58,7 @@ jobs:
             /tmp/factorh_ese_master_smoke.pdf
             /tmp/factorh_ese_master_smoke.docx
           retention-days: 2
+      - name: Validate 360 gap interpretation
+        run: npx --yes tsx scripts/360-gap-interpretation-smoke.ts
       - name: Build app
         run: npm run build
