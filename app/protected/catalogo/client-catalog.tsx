@@ -45,7 +45,8 @@ export default async function ClientCatalog(){
   const availablePsychometrics=current&&remaining>0&&allowed.size>0&&validSubscription(subs.get("psychometrics"));
   const accessible=(module:Module)=>module.client_available&&(
     module.module_key==="psychometrics"?availablePsychometrics:
-    module.module_key==="nom035"?validSubscription(subs.get("nom035")):false
+    module.module_key==="nom035"?validSubscription(subs.get("nom035")):
+    module.module_key==="feedback360"?validSubscription(subs.get("feedback360")):false
   );
   return <ClientCatalogView
     modules={modules} instruments={instruments} credits={credits}
