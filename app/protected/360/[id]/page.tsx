@@ -30,17 +30,18 @@ async function Feedback360DetailContent({ params }: PageProps) {
   const {id}=await params;
   const db=createAdminClient();
   const {data:cycle,error:cycleError}=await db.from('feedback360_cycles')
-    .select('id,organization_id,person_id,name,status,due_date,created_at,closed_at,instrument_version')
+    .select('id,organization_id,person_id,department_id,name,status,due_date,created_at,closed_at,instrument_version')
     .eq('id',id).maybeSingle();
   if(cycleError) return <ErrorBox message={cycleError.message}/>;
   if(!cycle||!can360Organization(user,cycle.organization_id))notFound();
 
-  const [personR,orgR,ratersR]=await Promise.all([
+  const [personR,orgR,ratersR,departmentsR]=await Promise.all([
     db.from('people').select('first_name,last_name,job_title,area').eq('id',cycle.person_id).single(),
     db.from('organizations').select('name').eq('id',cycle.organization_id).single(),
     db.from('feedback360_raters').select('id,role,evaluator_name,evaluator_email,status,completed_at').eq('cycle_id',id).order('created_at'),
+    db.from('organization_departments').select('id,name').eq('organization_id',cycle.organization_id),
   ]);
-  const firstError=personR.error||orgR.error||ratersR.error;
+  const firstError=personR.error||orgR.error||ratersR.error||departmentsR.error;
   if(firstError) return <ErrorBox message={firstError.message}/>;
 
   const raters=(ratersR.data??[]) as {id:string;role:FeedbackRole;evaluator_name:string;evaluator_email:string|null;status:string;completed_at:string|null}[];
@@ -58,6 +59,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
   const professional=closed?professional360(summary.dimensions,summary.facets):null;
   const person=personR.data;
   const personName=`${person.first_name} ${person.last_name??''}`.trim();
+  const departmentName=(departmentsR.data??[]).find(d=>d.id===cycle.department_id)?.name??person.area;
   const reportFileName=`Reporte-360-${personName}-${orgR.data.name}`;
 
   return <div className="space-y-7">
@@ -72,7 +74,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
         <div>
           <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactoRH · Evaluación 360° v{cycle.instrument_version}</div>
           <h1 className="mt-3 text-3xl font-black">{personName}</h1>
-          <p className="mt-2 text-neutral-300">{[person.job_title,person.area].filter(Boolean).join(' · ')||'Sin puesto registrado'}</p>
+          <p className="mt-2 text-neutral-300">{[person.job_title,departmentName].filter(Boolean).join(' · ')||'Sin puesto registrado'}</p>
           <p className="mt-1 text-sm text-neutral-400">{orgR.data.name} · {cycle.name}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
