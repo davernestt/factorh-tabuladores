@@ -89,6 +89,7 @@ export function buildEseReport(input:ReportInput):Report{
    [["Nombre de la persona candidata","meta.name"],["Empresa solicitante","meta.company"]],
    [["Puesto evaluado","meta.position"],["Tipo de estudio","meta.type"]],
   ]),
+  box("FOTOGRAFÍA DE IDENTIFICACIÓN\nPendiente: solo se insertará una imagen capturada y autorizada.",65),
   bar("RESULTADO EJECUTIVO"),
   tbl(["Recomendable","Recomendable con observaciones","No recomendable","No concluyente"],[
    ["Recomendable","Recomendable con observaciones","No recomendable","No concluyente"].map(x=>outcome===x?"X":"")
