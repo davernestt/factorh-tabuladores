@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { authorized360Admin } from '@/lib/feedback360-auth';
+import {authorized360User,can360Organization} from '@/lib/feedback360-access';
 import { FEEDBACK_ROLES, interpret360, type FeedbackRole } from '@/lib/feedback360';
 import { band360, professional360, summarize360 } from '@/lib/feedback360-report';
 import { CompetencyBars, GapBars, Radar360 } from './report-visuals';
@@ -24,14 +24,14 @@ export default function Feedback360Detail(props: PageProps) {
 }
 
 async function Feedback360DetailContent({ params }: PageProps) {
-  if(!await authorized360Admin()) redirect('/auth/login');
+  const user=await authorized360User();if(!user)redirect('/protected/catalogo');
   const {id}=await params;
   const db=createAdminClient();
   const {data:cycle,error:cycleError}=await db.from('feedback360_cycles')
     .select('id,organization_id,person_id,name,status,due_date,created_at,closed_at,instrument_version')
     .eq('id',id).maybeSingle();
   if(cycleError) return <ErrorBox message={cycleError.message}/>;
-  if(!cycle) notFound();
+  if(!cycle||!can360Organization(user,cycle.organization_id))notFound();
 
   const [personR,orgR,ratersR]=await Promise.all([
     db.from('people').select('first_name,last_name,job_title,area').eq('id',cycle.person_id).single(),
