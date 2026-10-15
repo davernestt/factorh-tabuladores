@@ -1,12 +1,16 @@
 "use client";
 import {useCallback,useEffect,useState} from "react";
 import {Download,Link2,MessageCircle,Mail,ShieldCheck} from "lucide-react";
+import Link from "next/link";
 
-type Invite={id:string;url:string|null};
+type Invite={id:string;url:string|null;departmentId:string|null};
+type Department={id:string;name:string;active:boolean};
 const csvCell=(value:string)=>'"'+(/^[=+\-@\t\r]/.test(value)?"'"+value:value).replace(/"/g,'""')+'"';
 
-export default function ClimaInviteManager({campaignId,open}:{campaignId:string;open:boolean}){
+export default function ClimaInviteManager({campaignId,organizationId,open}:{campaignId:string;organizationId:string;open:boolean}){
  const [invites,setInvites]=useState<Invite[]>([]);
+ const [departments,setDepartments]=useState<Department[]>([]);
+ const [departmentId,setDepartmentId]=useState("");
  const [count,setCount]=useState(10);
  const [loading,setLoading]=useState(true);
  const [busy,setBusy]=useState(false);
@@ -22,12 +26,20 @@ export default function ClimaInviteManager({campaignId,open}:{campaignId:string;
   finally{setLoading(false)}
  },[campaignId]);
  useEffect(()=>{void reload()},[reload]);
+ useEffect(()=>{
+  let cancelled=false;
+  void fetch("/api/360/departamentos?organization_id="+encodeURIComponent(organizationId),{cache:"no-store"})
+   .then(r=>r.ok?r.json():Promise.reject(new Error("No se pudo cargar el catálogo.")))
+   .then(data=>{if(!cancelled)setDepartments((data.departments||[]).filter((d:Department)=>d.active));})
+   .catch(()=>{if(!cancelled)setError("No se pudieron cargar departamentos. Actualiza la página.");});
+  return ()=>{cancelled=true};
+ },[organizationId]);
  async function generate(){
   setBusy(true);setError("");setNotice("");
   try{
    const res=await fetch("/api/clima-encuestas/invites",{
     method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({campaignId,count})
+    body:JSON.stringify({campaignId,count,departmentId:departmentId||null})
    });
    const body=await res.json();
    if(!res.ok)throw Error(body.error||"No se generaron las ligas");
@@ -36,7 +48,7 @@ export default function ClimaInviteManager({campaignId,open}:{campaignId:string;
   }catch(e){setError(e instanceof Error?e.message:"Error al generar ligas")}finally{setBusy(false)}
  }
  function download(){
-  const content="\uFEFF"+[["numero","liga_individual"],...invites.map((it,i)=>[String(i+1),it.url||"No recuperable"])].map(row=>row.map(csvCell).join(",")).join("\r\n");
+  const content="\uFEFF"+[["numero","departamento","liga_individual"],...invites.map((it,i)=>[String(i+1),departments.find(d=>d.id===it.departmentId)?.name||"Sin departamento",it.url||"No recuperable"])].map(row=>row.map(csvCell).join(",")).join("\r\n");
   const url=URL.createObjectURL(new Blob([content],{type:"text/csv;charset=utf-8"}));
   const a=document.createElement("a");a.href=url;a.download="FactoRH_Ligas_Encuesta_"+campaignId.slice(0,8)+".csv";
   document.body.appendChild(a);a.click();a.remove();
@@ -55,6 +67,11 @@ export default function ClimaInviteManager({campaignId,open}:{campaignId:string;
    </div>
   </div>
   <div className="mt-5 flex flex-wrap items-center gap-3">
+   <label className="text-sm font-bold text-neutral-700">Departamento
+    <select className="mt-2 block min-w-[195px] rounded-xl border border-neutral-300 bg-white p-3" value={departmentId} onChange={e=>setDepartmentId(e.target.value)} disabled={!open||busy}>
+     <option value="">Sin departamento</option>{departments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+    </select>
+   </label>
    <input aria-label="Número de ligas" type="number" value={count} onChange={e=>setCount(Number(e.target.value))}
     disabled={!open||busy} min={1} max={100} className="w-28 rounded-xl border border-neutral-300 p-3"/>
    <button type="button" disabled={!open||busy||!Number.isInteger(count)||count<1||count>100}
@@ -67,6 +84,7 @@ export default function ClimaInviteManager({campaignId,open}:{campaignId:string;
     <Download className="h-4 w-4"/>Exportar CSV
    </button>
   </div>
+  <p className="mt-3 text-xs text-neutral-500">El departamento queda registrado al generar el lote, sin solicitar nombres a quienes responden. <Link href="/protected/departamentos" className="font-bold text-orange-600">Administrar departamentos →</Link></p>
   {!open&&<p className="mt-3 text-sm text-neutral-500">Abre la campaña para crear nuevas ligas.</p>}
   {error&&<p role="alert" className="mt-4 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</p>}
   {notice&&<p role="status" className="mt-4 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-700">{notice}</p>}
@@ -76,7 +94,7 @@ export default function ClimaInviteManager({campaignId,open}:{campaignId:string;
   </div>
   <div className="mt-3 max-h-[430px] divide-y divide-neutral-100 overflow-auto">
    {invites.map((item,i)=><div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-    <p className="text-sm font-bold text-neutral-800">Liga {i+1}</p>
+    <p className="text-sm font-bold text-neutral-800">Liga {i+1}<span className="ml-2 text-xs font-normal text-neutral-500">{departments.find(d=>d.id===item.departmentId)?.name||"Sin departamento"}</span></p>
     <div className="flex flex-wrap gap-2">
      <button type="button" disabled={!item.url} onClick={()=>item.url&&void copy(item.url)}
       className="rounded-lg border border-neutral-300 px-3 py-2 text-xs font-bold disabled:opacity-40">Copiar</button>
