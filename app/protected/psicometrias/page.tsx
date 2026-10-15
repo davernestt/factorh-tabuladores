@@ -31,6 +31,7 @@ type ProcessRow = {
   organization_id: string;
   name: string;
   public_token: string;
+  department_id: string | null;
 };
 
 type Person = {
@@ -41,6 +42,7 @@ type Person = {
   phone: string | null;
   job_title: string | null;
   area: string | null;
+  department_id: string | null;
 };
 
 type Organization = { id: string; name: string };
@@ -101,6 +103,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
   const query = normalize(paramValue(params.q));
   const organizationFilter = paramValue(params.organization);
   const statusFilter = paramValue(params.status);
+  const departmentFilter = paramValue(params.department);
 
   const db = createAdminClient();
 
@@ -189,7 +192,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     processIds.length
       ? db
           .from("assessment_processes")
-          .select("id,person_id,organization_id,name,public_token")
+          .select("id,person_id,organization_id,name,public_token,department_id")
           .in("id", processIds)
       : Promise.resolve({ data: [], error: null }),
     assignmentIds.length
@@ -208,22 +211,25 @@ async function PsychometricsContent({ searchParams }: PageProps) {
   const personIds = Array.from(new Set(processes.map((item) => item.person_id)));
   const organizationIds = Array.from(new Set(processes.map((item) => item.organization_id)));
 
-  const [peopleR, organizationsR] = await Promise.all([
+  const [peopleR, organizationsR, departmentsR] = await Promise.all([
     personIds.length
       ? db
           .from("people")
-          .select("id,first_name,last_name,email,phone,job_title,area")
+          .select("id,first_name,last_name,email,phone,job_title,area,department_id")
           .in("id", personIds)
       : Promise.resolve({ data: [], error: null }),
     organizationIds.length
       ? db.from("organizations").select("id,name").in("id", organizationIds)
       : Promise.resolve({ data: [], error: null }),
+    scopedOrganizationId ? db.from("organization_departments").select("id,name,organization_id").eq("organization_id",scopedOrganizationId).order("name") : db.from("organization_departments").select("id,name,organization_id").order("name"),
   ]);
 
-  if (peopleR.error || organizationsR.error) {
-    return <ErrorCard message={peopleR.error?.message ?? organizationsR.error?.message ?? "Error"} />;
+  if (peopleR.error || organizationsR.error || departmentsR.error) {
+    return <ErrorCard message={peopleR.error?.message ?? organizationsR.error?.message ?? departmentsR.error?.message ?? "Error"} />;
   }
 
+  const departmentOptions=departmentsR.data??[];
+  const departmentById=new Map(departmentOptions.map(d=>[d.id,d.name]));
   const templateById = new Map(templates.map((item) => [item.id, item]));
   const processById = new Map(processes.map((item) => [item.id, item]));
   const peopleById = new Map(((peopleR.data ?? []) as Person[]).map((item) => [item.id, item]));
@@ -322,6 +328,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     );
 
   const filteredGroups = personGroups.filter((group) => {
+    if(departmentFilter && !group.applications.some(a=>a.process?.department_id===departmentFilter))return false;
     if (organizationFilter && group.organization?.id !== organizationFilter) return false;
     if (statusFilter === "active" && group.active === 0) return false;
     if (statusFilter === "pending" && group.pending === 0) return false;
@@ -336,7 +343,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
         [
           personName,
           group.person?.job_title,
-          group.person?.area,
+          departmentById.get(group.applications[0]?.process?.department_id??"")||group.person?.area,
           group.organization?.name,
           ...group.applications.map((item) => item.template?.name ?? ""),
         ].filter(Boolean).join(" "),
@@ -461,6 +468,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
             Configurar baterías
           </Link>
         )}
+        <Link href="/protected/departamentos" className="rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50">Departamentos</Link>
         <Link
           href="/protected/psicometrias/perfiles-puesto"
           className="rounded-xl px-5 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
@@ -491,7 +499,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
             className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-sm"
           >
             <input type="hidden" name="view" value="personas" />
-            <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr_1fr_auto]">
+            <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto]">
               <label>
                 <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
                   Buscar persona
@@ -540,6 +548,13 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                 </select>
               </label>
 
+              <label>
+               <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">Departamento</span>
+               <select name="department" defaultValue={departmentFilter} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm">
+                 <option value="">Todos</option>
+                 {departmentOptions.filter(d=>!organizationFilter||d.organization_id===organizationFilter).map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+               </select>
+              </label>
               <div className="flex items-end gap-2">
                 <button
                   type="submit"
@@ -547,7 +562,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                 >
                   Filtrar
                 </button>
-                {(query || organizationFilter || statusFilter) && (
+                {(query || organizationFilter || statusFilter || departmentFilter) && (
                   <Link
                     href="/protected/psicometrias?view=personas"
                     className="rounded-xl border border-neutral-300 px-4 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-50"
@@ -587,7 +602,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                               <span className="text-neutral-400 transition group-open:rotate-90">›</span>
                             </div>
                             <div className="mt-1 text-xs text-neutral-500">
-                              {[group.person?.job_title, group.person?.area].filter(Boolean).join(" · ") || "Sin puesto registrado"}
+                              {[group.person?.job_title,departmentById.get(group.applications[0]?.process?.department_id??"")??group.person?.area].filter(Boolean).join(" · ") || "Sin puesto registrado"}
                             </div>
                           </div>
                           <div>
