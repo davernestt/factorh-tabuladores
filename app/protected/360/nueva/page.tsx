@@ -18,7 +18,7 @@ async function New360PageContent() {
   const db=createAdminClient();
   const [organizations,people,departments]=await Promise.all([
     user.role==='client'?db.from('organizations').select('id,name').eq('active',true).eq('id',user.organizationId!):db.from('organizations').select('id,name').eq('active',true).order('name'),
-    user.role==='client'?db.from('people').select('id,first_name,last_name,email,job_title,organization_id,department_id').eq('active',true).eq('organization_id',user.organizationId!).order('first_name'):db.from('people').select('id,first_name,last_name,email,job_title,organization_id').eq('active',true).order('first_name'),
+    user.role==='client'?db.from('people').select('id,first_name,last_name,email,job_title,organization_id,department_id').eq('active',true).eq('organization_id',user.organizationId!).order('first_name'):db.from('people').select('id,first_name,last_name,email,job_title,organization_id,department_id').eq('active',true).order('first_name'),
     user.role==='client'?db.from('organization_departments').select('id,organization_id,name,active').eq('organization_id',user.organizationId!).eq('active',true).order('name'):db.from('organization_departments').select('id,organization_id,name,active').eq('active',true).order('name'),
   ]);
   if(organizations.error||people.error||departments.error) return <p className="rounded-2xl bg-red-50 p-6 text-red-700">No fue posible cargar el catálogo. {organizations.error?.message??people.error?.message??departments.error?.message}</p>;
