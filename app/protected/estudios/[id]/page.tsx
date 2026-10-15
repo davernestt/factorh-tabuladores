@@ -38,6 +38,7 @@ async function StudyContent({params}:Params){
  <div className="space-y-6">
    <PilotCollaboration caseId={id} tasks={tasksR.data||[]} workers={workersR.data||[]}/>
    <PilotMasterReview caseId={id}
+     tasks={(tasksR.data||[]).map(task=>({task_type:task.task_type,status:task.status}))}
      initial={masterR?.data&&typeof masterR.data==="object"&&!Array.isArray(masterR.data)?
        masterR.data as Record<string,string>:{}}/>
   </div>:
