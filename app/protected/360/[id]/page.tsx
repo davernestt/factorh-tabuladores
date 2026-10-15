@@ -10,6 +10,7 @@ import { band360, professional360, summarize360 } from '@/lib/feedback360-report
 import { CompetencyBars, GapBars, Radar360 } from './report-visuals';
 import ReportActions from '../report-actions';
 import GapInterpretation from '../gap-interpretation';
+import {safe360Comments} from '@/lib/feedback360-confidential-comments';
 import CycleActions from './cycle-actions';
 import InviteActions from './invite-actions';
 import './print.css';
@@ -52,6 +53,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
 
   const closed=cycle.status==='closed';
   const summary=summarize360(raters,answersR.data??[],closed);
+  const releasedComments=safe360Comments(raters,commentsR.data??[],closed);
   const analysis=closed?interpret360(summary.dimensions):null;
   const professional=closed?professional360(summary.dimensions,summary.facets):null;
   const person=personR.data;
@@ -87,7 +89,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
       </div>)}
     </section>
 
-    <section className="rounded-3xl border border-neutral-200 bg-white shadow-sm">
+    <section className="no-print rounded-3xl border border-neutral-200 bg-white shadow-sm">
       <div className="border-b border-neutral-200 p-6"><h2 className="text-xl font-black text-neutral-800">Seguimiento de evaluadores</h2><p className="mt-1 text-sm text-neutral-500">Las ligas son individuales. Las respuestas de pares y colaboradores nunca se muestran por persona.</p></div>
       <div className="overflow-x-auto"><table className="min-w-full text-left text-sm">
         <thead className="bg-neutral-50 text-xs uppercase text-neutral-500"><tr><th className="px-5 py-4">Evaluador</th><th className="px-5 py-4">Relación</th><th className="px-5 py-4">Estado</th><th className="px-5 py-4 no-print">Acción</th></tr></thead>
@@ -159,7 +161,7 @@ async function Feedback360DetailContent({ params }: PageProps) {
       </section>
 
       <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8"><div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">Comentarios cualitativos</div><h2 className="mt-2 text-2xl font-black text-neutral-800">Temas abiertos</h2><p className="mt-2 text-sm text-neutral-500">Los comentarios se presentan sin identificar a pares o colaboradores.</p>
-        <div className="mt-5 grid gap-4">{(commentsR.data??[]).length?(commentsR.data??[]).map((c,i)=><blockquote key={i} className="rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">“{c.comment}”</blockquote>):<p className="text-sm text-neutral-500">No se recibieron comentarios abiertos.</p>}</div>
+        <div className="mt-5 grid gap-4">{releasedComments.length?releasedComments.map((c,i)=><blockquote key={i} className="rounded-2xl bg-neutral-50 p-4 text-sm leading-6 text-neutral-700">“{c.comment}”</blockquote>):<p className="text-sm text-neutral-500">No hay comentarios liberables para este ciclo. Los comentarios de grupos con menos de tres respuestas se mantienen confidenciales.</p>}</div>
       </section>
     </>}
     </article>

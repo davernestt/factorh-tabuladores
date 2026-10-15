@@ -60,5 +60,7 @@ jobs:
           retention-days: 2
       - name: Validate 360 gap interpretation
         run: npx --yes tsx scripts/360-gap-interpretation-smoke.ts
+      - name: Validate 360 confidential comments
+        run: npx --yes tsx scripts/360-confidential-comments-smoke.ts
       - name: Build app
         run: npm run build
