@@ -7,6 +7,7 @@ import { COMPETENCIES_360, FEEDBACK_ROLES, type DimensionScore, type FeedbackRol
 import { professional360, summarize360, type FacetScore } from '@/lib/feedback360-report';
 import { CompetencyBars, Radar360 } from '../../[id]/report-visuals';
 import ReportActions from '../../report-actions';
+import {latest360PerPerson,publishable360People,canPublish360Department} from '@/lib/feedback360-departments';
 
 type PageProps={params:Promise<{organizationId:string}>;searchParams:Promise<{department?:string}>};
 type Department={id:string;name:string;organization_id:string};
@@ -53,13 +54,11 @@ async function Company360Content({params,searchParams}:PageProps){
     return {cycle:c,summary:summarize360(cycleRaters,answers.filter(a=>ids.has(a.rater_id)),true)};
   });
   const summaries=allSummaries.filter(x=>!requestedDepartment||x.cycle.department_id===requestedDepartment);
-  const latestByPerson=new Map<string,(typeof allSummaries)[number]>();
-  for(const x of allSummaries)latestByPerson.set(x.cycle.person_id,x);
-  const latest=[...latestByPerson.values()];
+  const latest=latest360PerPerson(allSummaries);
   const departmentComparisons=departments.map(d=>{
     const group=latest.filter(x=>x.cycle.department_id===d.id);
-    const scored=group.filter(x=>x.summary.dimensions.some(dim=>dim.scores.manager!==undefined||dim.scores.peer!==undefined||dim.scores.report!==undefined));
-    const enough=scored.length>=3;
+    const scored=publishable360People(group);
+    const enough=canPublish360Department(group);
     const dims=enough?aggregateDimensions(scored.map(x=>x.summary.dimensions)):[];
     const overall=enough?professional360(dims).overall:null;
     const ranked=enough?professional360(dims):null;
@@ -67,7 +66,7 @@ async function Company360Content({params,searchParams}:PageProps){
      strongest:ranked?.strengths[0]?.name??null,focus:ranked?.priorities[0]?.name??null};
   });
   const selectedPeople=new Set(summaries.map(x=>x.cycle.person_id));
-  const selectedScored=new Set(summaries.filter(x=>x.summary.dimensions.some(d=>d.scores.manager!==undefined||d.scores.peer!==undefined||d.scores.report!==undefined)).map(x=>x.cycle.person_id));
+  const selectedScored=new Set(publishable360People(summaries).map(x=>x.cycle.person_id));
   if(requestedDepartment&&selectedScored.size<3)return <div className="space-y-5">
    <Link href={`/protected/360/empresa/${organizationId}`} className="text-sm font-bold text-orange-600">← Volver al informe de empresa</Link>
    <section className="rounded-3xl border border-neutral-200 bg-white p-7">
