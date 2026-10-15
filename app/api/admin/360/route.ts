@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { authorized360Admin } from '@/lib/feedback360-auth';
+import {authorized360User,can360Organization,trial360Limit} from '@/lib/feedback360-access';
 import type { FeedbackRole } from '@/lib/feedback360';
 import { build360Url } from '@/lib/feedback360-url';
 
@@ -12,7 +12,11 @@ const clean = (s: unknown) => typeof s === 'string' ? s.trim() : '';
 const fail = (message: string, status = 400) => NextResponse.json({ error: message }, { status });
 
 export async function POST(request: NextRequest) {
-  if (!await authorized360Admin()) return fail('Sin permisos para administrar el 360°.', 403);
+  const user=await authorized360User();
+  if(!user)return fail('Tu empresa no tiene acceso vigente al 360°.',403);
+  const origin=request.headers.get('origin');
+  if(origin&&origin!==request.nextUrl.origin)return fail('Origen no permitido.',403);
+  if(Number(request.headers.get('content-length')||0)>16000)return fail('Solicitud demasiado extensa.',413);
   let body: RequestBody;
   try { body = await request.json(); } catch { return fail('Datos inválidos.'); }
   const organization_id = clean(body.organization_id);
@@ -20,12 +24,21 @@ export async function POST(request: NextRequest) {
   const name = clean(body.name) || 'Evaluación 360°';
   const due_date = clean(body.due_date) || null;
   if (!organization_id || !person_id || name.length > 150) return fail('Selecciona empresa y persona evaluada.');
+  if(!can360Organization(user,organization_id))return fail('Empresa no autorizada.',403);
   if (due_date && (!/^\d{4}-\d{2}-\d{2}$/.test(due_date) || Number.isNaN(Date.parse(due_date)))) return fail('Fecha límite incorrecta.');
   if (!Array.isArray(body.raters) || body.raters.length < 1 || body.raters.length > 40) return fail('Añade entre 1 y 40 evaluadores externos.');
   const raters = body.raters.map(r => ({ role: clean(r.role) as FeedbackRole, name: clean(r.name), email: clean(r.email).toLowerCase() || null }));
   if (raters.some(r => !VALID_ROLES.has(r.role) || !r.name || r.name.length > 120 || (r.email && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email) || r.email.length > 254)))) return fail('Revisa nombre, correo o relación de los evaluadores.');
   if (raters.filter(r => r.role === 'self').length !== 1 || raters.filter(r => r.role === 'manager').length > 1) return fail('Debe haber una autoevaluación y como máximo un jefe.');
   const db = createAdminClient();
+  const {data:org}=await db.from('organizations').select('id,active').eq('id',organization_id).maybeSingle();
+  if(!org?.active)return fail('Empresa no activa.',403);
+  const limit=await trial360Limit(user);
+  if(limit!==null){
+    const {count,error:limitError}=await db.from('feedback360_cycles').select('id',{count:'exact',head:true}).eq('organization_id',organization_id);
+    if(limitError)return fail('No fue posible verificar el límite del plan.',500);
+    if((count||0)>=limit)return fail('Tu demostración incluye un ciclo 360°. Solicita a FactoRH la activación del plan para crear más evaluaciones.',403);
+  }
   const { data: person, error: personError } = await db.from('people').select('id,first_name,last_name,organization_id,active').eq('id',person_id).eq('organization_id',organization_id).eq('active',true).maybeSingle();
   if (personError) return fail('Error al validar a la persona.', 500);
   if (!person) return fail('La persona no pertenece a la empresa seleccionada.');
