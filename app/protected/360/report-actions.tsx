@@ -6,6 +6,8 @@ export default function ReportActions({fileName,elementId}:Props){
   function downloadPdf(){window.print();}
   function downloadWord(){
     const report=document.getElementById(elementId); if(!report)return;
+    const cleanReport=report.cloneNode(true) as HTMLElement;
+    cleanReport.querySelectorAll('.no-print').forEach(element=>element.remove());
     const styles=`
       body{font-family:Arial,sans-serif;color:#262626;margin:28px}
       h1{font-size:26px} h2{font-size:20px;margin-top:22px} h3{font-size:15px;margin-top:16px}
@@ -14,7 +16,7 @@ export default function ReportActions({fileName,elementId}:Props){
       th{background:#f5f5f5} svg{max-width:640px;height:auto}.no-print,button,a{display:none!important}
       .bg-[#4A4A4A],.bg-[#4A4A4A]{background:#555555!important;color:#fff!important}
     `;
-    const html=`<html><head><meta charset="utf-8"/><style>${styles}</style></head><body>${report.innerHTML}</body></html>`;
+    const html=`<html><head><meta charset="utf-8"/><style>${styles}</style></head><body>${cleanReport.innerHTML}</body></html>`;
     const blob=new Blob(["\ufeff",html],{type:"application/msword"});
     const url=URL.createObjectURL(blob); const a=document.createElement("a");
     a.href=url;a.download=`${sanitize(fileName)}.doc`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
