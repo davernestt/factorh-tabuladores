@@ -4,23 +4,25 @@ import Link from 'next/link';
 import { FEEDBACK_ROLES, type FeedbackRole } from '@/lib/feedback360';
 
 type Organization={id:string;name:string};
-type Person={id:string;organization_id:string;first_name:string;last_name:string|null;email:string|null;job_title:string|null};
+type Department={id:string;organization_id:string;name:string;active:boolean};
+type Person={id:string;organization_id:string;first_name:string;last_name:string|null;email:string|null;job_title:string|null;department_id:string|null};
 type Rater = { id:number; role:FeedbackRole; name:string; email:string };
 type Invite={role:FeedbackRole;name:string;email:string|null;url:string};
 const btn='rounded-xl bg-orange-500 px-5 py-3 font-bold text-white hover:bg-orange-600 disabled:opacity-50';
 const input='w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-neutral-800 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-100';
 let idx=1;
 const fresh=(role:FeedbackRole):Rater=>({id:idx++,role,name:'',email:''});
-export default function New360Form({organizations,people}:{organizations:Organization[];people:Person[]}){
-  const [org,setOrg]=useState(organizations.length===1?organizations[0].id:'');const [person,setPerson]=useState('');const [name,setName]=useState('Evaluación 360°');
+export default function New360Form({organizations,people,departments}:{organizations:Organization[];people:Person[];departments:Department[]}){
+  const [org,setOrg]=useState(organizations.length===1?organizations[0].id:'');const [person,setPerson]=useState('');const [selectedDepartment,setSelectedDepartment]=useState('');const [name,setName]=useState('Evaluación 360°');
   const [peopleList,setPeopleList]=useState(people);
   const [showPersonForm,setShowPersonForm]=useState(false);
-  const [newPerson,setNewPerson]=useState({first_name:'',last_name:'',email:'',job_title:''});
+  const [newPerson,setNewPerson]=useState({first_name:'',last_name:'',email:'',job_title:'',department_id:''});
   const [addingPerson,setAddingPerson]=useState(false);
   const [dueDate,setDueDate]=useState('');const [raters,setRaters]=useState<Rater[]>([fresh('manager')]);
   const [saving,setSaving]=useState(false);const [error,setError]=useState('');const [invites,setInvites]=useState<Invite[]|null>(null);
   const [cycleId,setCycleId]=useState('');
   const validPeople=peopleList.filter(p=>p.organization_id===org);
+  const validDepartments=departments.filter(d=>d.organization_id===org&&d.active);
   async function addPerson(){
    setAddingPerson(true);setError('');
    try{
@@ -29,8 +31,8 @@ export default function New360Form({organizations,people}:{organizations:Organiz
      const result=await response.json();
      if(!response.ok)throw Error(result.error||'No fue posible registrar.');
      setPeopleList(prev=>[...prev,result.person as Person]);
-     setPerson(result.person.id);setShowPersonForm(false);
-     setNewPerson({first_name:'',last_name:'',email:'',job_title:''});
+     setPerson(result.person.id);setSelectedDepartment(result.person.department_id);setShowPersonForm(false);
+     setNewPerson({first_name:'',last_name:'',email:'',job_title:'',department_id:''});
    }catch(cause){setError(cause instanceof Error?cause.message:'No se pudo crear.');}
    finally{setAddingPerson(false)}
   }
@@ -40,8 +42,14 @@ export default function New360Form({organizations,people}:{organizations:Organiz
   async function submit(e:React.FormEvent){
     e.preventDefault();setError('');if(!selected){setError('Selecciona una persona.');return;}
     if(raters.some(r=>!r.name.trim())){setError('Escribe el nombre de todos los evaluadores agregados.');return;}
+    if(!selectedDepartment){setError('Asigna un departamento a la persona evaluada.');return;}
     setSaving(true);
     try{
+      if(selected.department_id!==selectedDepartment){
+        const patch=await fetch(`/api/360/personas/${person}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({department_id:selectedDepartment})});
+        const updated=await patch.json();if(!patch.ok)throw Error(updated.error||'No se pudo asignar el departamento.');
+        setPeopleList(rows=>rows.map(p=>p.id===person?{...p,department_id:selectedDepartment}:p));
+      }
       const payload={organization_id:org,person_id:person,name,due_date:dueDate,
         raters:[{role:'self' as FeedbackRole,name:personName,email:selected.email||''},...raters.map(({role,name,email})=>({role,name,email}))]};
       const res=await fetch('/api/admin/360',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -66,8 +74,12 @@ export default function New360Form({organizations,people}:{organizations:Organiz
   return <form onSubmit={submit} className="space-y-6">
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm md:p-8"><h2 className="text-xl font-black text-neutral-800">1. Persona evaluada</h2>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <label className="text-sm font-bold text-neutral-700">Empresa<select required className={`${input} mt-2`} value={org} onChange={e=>{setOrg(e.target.value);setPerson('')}}><option value="">Seleccionar empresa</option>{organizations.map(o=><option value={o.id} key={o.id}>{o.name}</option>)}</select></label>
-        <label className="text-sm font-bold text-neutral-700">Persona evaluada<select required className={`${input} mt-2`} value={person} onChange={e=>setPerson(e.target.value)}><option value="">Seleccionar persona</option>{validPeople.map(p=><option value={p.id} key={p.id}>{`${p.first_name} ${p.last_name??''}`.trim()} {p.job_title?`· ${p.job_title}`:''}</option>)}</select></label>
+        <label className="text-sm font-bold text-neutral-700">Empresa<select required className={`${input} mt-2`} value={org} onChange={e=>{setOrg(e.target.value);setPerson('');setSelectedDepartment('')}}><option value="">Seleccionar empresa</option>{organizations.map(o=><option value={o.id} key={o.id}>{o.name}</option>)}</select></label>
+        <label className="text-sm font-bold text-neutral-700">Persona evaluada<select required className={`${input} mt-2`} value={person} onChange={e=>{setPerson(e.target.value);setSelectedDepartment(validPeople.find(p=>p.id===e.target.value)?.department_id??"")}}><option value="">Seleccionar persona</option>{validPeople.map(p=><option value={p.id} key={p.id}>{`${p.first_name} ${p.last_name??''}`.trim()} {p.job_title?`· ${p.job_title}`:''}</option>)}</select></label>
+        <label className="text-sm font-bold text-neutral-700">Departamento de la persona
+         <select required className={`${input} mt-2`} value={selectedDepartment} onChange={e=>setSelectedDepartment(e.target.value)} disabled={!person}><option value="">Seleccionar departamento</option>{validDepartments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>
+        </label>
+        <div className="flex items-end"><Link href="/protected/360/departamentos" className="rounded-xl border border-orange-300 px-4 py-3 text-sm font-bold text-orange-700">+ Administrar departamentos →</Link></div>
         <label className="text-sm font-bold text-neutral-700">Nombre del ciclo<input required maxLength={150} className={`${input} mt-2`} value={name} onChange={e=>setName(e.target.value)}/></label>
         <label className="text-sm font-bold text-neutral-700">Fecha límite (opcional)<input type="date" className={`${input} mt-2`} value={dueDate} onChange={e=>setDueDate(e.target.value)}/></label>
       </div>
@@ -77,7 +89,10 @@ export default function New360Form({organizations,people}:{organizations:Organiz
         {([{key:'first_name',label:'Nombre(s)'},{key:'last_name',label:'Apellidos'},{key:'email',label:'Correo (opcional)'},{key:'job_title',label:'Puesto'}] as const).map(field=><label key={field.key} className="text-xs font-bold text-neutral-600">{field.label}
           <input type={field.key==='email'?'email':'text'} value={newPerson[field.key]} onChange={event=>setNewPerson(p=>({...p,[field.key]:event.target.value}))} className={`${input} mt-1`} placeholder={field.label}/>
         </label>)}
-        <button type="button" onClick={addPerson} disabled={addingPerson||!org||newPerson.first_name.trim().length<2} className={btn}>{addingPerson?'Guardando...':'Guardar persona y seleccionarla'}</button>
+        <label className="text-xs font-bold text-neutral-600">Departamento (obligatorio)
+         <select required value={newPerson.department_id} onChange={e=>setNewPerson(p=>({...p,department_id:e.target.value}))} className={`${input} mt-1`}><option value="">Seleccionar departamento</option>{validDepartments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select>
+        </label>
+        <button type="button" onClick={addPerson} disabled={addingPerson||!org||!newPerson.department_id||newPerson.first_name.trim().length<2} className={btn}>{addingPerson?'Guardando...':'Guardar persona y seleccionarla'}</button>
        </div>}
       </div>
       <p className="mt-4 text-sm text-neutral-500">Autoevaluación: {personName||'Se agregará al elegir a la persona'}. Su invitación se generará automáticamente.</p>
