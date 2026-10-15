@@ -39,13 +39,16 @@ export async function POST(request: NextRequest) {
     if(limitError)return fail('No fue posible verificar el límite del plan.',500);
     if((count||0)>=limit)return fail('Tu demostración incluye un ciclo 360°. Solicita a FactoRH la activación del plan para crear más evaluaciones.',403);
   }
-  const { data: person, error: personError } = await db.from('people').select('id,first_name,last_name,organization_id,active').eq('id',person_id).eq('organization_id',organization_id).eq('active',true).maybeSingle();
+  const { data: person, error: personError } = await db.from('people').select('id,first_name,last_name,organization_id,department_id,active').eq('id',person_id).eq('organization_id',organization_id).eq('active',true).maybeSingle();
   if (personError) return fail('Error al validar a la persona.', 500);
   if (!person) return fail('La persona no pertenece a la empresa seleccionada.');
+  if(!person.department_id)return fail('Asigna un departamento a la persona antes de crear su evaluación.');
+  const {data:department}=await db.from('organization_departments').select('id').eq('id',person.department_id).eq('organization_id',organization_id).eq('active',true).maybeSingle();
+  if(!department)return fail('Selecciona un departamento activo de esta empresa.');
   const self = raters.find(r => r.role === 'self')!;
   const personName = `${person.first_name} ${person.last_name ?? ''}`.trim();
   if (self.name.localeCompare(personName,'es',{sensitivity:'base'}) !== 0) return fail('El evaluador AUTO debe ser la misma persona evaluada.');
-  const { data: cycle, error: createError } = await db.from('feedback360_cycles').insert({ organization_id, person_id, name, due_date, status:'open' }).select('id').single();
+  const { data: cycle, error: createError } = await db.from('feedback360_cycles').insert({ organization_id, person_id, department_id:person.department_id, name, due_date, status:'open' }).select('id').single();
   if (createError || !cycle) return fail(createError?.message ?? 'No se pudo abrir el ciclo.',500);
   const invitations = raters.map(r => {
     const token = randomBytes(32).toString('base64url');
