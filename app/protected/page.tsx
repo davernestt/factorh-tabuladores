@@ -24,6 +24,7 @@ type ProcessRow = {
   name: string;
   person_id: string;
   organization_id: string;
+  department_id: string|null;
 };
 
 type Person = {
@@ -123,6 +124,7 @@ async function AdminDashboardContent({
   const organizationFilter = paramValue(params.organization);
   const statusFilter = paramValue(params.status);
   const areaFilter = paramValue(params.area);
+  const departmentFilter = paramValue(params.department);
   const templateFilter = paramValue(params.template);
 
   const db = createAdminClient();
@@ -136,6 +138,7 @@ async function AdminDashboardContent({
     questionsResult,
     responsesResult,
     resultsResult,
+    departmentsResult,
   ] = await Promise.all([
     db
       .from("assessment_assignments")
@@ -145,7 +148,7 @@ async function AdminDashboardContent({
       .order("created_at", { ascending: false }),
     db
       .from("assessment_processes")
-      .select("id,name,person_id,organization_id"),
+.select("id,name,person_id,organization_id,department_id"),
     db
       .from("people")
       .select("id,first_name,last_name,job_title,area"),
@@ -158,6 +161,7 @@ async function AdminDashboardContent({
       .from("assessment_responses")
       .select("assignment_id,question_id"),
     db.from("assessment_results").select("assignment_id,score"),
+    db.from("organization_departments").select("id,name,organization_id").order("name"),
   ]);
 
   const firstError =
@@ -168,7 +172,8 @@ async function AdminDashboardContent({
     templatesResult.error ||
     questionsResult.error ||
     responsesResult.error ||
-    resultsResult.error;
+    resultsResult.error ||
+    departmentsResult.error;
 
   if (firstError) {
     return (
@@ -195,6 +200,7 @@ async function AdminDashboardContent({
   const questions = (questionsResult.data ?? []) as Question[];
   const responses = (responsesResult.data ?? []) as ResponseRow[];
   const resultRows = (resultsResult.data ?? []) as ResultRow[];
+  const departmentOptions=departmentsResult.data??[];
 
   const questionTypeById = new Map(
     questions.map((question) => [question.id, question.question_type]),
@@ -390,6 +396,7 @@ async function AdminDashboardContent({
   );
 
   const filteredParticipantGroups = participantGroups.filter((group) => {
+    if(departmentFilter&&!group.assignments.some(view=>view.process?.department_id===departmentFilter))return false;
     if (
       organizationFilter &&
       group.organizationId !== organizationFilter
@@ -490,6 +497,7 @@ async function AdminDashboardContent({
           >
             + Nueva evaluación
           </a>
+          <Link href="/protected/departamentos" className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-bold text-neutral-700">Departamentos</Link>
         </div>
       </div>
 
@@ -511,7 +519,7 @@ async function AdminDashboardContent({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(260px,1.5fr)_minmax(180px,1fr)_minmax(170px,.85fr)_minmax(170px,.85fr)_minmax(220px,1.2fr)_auto]">
+        <div className="mt-5 grid gap-4 xl:grid-cols-3 2xl:grid-cols-7">
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
               Buscar persona
@@ -579,6 +587,14 @@ async function AdminDashboardContent({
             </select>
           </label>
 
+          <label className="block">
+            <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">Departamento corporativo</span>
+            <select name="department" defaultValue={departmentFilter} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm">
+              <option value="">Todos</option>
+              {departmentOptions.filter(d=>!organizationFilter||d.organization_id===organizationFilter).map(d=>
+               <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </label>
           <label className="block">
             <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-400">
               Prueba
