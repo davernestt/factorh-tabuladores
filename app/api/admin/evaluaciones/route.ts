@@ -16,6 +16,7 @@ type CreateBody = {
   phone?: string;
   job_title?: string;
   area?: string;
+  department_id?: string | null;
   process_name?: string;
   due_date?: string | null;
   evaluation_purpose?: string | null;
@@ -99,6 +100,7 @@ export async function POST(request: NextRequest) {
   const body = (await request.json()) as CreateBody;
   const organizationId = clean(body.organization_id);
   const existingPersonId = clean(body.existing_person_id);
+  const departmentId=clean(body.department_id);
   const requestedIds = Array.isArray(body.template_ids)
     ? body.template_ids.map(clean).filter(Boolean)
     : [];
@@ -242,6 +244,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Indica quién realizará la entrevista conductual." }, { status: 400 });
   }
 
+  let departmentName:string|null=null;
+  if(departmentId){
+    const {data:dept,error:deptError}=await db.from("organization_departments")
+      .select("id,name").eq("id",departmentId).eq("organization_id",organizationId).eq("active",true).maybeSingle();
+    if(deptError)return NextResponse.json({error:"No se pudo validar el departamento."},{status:500});
+    if(!dept)return NextResponse.json({error:"El departamento no pertenece a esta empresa."},{status:403});
+    departmentName=dept.name;
+  }
+  if(!departmentId&&orderedTemplates.some(t=>t.assessment_type.startsWith("leadership")))
+    return NextResponse.json({error:"Selecciona el departamento del líder."},{status:400});
+
   let personId = existingPersonId;
   let createdPersonId: string | null = null;
   let personName = "";
@@ -353,7 +366,8 @@ export async function POST(request: NextRequest) {
         email: clean(body.email).toLowerCase() || null,
         phone: clean(body.phone) || null,
         job_title: clean(body.job_title) || null,
-        area: clean(body.area) || null,
+        area: departmentName,
+        department_id:departmentId||null,
         active: true,
       })
       .select("id,first_name,last_name,email,phone")
@@ -386,6 +400,7 @@ export async function POST(request: NextRequest) {
     .insert({
       organization_id: organizationId,
       person_id: personId,
+      department_id: departmentId || null,
       name: processName,
       status: templatesToApply.length ? "open" : "completed",
       start_date: new Date().toISOString().slice(0, 10),
@@ -400,6 +415,12 @@ export async function POST(request: NextRequest) {
   if (processError) {
     if (createdPersonId) await db.from("people").delete().eq("id", createdPersonId);
     return NextResponse.json({ error: processError.message }, { status: 500 });
+  }
+
+  if(existingPersonId&&departmentId){
+    // Actualizar la asignación actual sin reescribir los procesos históricos.
+    await db.from("people").update({department_id:departmentId,area:departmentName})
+      .eq("id",existingPersonId).eq("organization_id",organizationId);
   }
 
   let creditsReserved = false;

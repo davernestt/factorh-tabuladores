@@ -74,6 +74,16 @@ export default function InviteGenerator({campaignId,disabled}:{campaignId:string
   }catch(e){setError(e instanceof Error?e.message:"Ocurrió un error.");}
   finally{setBusy(false);}
  }
+ async function syncDepartments(){
+  clear();setAdding(true);
+  try{
+   const r=await fetch("/api/c3/departments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({campaignId,sync:true})});
+   const data=await r.json();if(!r.ok)throw Error(data.error||"No se pudo sincronizar.");
+   setDepartments(data.departments||[]);
+   setInfo("Departamentos corporativos sincronizados.");
+  }catch(e){setError(e instanceof Error?e.message:"Error al sincronizar.");}
+  finally{setAdding(false);}
+ }
  async function addDepartment(){
   clear();
   const name=departmentName.trim();
@@ -134,8 +144,11 @@ export default function InviteGenerator({campaignId,disabled}:{campaignId:string
    <strong>Importante:</strong> este es un sistema de encuestas <strong>confidenciales</strong>, no de anonimato absoluto. Un enlace individual puede vincularse con la persona a la que lo entregas. FactoRH no muestra respuestas individuales ni indica en esta tabla qué código respondió. Los indicadores por departamento se publicarán solo cuando cumplan los umbrales de confidencialidad.
   </div>
   <section className="rounded-2xl border border-neutral-200 p-5">
-   <h3 className="font-black text-neutral-800">1. Departamentos (opcional)</h3>
-   <p className="mt-1 text-xs leading-5 text-neutral-500">Por ejemplo: Recursos Humanos, Finanzas, Logística. Si un grupo es pequeño, sus resultados se ocultarán o se agruparán para proteger a los participantes.</p>
+   <div className="flex flex-wrap items-center justify-between gap-3">
+    <h3 className="font-black text-neutral-800">1. Departamentos corporativos</h3>
+    <button type="button" disabled={adding||busy||disabled} onClick={()=>void syncDepartments()} className="rounded-lg border border-orange-300 px-3 py-2 text-xs font-bold text-orange-700 disabled:opacity-40">Sincronizar catálogo</button>
+   </div>
+   <p className="mt-1 text-xs leading-5 text-neutral-500">Sincroniza las áreas registradas por RH en otros módulos. Los departamentos anteriores de esta campaña se conservan y los grupos pequeños continúan protegidos.</p>
    <div className="mt-3 flex flex-wrap gap-2">
     <input aria-label="Nombre de departamento" value={departmentName} maxLength={80} onChange={e=>setDepartmentName(e.target.value)}
      placeholder="Ej. Finanzas" className="min-w-0 flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-sm"/>

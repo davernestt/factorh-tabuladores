@@ -18,7 +18,10 @@ type Person = {
   phone: string | null;
   job_title: string | null;
   area: string | null;
+  department_id: string | null;
 };
+
+type Department = { id:string; organization_id:string; name:string; active:boolean };
 
 type Template = {
   id: string;
@@ -60,6 +63,7 @@ type JobProfile = {
 type Props = {
   organizations: Organization[];
   people: Person[];
+  departments?: Department[];
   templates: Template[];
   templateAccess: TemplateAccess[];
   batteries: Battery[];
@@ -104,6 +108,7 @@ type ValidResult = { template_id:string; template_name:string; source_assignment
 export default function NewAssessmentForm({
   organizations,
   people,
+  departments = [],
   templates,
   templateAccess,
   batteries,
@@ -140,7 +145,7 @@ export default function NewAssessmentForm({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [jobTitle, setJobTitle] = useState("");
-  const [area, setArea] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [processName, setProcessName] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [evaluationPurpose, setEvaluationPurpose] = useState("selection");
@@ -164,7 +169,7 @@ export default function NewAssessmentForm({
     setEmail("");
     setPhone("");
     setJobTitle("");
-    setArea("");
+    setDepartmentId("");
   }
 
   function clearExternalEvaluators() {
@@ -201,6 +206,8 @@ export default function NewAssessmentForm({
     setValidDecisions({});
     setError(null);
   }
+
+  const availableDepartments = useMemo(() => departments.filter(d => d.organization_id===organizationId && d.active),[departments,organizationId]);
 
   const availablePeople = useMemo(
     () => people.filter((person) => person.organization_id === organizationId),
@@ -387,7 +394,7 @@ export default function NewAssessmentForm({
           email,
           phone,
           job_title: jobTitle,
-          area,
+          department_id: departmentId || null,
           process_name: processName,
           due_date: dueDate || null,
           evaluation_purpose: isPsychometrics ? evaluationPurpose : null,
@@ -610,7 +617,7 @@ export default function NewAssessmentForm({
             <Field label="Colaborador">
               <select
                 value={existingPersonId}
-                onChange={(event) => { setExistingPersonId(event.target.value); setValidResults([]); setValidDecisions({}); }}
+                onChange={(event) => { setExistingPersonId(event.target.value); setDepartmentId(people.find(p=>p.id===event.target.value)?.department_id??""); setValidResults([]); setValidDecisions({}); }}
                 className="input"
                 required
               >
@@ -663,15 +670,20 @@ export default function NewAssessmentForm({
                 className="input"
               />
             </Field>
-            <Field label="Área">
-              <input
-                value={area}
-                onChange={(event) => setArea(event.target.value)}
-                className="input"
-              />
-            </Field>
+
           </div>
         )}
+        <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+          <Field label={isPsychometrics?"Departamento de referencia (opcional para candidatos externos)":"Departamento del líder (obligatorio)"}>
+            <select className="input" value={departmentId} onChange={event=>setDepartmentId(event.target.value)}
+              required={!isPsychometrics}>
+              <option value="">Sin departamento / No aplica</option>
+              {availableDepartments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </Field>
+          <Link href="/protected/departamentos" className="rounded-xl border border-orange-300 px-4 py-3 text-sm font-bold text-orange-700">Administrar departamentos →</Link>
+        </div>
+        <p className="mt-2 text-xs leading-6 text-neutral-500">La evaluación guardará el departamento de este momento, aunque la persona cambie de área posteriormente.</p>
       </section>
 
       {isPsychometrics && (

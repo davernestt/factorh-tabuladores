@@ -71,10 +71,12 @@ async function NewPsychometricAssessmentContent() {
   let peopleQuery = db
     .from("people")
     .select(
-      "id,organization_id,first_name,last_name,email,phone,job_title,area",
+      "id,organization_id,first_name,last_name,email,phone,job_title,area,department_id",
     )
     .eq("active", true)
     .order("first_name");
+
+  let departmentsQuery = db.from("organization_departments").select("id,organization_id,name,active").eq("active",true).order("name");
 
   let accessQuery = db
     .from("organization_assessment_templates")
@@ -97,6 +99,7 @@ async function NewPsychometricAssessmentContent() {
   if (scopedOrganizationId) {
     organizationsQuery = organizationsQuery.eq("id", scopedOrganizationId);
     peopleQuery = peopleQuery.eq("organization_id", scopedOrganizationId);
+    departmentsQuery = departmentsQuery.eq("organization_id", scopedOrganizationId);
     accessQuery = accessQuery.eq("organization_id", scopedOrganizationId);
     batteriesQuery = batteriesQuery.eq("organization_id", scopedOrganizationId);
     jobProfilesQuery = jobProfilesQuery.or(
@@ -112,6 +115,7 @@ async function NewPsychometricAssessmentContent() {
     batteriesResult,
     batteryItemsResult,
     jobProfilesResult,
+    departmentsResult,
   ] = await Promise.all([
     organizationsQuery,
     peopleQuery,
@@ -128,6 +132,7 @@ async function NewPsychometricAssessmentContent() {
       .select("battery_id,template_id,sort_order")
       .order("sort_order"),
     jobProfilesQuery,
+    departmentsQuery,
   ]);
 
   const firstError =
@@ -137,7 +142,8 @@ async function NewPsychometricAssessmentContent() {
     accessResult.error ||
     batteriesResult.error ||
     batteryItemsResult.error ||
-    jobProfilesResult.error;
+    jobProfilesResult.error ||
+    departmentsResult.error;
 
   if (firstError) {
     return (
@@ -255,6 +261,7 @@ async function NewPsychometricAssessmentContent() {
         <NewAssessmentForm
           organizations={organizationsResult.data ?? []}
           people={peopleResult.data ?? []}
+          departments={departmentsResult.data ?? []}
           templates={psychometricTemplates}
           templateAccess={psychometricAccess}
           batteries={psychometricBatteries}

@@ -39,7 +39,7 @@ export default function DepartmentsManager({organizations,initialDepartments}:{o
    <p className="mt-2 text-sm text-neutral-500">Aparecerán al registrar o actualizar personas en el 360°.</p>
    <div className="mt-4 space-y-2">{rows.filter(x=>x.organization_id===org).map(d=><div key={d.id} className="rounded-xl bg-neutral-50 px-4 py-3 text-sm font-semibold text-neutral-700">{d.name}</div>)}
    {!rows.some(x=>x.organization_id===org)&&<p className="text-sm text-neutral-500">Sin departamentos registrados.</p>}</div>
-   <Link href="/protected/360/nueva" className="mt-5 inline-block text-sm font-bold text-orange-600">Crear evaluación con departamento →</Link>
+   <Link href="/protected/evaluaciones" className="mt-5 inline-block text-sm font-bold text-orange-600">Volver al centro de evaluaciones →</Link>
   </section>
  </div>;
 }
