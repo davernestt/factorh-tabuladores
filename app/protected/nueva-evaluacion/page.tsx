@@ -44,6 +44,7 @@ async function NewAssessmentContent() {
     accessResult,
     batteriesResult,
     batteryItemsResult,
+    departmentsResult,
   ] = await Promise.all([
     db
       .from("organizations")
@@ -53,7 +54,7 @@ async function NewAssessmentContent() {
     db
       .from("people")
       .select(
-        "id,organization_id,first_name,last_name,email,phone,job_title,area",
+        "id,organization_id,first_name,last_name,email,phone,job_title,area,department_id",
       )
       .eq("active", true)
       .order("first_name"),
@@ -74,6 +75,7 @@ async function NewAssessmentContent() {
       .from("assessment_battery_items")
       .select("battery_id,template_id,sort_order")
       .order("sort_order"),
+    db.from("organization_departments").select("id,organization_id,name,active").eq("active",true).order("name"),
   ]);
 
   const firstError =
@@ -82,7 +84,8 @@ async function NewAssessmentContent() {
     templatesResult.error ||
     accessResult.error ||
     batteriesResult.error ||
-    batteryItemsResult.error;
+    batteryItemsResult.error ||
+    departmentsResult.error;
 
   if (firstError) {
     return (
@@ -150,6 +153,7 @@ async function NewAssessmentContent() {
         <NewAssessmentForm
           organizations={organizationsResult.data ?? []}
           people={peopleResult.data ?? []}
+          departments={departmentsResult.data ?? []}
           templates={pdlTemplates}
           templateAccess={pdlAccess}
           batteries={pdlBatteries}
