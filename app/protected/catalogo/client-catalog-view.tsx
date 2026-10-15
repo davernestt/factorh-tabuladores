@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {solutionContent} from "./solution-content";
+import {feedback360PurchaseHref} from "@/lib/feedback360-commercial";
 
 export type ClientCatalogModule = {
   module_key: string; name: string; description: string | null;
@@ -14,7 +15,7 @@ export type ClientCatalogCredits = {
 };
 export default function ClientCatalogView({
   modules, instruments, credits, organizationName, availablePsychometrics,
-  allowedIds, accessibleKeys, mode="live"
+  allowedIds, accessibleKeys, canRequest360=false, mode="live"
 }: {
   modules: ClientCatalogModule[];
   instruments: ClientCatalogInstrument[];
@@ -23,6 +24,7 @@ export default function ClientCatalogView({
   availablePsychometrics: boolean;
   allowedIds: string[];
   accessibleKeys: string[];
+  canRequest360?:boolean;
   mode?: "live" | "demo";
 }){
   const remaining=credits?Math.max(0,credits.credits_total-credits.credits_used):0;
@@ -50,7 +52,7 @@ export default function ClientCatalogView({
         const isPsych=module.module_key==="psychometrics";
         const content=solutionContent[module.module_key];
         const href=mode==="demo"
-          ? `/demo-cliente?seccion=${isPsych?"psicometrias":"nom035"}`
+          ? `/demo-cliente?seccion=${isPsych?"psicometrias":module.module_key==="feedback360"?"360":"nom035"}`
           : isPsych?"/protected/psicometrias":module.module_key==="feedback360"?"/protected/360":"/protected/nom035";
         const detailHref=mode==="demo"
           ? `/demo-cliente?seccion=solucion&modulo=${encodeURIComponent(module.module_key)}`
@@ -93,6 +95,8 @@ export default function ClientCatalogView({
                 className="inline-flex rounded-xl border border-orange-200 px-5 py-3 text-sm font-bold text-orange-700 hover:bg-orange-50">
                 Descubre cómo funciona →
               </Link>}
+            {module.module_key==="feedback360"&&<Link href={mode==="demo"?"/demo-cliente?seccion=360":"/protected/360/demo"} className="inline-flex rounded-xl border border-orange-300 bg-orange-50 px-5 py-3 text-sm font-bold text-orange-700 hover:bg-orange-100">Ver demo 360° →</Link>}
+            {module.module_key==="feedback360"&&mode==="live"&&canRequest360&&<a href={feedback360PurchaseHref(organizationName)} className="inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Solicitar contratación 360° →</a>}
             {enabled && <Link href={detailHref} className="text-sm font-semibold text-orange-700 hover:underline">
               Ver beneficios y alcance
             </Link>}
@@ -115,6 +119,6 @@ export default function ClientCatalogView({
         </div>)}
       </div>
     </section>
-    <p className="text-xs leading-6 text-neutral-500">El catálogo es informativo: no muestra respuestas, expedientes ni información de otras empresas. Las demostraciones y nuevas licencias se activan únicamente desde administración FactoRH.</p>
+    <p className="text-xs leading-6 text-neutral-500">El catálogo es informativo: no muestra respuestas, expedientes ni información de otras empresas. La solicitud de contratación se envía a FactoRH para confirmar la propuesta y activar el servicio. No realiza cargos ni activa licencias automáticamente.</p>
   </div>;
 }
