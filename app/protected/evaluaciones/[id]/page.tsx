@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import {getCurrentAppUser} from "@/lib/app-auth";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -125,9 +126,23 @@ async function EvaluationDetailContent({ params }: PageProps) {
   const person = personResult.data;
   const organization = organizationResult.data;
   const template = templateResult.data;
+  const isLeadershipCases=template.assessment_type==="leadership_cases";
+  let gradesCount=0;
+  let criteriaCount=0;
+  if(isLeadershipCases){
+    const [gradeQuery,criteriaQuery]=await Promise.all([
+      db.from("leadership_case_ratings").select("question_id",{count:"exact",head:true}).eq("assignment_id",id),
+      db.from("assessment_questions").select("id",{count:"exact",head:true})
+        .eq("template_id",assignment.template_id).eq("question_type","scale")
+    ]);
+    if(gradeQuery.error||criteriaQuery.error)return <ErrorCard message="No se pudo verificar la evaluación profesional." />;
+    gradesCount=gradeQuery.count??0;
+    criteriaCount=criteriaQuery.count??0;
+  }
+  const professionalComplete=!isLeadershipCases||(criteriaCount>0&&gradesCount===criteriaCount);
   const dimensions = dimensionsResult.data ?? [];
   const resultByDimension = new Map(
-    (resultsResult.data ?? []).map((result) => [result.dimension_id, result]),
+    (professionalComplete?resultsResult.data??[]:[]).map((result) => [result.dimension_id, result]),
   );
   const questionTypeById = new Map(
     (questionsResult.data ?? []).map((question) => [
@@ -140,7 +155,7 @@ async function EvaluationDetailContent({ params }: PageProps) {
   const scaleTotal = (questionsResult.data ?? []).filter(
     (question) => question.question_type === "scale",
   ).length;
-  const scaleAnswered = responses.filter(
+  const scaleAnswered = isLeadershipCases?gradesCount:responses.filter(
     (response) => questionTypeById.get(response.question_id) === "scale",
   ).length;
   const textAnswered = responses.filter(
@@ -185,6 +200,12 @@ async function EvaluationDetailContent({ params }: PageProps) {
 
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={assignment.status} />
+          {isLeadershipCases&&assignment.status==="completed"&&
+           (await getCurrentAppUser())?.role==="super_admin"&&
+           <Link href={`/protected/evaluaciones/${id}/calificar-casos`}
+             className="rounded-xl bg-orange-600 px-4 py-2 text-sm font-bold text-white hover:bg-orange-700">
+             {professionalComplete?"Revisar calificación":"Calificar casos"}
+           </Link>}
           {assignment.status === "completed" &&
             template.assessment_type?.startsWith("leadership") && (
               <Link
@@ -215,8 +236,8 @@ async function EvaluationDetailContent({ params }: PageProps) {
         />
         <Metric label="Abiertas" value={String(textAnswered)} suffix="guardadas" />
         <Metric
-          label="Resultado global"
-          value={overallAverage === null ? "—" : overallAverage.toFixed(2)}
+          label={isLeadershipCases?"Calificación profesional":"Resultado global"}
+          value={overallAverage === null ? "Pendiente" : overallAverage.toFixed(2)}
           suffix={overallAverage === null ? undefined : "/ 5"}
         />
       </div>
