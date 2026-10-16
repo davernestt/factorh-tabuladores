@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import CopyAssessmentLink from "../copy-assessment-link";
+import {buildPdlPublicUrl} from "@/lib/pdl-public-url";
 
 type Organization = {
   id: string;
@@ -436,7 +437,7 @@ export default function NewAssessmentForm({
   }
 
   function fullUrl(path: string) {
-    return typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+    return buildPdlPublicUrl(path);
   }
 
   if (created) {
