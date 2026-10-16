@@ -145,7 +145,7 @@ export default function CompanyCreditManager({
                   {organizationName}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">
-                  La prueba gratuita permite 2 aplicaciones, una prueba por liga. Los paquetes consumen 1 crédito por instrumento aplicado.
+                  La prueba gratuita permite 2 candidatos durante 30 días. Cada uno puede responder una, varias o todas las psicometrías habilitadas desde una sola liga. Los paquetes contratados actuales siguen contabilizando por instrumento.
                 </p>
               </div>
               <button
@@ -170,7 +170,7 @@ export default function CompanyCreditManager({
                 >
                   <div className="text-sm font-black text-neutral-900">Prueba gratuita</div>
                   <div className="mt-1 text-xs leading-5 text-neutral-500">
-                    2 créditos · máximo una psicometría por liga · 30 días.
+                    2 candidatos · una, varias o todas las pruebas habilitadas por liga · 30 días.
                   </div>
                 </button>
                 <button
@@ -235,7 +235,7 @@ export default function CompanyCreditManager({
               )}
 
               <div className="rounded-2xl bg-neutral-50 p-4 text-xs leading-5 text-neutral-600">
-                Al activar o renovar un plan, el contador inicia nuevamente desde cero. Una batería de 5 instrumentos consume 5 créditos aunque el candidato reciba una sola liga.
+                Al activar o renovar un plan, el contador inicia nuevamente desde cero. En prueba gratuita, una batería de varias psicometrías consume sólo 1 aplicación por candidato. En los paquetes contratados actuales, cada instrumento aplicado consume 1 crédito.
               </div>
 
               {message && (
