@@ -417,7 +417,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                   : "Prueba gratuita FactoRH"}
               </div>
               <div className="mt-1 text-xl font-black text-neutral-900">
-                {clientCreditsRemaining ?? 0} {clientCreditPlan?.plan_type === "trial" ? "candidatos de prueba disponibles" : "créditos disponibles"}
+                {clientCreditsRemaining ?? 0} {clientPlan?.plan_type === "trial" ? "candidatos de prueba disponibles" : "créditos disponibles"}
               </div>
               <p className="mt-1 text-sm text-neutral-600">
                 {clientPlan?.plan_type === "trial"
