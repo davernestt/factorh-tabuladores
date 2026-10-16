@@ -1,8 +1,12 @@
 import Link from "next/link";
+import {Suspense} from "react";
 import FactoRHLogo from "@/components/factorh-logo";
 
 type Params={error?:string;reason?:string};
-export default async function AccessErrorPage({searchParams}:{searchParams:Promise<Params>}){
+export default function AccessErrorPage({searchParams}:{searchParams:Promise<Params>}){
+ return <Suspense fallback={<div className="flex min-h-svh items-center justify-center text-sm text-neutral-500">Preparando opciones de acceso…</div>}><AccessErrorContent searchParams={searchParams}/></Suspense>;
+}
+async function AccessErrorContent({searchParams}:{searchParams:Promise<Params>}){
  const params=await searchParams;
  const error=String(params?.error??"");
  const expired=params?.reason==="invalid_link"||/link is invalid|has expired|otp_expired|expired|invalid token/i.test(error);
