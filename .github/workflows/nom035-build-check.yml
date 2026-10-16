@@ -19,6 +19,7 @@ on:
       - 'feature/marca-*'
       - 'fix/logotipo-*'
       - 'fix/leadership-*'
+      - 'fix/pdl-*'
   workflow_dispatch:
 
 jobs:
@@ -79,5 +80,7 @@ jobs:
         run: npx --yes tsx scripts/client-service-demos-smoke.ts
       - name: Validate private leadership cases rubric
         run: npx --yes tsx scripts/leadership-cases-private-rubric-smoke.ts
+      - name: Verify stable PDL URLs and safe resends
+        run: npx --yes tsx scripts/pdl-urls-resend-smoke.ts
       - name: Build app
         run: npm run build
