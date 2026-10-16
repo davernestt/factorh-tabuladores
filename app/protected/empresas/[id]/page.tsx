@@ -1,496 +1,188 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentAppUser } from "@/lib/app-auth";
+import {notFound,redirect} from "next/navigation";
+import {createAdminClient} from "@/lib/supabase/admin";
+import {getCurrentAppUser} from "@/lib/app-auth";
+import CompanyManager from "../company-manager";
 import CompanyAccessPanel from "../company-access-panel";
-import CompanyCreditManager, { type CreditPlan } from "../company-credit-manager";
-import CompanyModuleManager, {
-  type ModuleSubscription,
-  type PlatformModule,
-} from "../company-module-manager";
-
-type Organization = {
-  id: string;
-  name: string;
-  slug: string;
-  active: boolean;
-  lifecycle_stage: "prospect" | "client" | "inactive";
-  website: string | null;
-  phone: string | null;
-  commercial_email: string | null;
-  notes: string | null;
-};
-
-type ClientUser = {
-  user_id: string;
-  email: string;
-  display_name: string | null;
-  active: boolean;
-};
-
-type ProcessRow = {
-  id: string;
-  person_id: string;
-  name: string;
-  status: string;
-  created_at: string;
-};
-
-type AssignmentRow = {
-  id: string;
-  process_id: string;
-  status: string;
-  template_id: string;
-};
-
-type PersonRow = {
-  id: string;
-  first_name: string;
-  last_name: string | null;
-};
-
-type ReminderRow = {
-  module_key: string;
-  ends_on: string;
-  days_remaining: number;
-};
-
-export default async function CompanyDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const currentUser = await getCurrentAppUser();
-  if (!currentUser) redirect("/auth/login");
-  if (currentUser.role !== "super_admin") redirect("/protected/psicometrias");
-
-  const { id } = await params;
-  const db = createAdminClient();
-
-  const [
-    organizationR,
-    usersR,
-    creditR,
-    modulesR,
-    subscriptionsR,
-    remindersR,
-    processesR,
-    accessR,
-  ] = await Promise.all([
-    db
-      .from("organizations")
-      .select(
-        "id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes",
-      )
-      .eq("id", id)
-      .maybeSingle(),
-    db
-      .from("app_users")
-      .select("user_id,email,display_name,active")
-      .eq("organization_id", id)
-      .eq("role", "client")
-      .order("created_at"),
-    db
-      .from("organization_psychometric_credits")
-      .select(
-        "organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only",
-      )
-      .eq("organization_id", id)
-      .maybeSingle(),
-    db
-      .from("platform_modules")
-      .select("module_key,name,description,route,client_available")
-      .eq("active", true)
-      .order("sort_order"),
-    db
-      .from("organization_module_subscriptions")
-      .select(
-        "id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice",
-      )
-      .eq("organization_id", id),
-    db
-      .from("module_expiry_reminders")
-      .select("module_key,ends_on,days_remaining")
-      .eq("organization_id", id)
-      .order("days_remaining"),
-    db
-      .from("assessment_processes")
-      .select("id,person_id,name,status,created_at")
-      .eq("organization_id", id)
-      .order("created_at", { ascending: false }),
-    db
-      .from("organization_assessment_templates")
-      .select("template_id,enabled")
-      .eq("organization_id", id)
-      .eq("enabled", true),
-  ]);
-
-  const firstError =
-    organizationR.error ||
-    usersR.error ||
-    creditR.error ||
-    modulesR.error ||
-    subscriptionsR.error ||
-    remindersR.error ||
-    processesR.error ||
-    accessR.error;
-
-  if (firstError) {
-    return (
-      <div className="rounded-3xl border border-red-200 bg-red-50 p-7">
-        <h1 className="font-bold text-red-800">No fue posible cargar la empresa</h1>
-        <p className="mt-2 text-sm text-red-700">{firstError.message}</p>
-      </div>
-    );
-  }
-
-  if (!organizationR.data) notFound();
-
-  const organization = organizationR.data as Organization;
-  const users = (usersR.data ?? []) as ClientUser[];
-  const creditPlan = (creditR.data ?? null) as CreditPlan | null;
-  const modules = (modulesR.data ?? []) as PlatformModule[];
-  const subscriptions = (subscriptionsR.data ?? []) as ModuleSubscription[];
-  const reminders = (remindersR.data ?? []) as ReminderRow[];
-  const processes = (processesR.data ?? []) as ProcessRow[];
-  const subscriptionByModule = new Map(
-    subscriptions.map((item) => [item.module_key, item]),
-  );
-
-  const processIds = processes.map((item) => item.id);
-  const personIds = Array.from(new Set(processes.map((item) => item.person_id)));
-  const templateIds = (accessR.data ?? []).map((item) => item.template_id);
-
-  const [assignmentsR, peopleR, templatesR] = await Promise.all([
-    processIds.length
-      ? db
-          .from("assessment_assignments")
-          .select("id,process_id,status,template_id")
-          .in("process_id", processIds)
-      : Promise.resolve({ data: [], error: null }),
-    personIds.length
-      ? db
-          .from("people")
-          .select("id,first_name,last_name")
-          .in("id", personIds)
-      : Promise.resolve({ data: [], error: null }),
-    templateIds.length
-      ? db
-          .from("assessment_templates")
-          .select("id,name,assessment_type")
-          .in("id", templateIds)
-          .order("name")
-      : Promise.resolve({ data: [], error: null }),
-  ]);
-
-  const secondaryError =
-    assignmentsR.error || peopleR.error || templatesR.error;
-  if (secondaryError) {
-    return (
-      <div className="rounded-3xl border border-red-200 bg-red-50 p-7">
-        <h1 className="font-bold text-red-800">No fue posible cargar la actividad</h1>
-        <p className="mt-2 text-sm text-red-700">{secondaryError.message}</p>
-      </div>
-    );
-  }
-
-  const assignments = (assignmentsR.data ?? []) as AssignmentRow[];
-  const people = (peopleR.data ?? []) as PersonRow[];
-  const personById = new Map(people.map((item) => [item.id, item]));
-  const assignmentsByProcess = new Map<string, AssignmentRow[]>();
-  assignments.forEach((assignment) => {
-    const rows = assignmentsByProcess.get(assignment.process_id) ?? [];
-    rows.push(assignment);
-    assignmentsByProcess.set(assignment.process_id, rows);
-  });
-
-  const completedAssignments = assignments.filter(
-    (item) => item.status === "completed",
-  ).length;
-  const activeAssignments = assignments.filter((item) =>
-    ["pending", "in_progress"].includes(item.status),
-  ).length;
-  const evaluatedPeople = new Set(processes.map((item) => item.person_id)).size;
-  const creditsRemaining = creditPlan
-    ? Math.max(0, creditPlan.credits_total - creditPlan.credits_used)
-    : 0;
-
-  const enabledPsychometrics = (templatesR.data ?? []).filter((item) =>
-    String(item.assessment_type ?? "").startsWith("psychometric_"),
-  );
-
-  return (
-    <div className="space-y-7">
-      <div>
-        <Link
-          href="/protected/empresas"
-          className="text-sm font-bold text-neutral-500 hover:text-orange-600"
-        >
-          ← Volver a Empresas
-        </Link>
-      </div>
-
-      <section className="rounded-3xl bg-[#4A4A4A] p-7 text-white shadow-sm md:p-9">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">
-              Ficha comercial y operativa
-            </div>
-            <h1 className="mt-2 text-4xl font-black">{organization.name}</h1>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full bg-white/10 px-3 py-1.5 font-bold">
-                {organization.lifecycle_stage === "prospect"
-                  ? "Prospecto"
-                  : organization.lifecycle_stage === "inactive"
-                    ? "Inactiva"
-                    : "Cliente"}
-              </span>
-              <span className="rounded-full bg-white/10 px-3 py-1.5 font-bold">
-                {users.length} usuario{users.length === 1 ? "" : "s"}
-              </span>
-              <span className="rounded-full bg-white/10 px-3 py-1.5 font-bold">
-                {enabledPsychometrics.length} pruebas habilitadas
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="Personas" value={String(evaluatedPeople)} />
-            <Metric label="Aplicaciones" value={String(assignments.length)} />
-            <Metric label="Terminadas" value={String(completedAssignments)} />
-            <Metric label="Créditos" value={String(creditsRemaining)} />
-          </div>
-        </div>
-      </section>
-
-      {reminders.length > 0 && (
-        <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6">
-          <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">
-            Seguimiento comercial
-          </div>
-          <h2 className="mt-2 text-xl font-black text-neutral-900">
-            Módulos próximos a vencer
-          </h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {reminders.map((reminder) => {
-              const module = modules.find(
-                (item) => item.module_key === reminder.module_key,
-              );
-              return (
-                <div
-                  key={reminder.module_key}
-                  className="rounded-2xl bg-white p-4 ring-1 ring-amber-200"
-                >
-                  <div className="font-black text-neutral-900">
-                    {module?.name ?? reminder.module_key}
-                  </div>
-                  <div className="mt-1 text-sm text-amber-800">
-                    {reminder.days_remaining >= 0
-                      ? `Vence en ${reminder.days_remaining} días`
-                      : `Venció hace ${Math.abs(reminder.days_remaining)} días`}
-                    {" · "}
-                    {new Date(reminder.ends_on + "T12:00:00").toLocaleDateString(
-                      "es-MX",
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
-        <CompanyAccessPanel
-          organizationId={organization.id}
-          organizationSlug={organization.slug}
-          users={users}
-        />
-
-        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-            Psicometrías
-          </div>
-          <h2 className="mt-2 text-2xl font-black text-neutral-900">
-            Demo, créditos y plan
-          </h2>
-          <div className="mt-5">
-            <CompanyCreditManager
-              organizationId={organization.id}
-              organizationName={organization.name}
-              plan={creditPlan}
-            />
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <SmallMetric
-              label="Créditos usados"
-              value={creditPlan ? String(creditPlan.credits_used) : "0"}
-            />
-            <SmallMetric
-              label="Aplicaciones activas"
-              value={String(activeAssignments)}
-            />
-            <SmallMetric
-              label="Reportes terminados"
-              value={String(completedAssignments)}
-            />
-          </div>
-
-          <div className="mt-5">
-            <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-              Pruebas habilitadas
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {enabledPsychometrics.length ? (
-                enabledPsychometrics.map((template) => (
-                  <span
-                    key={template.id}
-                    className="rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-bold text-neutral-700"
-                  >
-                    {template.name}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-neutral-500">
-                  No hay psicometrías habilitadas.
-                </span>
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-          Módulos FactoRH
-        </div>
-        <h2 className="mt-2 text-2xl font-black text-neutral-900">
-          Qué tiene, qué pidió y cuándo vence
-        </h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">
-          Cada módulo conserva su propia fecha de inicio y vencimiento. Puedes registrar
-          solicitudes aunque el módulo todavía no esté habilitado para autoservicio del cliente.
-        </p>
-
-        <div className="mt-6 grid gap-4">
-          {modules.map((module) => (
-            <CompanyModuleManager
-              key={module.module_key}
-              organizationId={organization.id}
-              module={module}
-              subscription={subscriptionByModule.get(module.module_key)}
-              psychometricsManagedSeparately={
-                module.module_key === "psychometrics"
-              }
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-              Actividad
-            </div>
-            <h2 className="mt-2 text-2xl font-black text-neutral-900">
-              Pruebas y aplicaciones recientes
-            </h2>
-          </div>
-          <Link
-            href={`/protected/psicometrias?organization=${organization.id}`}
-            className="rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-bold text-neutral-700 hover:bg-neutral-50"
-          >
-            Abrir psicometrías
-          </Link>
-        </div>
-
-        <div className="mt-5 divide-y divide-neutral-100">
-          {processes.slice(0, 12).map((process) => {
-            const person = personById.get(process.person_id);
-            const rows = assignmentsByProcess.get(process.id) ?? [];
-            const done = rows.filter((item) => item.status === "completed").length;
-            return (
-              <div
-                key={process.id}
-                className="grid gap-3 py-4 md:grid-cols-[1.2fr_1fr_auto] md:items-center"
-              >
-                <div>
-                  <div className="font-bold text-neutral-900">
-                    {person
-                      ? `${person.first_name} ${person.last_name ?? ""}`.trim()
-                      : "Persona"}
-                  </div>
-                  <div className="mt-1 text-xs text-neutral-500">
-                    {process.name}
-                  </div>
-                </div>
-                <div className="text-sm text-neutral-600">
-                  {done}/{rows.length} pruebas terminadas
-                </div>
-                <div className="text-xs text-neutral-400">
-                  {new Date(process.created_at).toLocaleDateString("es-MX")}
-                </div>
-              </div>
-            );
-          })}
-          {processes.length === 0 && (
-            <div className="py-8 text-center text-sm text-neutral-500">
-              Esta empresa todavía no tiene aplicaciones.
-            </div>
-          )}
-        </div>
-      </section>
-
-      {(organization.commercial_email ||
-        organization.phone ||
-        organization.website ||
-        organization.notes) && (
-        <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-            Datos comerciales
-          </div>
-          <div className="mt-4 grid gap-3 text-sm text-neutral-700 md:grid-cols-2">
-            {organization.commercial_email && (
-              <div><strong>Correo:</strong> {organization.commercial_email}</div>
-            )}
-            {organization.phone && (
-              <div><strong>Teléfono:</strong> {organization.phone}</div>
-            )}
-            {organization.website && (
-              <div><strong>Sitio:</strong> {organization.website}</div>
-            )}
-            {organization.notes && (
-              <div className="md:col-span-2">
-                <strong>Notas:</strong> {organization.notes}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+import CompanyCreditManager,{type CreditPlan} from "../company-credit-manager";
+import CompanyModuleManager,{type ModuleSubscription,type PlatformModule} from "../company-module-manager";
+import CompanyTestSettings from "../company-test-settings";
+import CompanyQuoteBuilder from "../company-quote-builder";
+import CompanyDetailTabs from "../company-detail-tabs";
+type RouteProps={params:Promise<{id:string}>};
+const mxn=(amount:number)=>Number(amount).toLocaleString("es-MX",{style:"currency",currency:"MXN"});
+const date=(value:string|null|undefined)=>value?new Date(value.includes("T")?value:value+"T12:00:00").toLocaleDateString("es-MX"):"Sin fecha";
+const box="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm";
+export default async function CompanyDetailPage({params}:RouteProps){
+ const user=await getCurrentAppUser();
+ if(!user)redirect("/auth/login");
+ if(user.role!=="super_admin")redirect("/protected/catalogo");
+ const {id}=await params;
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound();
+ const db=createAdminClient();
+ const [orgR,usersR,creditR,modulesR,subsR,remindersR,processesR,accessR,
+  templatesR,quotesR,auditR,cyclesR,climateR,c3R]=await Promise.all([
+  db.from("organizations").select("id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes").eq("id",id).maybeSingle(),
+  db.from("app_users").select("user_id,email,display_name,active").eq("organization_id",id).eq("role","client").order("created_at"),
+  db.from("organization_psychometric_credits").select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only").eq("organization_id",id).maybeSingle(),
+  db.from("platform_modules").select("module_key,name,description,route,client_available").eq("active",true).order("sort_order"),
+  db.from("organization_module_subscriptions").select("id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice").eq("organization_id",id),
+  db.from("module_expiry_reminders").select("module_key,ends_on,days_remaining").eq("organization_id",id),
+  db.from("assessment_processes").select("id,person_id,name,status,created_at").eq("organization_id",id).order("created_at",{ascending:false}).limit(100),
+  db.from("organization_assessment_templates").select("organization_id,template_id,enabled,participant_sendable").eq("organization_id",id),
+  db.from("assessment_templates").select("id,name,description,organization_id,assessment_type").eq("active",true).order("name"),
+  db.from("company_commercial_quotes").select("id,created_at,items,total_amount,discount_amount,subtotal,promo_50,status,notes,expires_on").eq("organization_id",id).order("created_at",{ascending:false}).limit(40),
+  db.from("company_service_audit").select("id,occurred_at,module_key,event_type,old_state,new_state").eq("organization_id",id).order("occurred_at",{ascending:false}).limit(100),
+  db.from("feedback360_cycles").select("id,status,created_at").eq("organization_id",id),
+  db.from("clima_campaigns").select("id,status").eq("organization_id",id),
+  db.from("c3_campaigns").select("id,status").eq("organization_id",id)
+ ]);
+ const firstError=orgR.error||usersR.error||creditR.error||modulesR.error||subsR.error||
+  remindersR.error||processesR.error||accessR.error||templatesR.error||
+  quotesR.error||auditR.error||cyclesR.error||climateR.error||c3R.error;
+ if(firstError)return <div className="rounded-3xl border border-red-200 bg-red-50 p-7 text-red-700">No se pudo cargar el expediente: {firstError.message}. Comprueba que la migración del Centro de Clientes esté aplicada.</div>;
+ const org=orgR.data;
+ if(!org)notFound();
+ const users=usersR.data??[];
+ const credit=(creditR.data??null) as CreditPlan|null;
+ const modules=(modulesR.data??[]) as PlatformModule[];
+ const subscriptions=(subsR.data??[]) as ModuleSubscription[];
+ const subMap=new Map(subscriptions.map(s=>[s.module_key,s]));
+ const reminder=remindersR.data??[];
+ const processes=processesR.data??[];
+ const quotes=quotesR.data??[];
+ const audit=auditR.data??[];
+ const access=accessR.data??[];
+ const templates=templatesR.data??[];
+ const psych=templates.filter(t=>t.assessment_type?.startsWith("psychometric_")&&access.some(a=>a.template_id===t.id&&a.enabled));
+ const group=Array.from(templates.reduce((acc,t)=>{
+  const prev=acc.get(t.name)??[];
+  prev.push({id:t.id,organization_id:t.organization_id});
+  acc.set(t.name,prev);return acc;
+ },new Map<string,Array<{id:string;organization_id:string|null}>>())).map(([name,variants])=>({
+  name,description:templates.find(t=>t.name===name)?.description??null,variants
+ }));
+ const processIds=processes.map(p=>p.id);
+ const [assignmentsR,peopleR]=await Promise.all([
+  processIds.length?db.from("assessment_assignments").select("id,process_id,status").in("process_id",processIds):Promise.resolve({data:[],error:null}),
+  processes.length?db.from("people").select("id,first_name,last_name").in("id",[...new Set(processes.map(p=>p.person_id))]):Promise.resolve({data:[],error:null})
+ ]);
+ if(assignmentsR.error||peopleR.error)return <div className="rounded-2xl bg-red-50 p-6 text-red-700">No se pudo cargar el seguimiento de aplicaciones.</div>;
+ const assignments=assignmentsR.data??[];
+ const names=new Map((peopleR.data??[]).map(p=>[p.id,`${p.first_name} ${p.last_name??""}`.trim()]));
+ const done=assignments.filter(a=>a.status==="completed").length;
+ const creditsRemaining=credit?Math.max(0,credit.credits_total-credit.credits_used):0;
+ const current=subscriptions.filter(s=>s.status==="active");
+ return <div className="space-y-6">
+  <Link href="/protected/empresas" className="text-sm font-bold text-orange-600">← Centro de Clientes</Link>
+  <header className="rounded-3xl bg-neutral-800 p-7 text-white shadow-sm sm:p-9">
+   <p className="text-xs font-bold uppercase tracking-widest text-orange-300">FactoRH · Expediente comercial y operativo</p>
+   <h1 className="mt-2 text-3xl font-black sm:text-4xl">{org.name}</h1>
+   <div className="mt-4 flex flex-wrap gap-2 text-xs">
+    <span className="rounded-lg bg-white/10 px-3 py-2">{org.lifecycle_stage==="prospect"?"Prospecto":org.lifecycle_stage==="inactive"?"Inactiva":"Cliente"}</span>
+    <span className="rounded-lg bg-white/10 px-3 py-2">{users.length} usuarios</span>
+    <span className="rounded-lg bg-white/10 px-3 py-2">{current.length} licencias activas</span>
+    <span className="rounded-lg bg-white/10 px-3 py-2">{subscriptions.filter(s=>s.status==="trial").length} módulos en demo</span>
+   </div>
+  </header>
+  <CompanyDetailTabs
+   overview={<div className="space-y-5">
+    <div className="grid gap-3 sm:grid-cols-4">
+     {([["Usuarios",users.length],["Módulos activos",current.length],["Aplicaciones terminadas",done],["Créditos disponibles",creditsRemaining]] as const).map(([k,v])=>
+      <div className={box} key={k}><p className="text-xs font-bold text-neutral-500">{k}</p><p className="mt-2 text-3xl font-black text-neutral-900">{v}</p></div>)}
     </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-white/10 px-4 py-3">
-      <div className="text-[10px] font-bold uppercase tracking-wide text-neutral-300">
-        {label}
+    {reminder.length>0&&<section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+     <h2 className="font-black text-amber-900">Seguimiento de renovaciones</h2>
+     <div className="mt-3 space-y-2">{reminder.map(r=><div key={r.module_key} className="text-sm text-amber-900">{modules.find(m=>m.module_key===r.module_key)?.name??r.module_key}: {r.days_remaining>=0?`vence en ${r.days_remaining} días`:"vencido"} · {date(r.ends_on)}</div>)}</div>
+    </section>}
+    <section className={box}>
+     <div className="flex flex-wrap items-center justify-between gap-3">
+      <h2 className="text-xl font-black text-neutral-900">Datos de la empresa</h2>
+      <CompanyManager organization={org}/>
+     </div>
+     <div className="mt-4 grid gap-3 text-sm text-neutral-700 md:grid-cols-2">
+      <div><strong>Correo:</strong> {org.commercial_email||"Sin registrar"}</div>
+      <div><strong>Teléfono:</strong> {org.phone||"Sin registrar"}</div>
+      <div><strong>Sitio:</strong> {org.website||"Sin registrar"}</div>
+      <div><strong>Etapa:</strong> {org.lifecycle_stage}</div>
+      {org.notes&&<div className="md:col-span-2"><strong>Notas comerciales:</strong> {org.notes}</div>}
+     </div>
+    </section>
+    <section className={box}>
+     <h2 className="text-xl font-black text-neutral-900">Servicios contratados y en seguimiento</h2>
+     <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {modules.map(m=>{const s=subMap.get(m.module_key);return <div key={m.module_key} className="rounded-xl border border-neutral-200 p-4">
+       <p className="font-bold text-neutral-800">{m.name}</p>
+       <p className="mt-1 text-xs text-neutral-500">{s?`${s.status} · ${s.plan_name||"Sin plan"} · vence ${date(s.ends_on)}`:"No contratado"}</p>
+      </div>})}
+     </div>
+    </section>
+   </div>}
+   users={<CompanyAccessPanel organizationId={org.id} organizationName={org.name} organizationSlug={org.slug} users={users}/>}
+   services={<div className="space-y-5">
+    <CompanyQuoteBuilder organizationId={org.id}/>
+    <section className={box}>
+     <h2 className="text-xl font-black text-neutral-900">Habilitación y licencias actuales</h2>
+     <p className="mt-2 text-sm leading-7 text-neutral-600">La cotización anterior no activa módulos. Utiliza los controles siguientes para habilitar o renovar licencias reales según la disponibilidad de cada servicio. Se conservará el historial de cambios.</p>
+     <div className="mt-5 rounded-2xl bg-orange-50 p-5">
+      <h3 className="font-black text-neutral-900">Psicometrías · Créditos y plan operativo</h3>
+      <div className="mt-3"><CompanyCreditManager organizationId={org.id} organizationName={org.name} plan={credit}/></div>
+      <p className="mt-2 text-xs text-neutral-600">La demo consume una aplicación por candidato; los paquetes pagados actuales todavía descuentan por instrumento. No actives cantidades de candidatos del nuevo modelo sin completar esta regla.</p>
+     </div>
+     <div className="mt-4 space-y-3">{modules.filter(m=>m.module_key!=="psychometrics").map(m=>
+      <CompanyModuleManager key={m.module_key} organizationId={org.id} module={m} subscription={subMap.get(m.module_key)}/>)}</div>
+    </section>
+    <section className={box}>
+     <h2 className="text-xl font-black text-neutral-900">Psicometrías disponibles para esta empresa</h2>
+     <p className="mt-2 text-sm text-neutral-500">{psych.length} pruebas habilitadas para la cuenta. Modifica aquí el catálogo autorizado.</p>
+     <div className="mt-5"><CompanyTestSettings organizationId={org.id} catalog={group} access={access}/></div>
+    </section>
+   </div>}
+   usage={<div className="space-y-5">
+    <section className="grid gap-3 sm:grid-cols-4">
+     {([
+      ["Procesos de evaluación",processes.length],
+      ["Pruebas terminadas",done],
+      ["Ciclos 360°",cyclesR.data?.length??0],
+      ["Campañas de clima",(climateR.data?.length??0)+(c3R.data?.length??0)]
+     ] as const).map(([k,v])=><div className={box} key={k}><p className="text-xs font-bold text-neutral-500">{k}</p><p className="mt-2 text-2xl font-black text-neutral-900">{v}</p></div>)}
+    </section>
+    <section className={box}>
+     <div className="flex flex-wrap justify-between gap-2"><h2 className="text-xl font-black">Aplicaciones recientes</h2><Link href={`/protected/psicometrias?organization=${org.id}`} className="text-sm font-bold text-orange-600">Abrir psicometrías →</Link></div>
+     <div className="mt-4 divide-y divide-neutral-100">{processes.slice(0,20).map(p=>{
+      const related=assignments.filter(a=>a.process_id===p.id);
+      return <div key={p.id} className="flex flex-wrap justify-between gap-3 py-3 text-sm">
+       <div><strong>{names.get(p.person_id)||"Persona"}</strong><p className="text-xs text-neutral-500">{p.name}</p></div>
+       <div className="text-neutral-600">{related.filter(a=>a.status==="completed").length} / {related.length} instrumentos · {date(p.created_at)}</div>
+      </div>})}
+      {processes.length===0&&<p className="py-5 text-sm text-neutral-500">Sin evaluaciones registradas.</p>}
+     </div>
+    </section>
+   </div>}
+   history={<div className="space-y-5">
+    <section className={box}>
+     <h2 className="text-xl font-black text-neutral-900">Cotizaciones registradas</h2>
+     <p className="mt-2 text-xs text-neutral-500">Son propuestas, no pagos cobrados. Las cantidades negociadas y el descuento se conservan para seguimiento.</p>
+     <div className="mt-4 space-y-3">{quotes.map(q=><article key={q.id} className="rounded-2xl border border-neutral-200 p-4">
+      <div className="flex flex-wrap justify-between gap-3">
+       <div><strong>{date(q.created_at)}</strong><p className="mt-1 text-xs text-neutral-500">{Array.isArray(q.items)?q.items.map((x:{moduleName?:string;quantity?:number})=>`${x.moduleName||"Módulo"}: ${x.quantity??0}`).join(" · "):"Cotización"}</p></div>
+       <div className="text-right"><p className="text-lg font-black">{mxn(q.total_amount)}</p><p className="text-xs text-neutral-500">{q.promo_50?"Promo 50% elegible":"Precio negociado"} · {q.status}</p></div>
       </div>
-      <div className="mt-1 text-2xl font-black text-white">{value}</div>
-    </div>
-  );
-}
-
-function SmallMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-neutral-50 p-4">
-      <div className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-        {label}
-      </div>
-      <div className="mt-1 text-xl font-black text-neutral-900">{value}</div>
-    </div>
-  );
+      {q.notes&&<p className="mt-2 text-sm text-neutral-600">{q.notes}</p>}
+     </article>)}
+     {quotes.length===0&&<p className="text-sm text-neutral-500">Sin cotizaciones guardadas.</p>}
+     </div>
+    </section>
+    <section className={box}>
+     <h2 className="text-xl font-black text-neutral-900">Bitácora de licencias y créditos</h2>
+     <p className="mt-2 text-xs text-neutral-500">Los cambios se registran automáticamente desde la instalación de esta mejora; no se reconstruye un historial anterior inexistente.</p>
+     <div className="mt-4 divide-y divide-neutral-100">{audit.map(a=><div key={a.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+      <div><strong>{modules.find(m=>m.module_key===a.module_key)?.name||a.module_key}</strong><p className="text-xs text-neutral-500">{a.event_type}</p></div>
+      <span className="text-xs text-neutral-500">{date(a.occurred_at)}</span>
+     </div>)}
+     {audit.length===0&&<p className="py-3 text-sm text-neutral-500">La bitácora se llenará conforme se efectúen nuevas activaciones, renovaciones y cambios.</p>}</div>
+    </section>
+   </div>}
+  />
+ </div>;
 }

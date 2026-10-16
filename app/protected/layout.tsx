@@ -73,8 +73,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     { href: "/protected/evaluaciones", name: "Evaluaciones" },
     { href: "/protected/estudios", name: "Estudios e Investigaciones" },
     { href: "/protected/candidatos", name: "Candidatos" },
-    { href: "/protected/empresas", name: "Empresas" },
-    { href: "/protected/usuarios", name: "Usuarios" },
+    { href: "/protected/empresas", name: "Centro de Clientes" },
   ];
 
   const clientItems = [
