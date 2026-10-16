@@ -13,6 +13,7 @@ on:
       - 'feature/solicitudes-*'
       - 'feature/ese-*'
       - 'feature/360-*'
+      - 'feature/psicometria-*'
       - 'feature/ese-formato-*'
       - 'feature/marca-*'
       - 'fix/logotipo-*'
@@ -66,5 +67,7 @@ jobs:
         run: npx --yes tsx scripts/360-departments-smoke.ts
       - name: Validate 360 demo and commercial visibility
         run: npx --yes tsx scripts/360-commercial-smoke.ts
+      - name: Validate multi-test psychometric free trial
+        run: npx --yes tsx scripts/psychometric-trial-batteries-smoke.ts
       - name: Build app
         run: npm run build
