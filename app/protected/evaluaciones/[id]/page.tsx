@@ -5,6 +5,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { relationshipLabel } from "@/lib/pdl-evaluation-role";
+import ResendAssessmentLink from "../../resend-assessment-link";
+import {buildPdlPublicUrl} from "@/lib/pdl-public-url";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -26,6 +28,9 @@ export default function EvaluationDetailPage({ params }: PageProps) {
 }
 
 async function EvaluationDetailContent({ params }: PageProps) {
+  const currentAppUser=await getCurrentAppUser();
+  if(!currentAppUser)redirect("/auth/login");
+  if(currentAppUser.role!=="super_admin")redirect("/protected/catalogo");
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
@@ -62,7 +67,7 @@ async function EvaluationDetailContent({ params }: PageProps) {
   ] = await Promise.all([
     db
       .from("assessment_processes")
-      .select("id,name,person_id,organization_id")
+      .select("id,name,person_id,organization_id,public_token")
       .eq("id", assignment.process_id)
       .single(),
     db
@@ -105,7 +110,7 @@ async function EvaluationDetailContent({ params }: PageProps) {
   const [personResult, organizationResult] = await Promise.all([
     db
       .from("people")
-      .select("first_name,last_name,job_title,area")
+      .select("first_name,last_name,email,phone,job_title,area")
       .eq("id", processData.person_id)
       .single(),
     db
@@ -319,14 +324,27 @@ async function EvaluationDetailContent({ params }: PageProps) {
           />
         </div>
 
-        {assignment.status !== "completed" && (
-          <Link
-            href={`/e/${assignment.public_token}`}
-            className="mt-6 inline-flex rounded-xl bg-orange-500 px-5 py-3 font-bold text-white hover:bg-orange-600"
-          >
-            Abrir evaluación
-          </Link>
-        )}
+        {assignment.status !== "completed"&&assignment.status!=="cancelled"&&
+          <div className="mt-6 space-y-3">
+            <ResendAssessmentLink
+              path={assignment.relationship_type==="self"&&processData.public_token
+                ? `/p/${processData.public_token}`
+                : `/e/${assignment.public_token}`}
+              personName={assignment.relationship_type==="self"?personName:assignment.evaluator_name||"Evaluador"}
+              evaluatedPersonName={assignment.relationship_type==="self"?null:personName}
+              relationshipLabel={assignment.relationship_type==="self"?null:relationshipLabel(assignment.relationship_type)}
+              templateName={template.name}
+              organizationName={organization.name}
+              email={assignment.relationship_type==="self"?person.email:assignment.evaluator_email}
+              phone={assignment.relationship_type==="self"?person.phone:assignment.evaluator_phone}
+            />
+            <a href={buildPdlPublicUrl(`/e/${assignment.public_token}`)}
+               target="_blank" rel="noopener noreferrer"
+               className="inline-flex rounded-xl bg-orange-500 px-5 py-3 font-bold text-white hover:bg-orange-600">
+              Abrir evaluación en versión actual ↗
+            </a>
+          </div>}
+
       </section>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buildPdlPublicUrl } from "@/lib/pdl-public-url";
 
 type Props = {
   token?: string;
@@ -29,7 +30,7 @@ export default function CopyAssessmentLink({
 
   function assessmentUrl() {
     const target = path ?? (token ? `/e/${token}` : "/");
-    return `${window.location.origin}${target}`;
+    return buildPdlPublicUrl(target);
   }
 
   function invitationMessage() {
@@ -44,7 +45,7 @@ Por favor responde únicamente con base en la evidencia y conductas que hayas ob
 Gracias.`;
     }
 
-    return `Hola ${personName}, te comparto la liga para realizar tu evaluación "${templateName}" asignada por ${organizationName} a través de FactorRH.
+    return `Hola ${personName}, te comparto la liga para realizar tu evaluación "${templateName}" asignada por ${organizationName} a través de FactoRH.
 
 Ingresa aquí:
 ${assessmentUrl()}
@@ -92,7 +93,7 @@ Gracias.`;
   }
 
   function openEmail() {
-    const subject = `Invitación a evaluación FactorRH · ${templateName}`;
+    const subject = `Invitación a evaluación FactoRH · ${templateName}`;
     const recipient = email?.trim() ?? "";
     window.location.href = `mailto:${recipient}?subject=${encodeURIComponent(
       subject,

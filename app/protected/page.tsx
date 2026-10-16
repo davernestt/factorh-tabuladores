@@ -4,12 +4,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import DeleteAssessmentButton from "./delete-assessment-button";
+import ResendAssessmentLink from "./resend-assessment-link";
+import {buildPdlPublicUrl} from "@/lib/pdl-public-url";
 import { relationshipLabel } from "@/lib/pdl-evaluation-role";
 
 type Assignment = {
   id: string;
   status: string;
   evaluator_name: string | null;
+  evaluator_email: string | null;
+  evaluator_phone: string | null;
   relationship_type: string;
   public_token: string;
   created_at: string;
@@ -24,6 +28,7 @@ type ProcessRow = {
   name: string;
   person_id: string;
   organization_id: string;
+  public_token: string;
   department_id: string|null;
 };
 
@@ -31,6 +36,8 @@ type Person = {
   id: string;
   first_name: string;
   last_name: string | null;
+  email: string | null;
+  phone: string | null;
   job_title: string | null;
   area: string | null;
 };
@@ -50,11 +57,13 @@ type Question = {
   id: string;
   template_id: string;
   question_type: string;
+  required: boolean;
 };
 
 type ResponseRow = {
   assignment_id: string;
   question_id: string;
+  text_value: string | null;
 };
 
 type ResultRow = {
@@ -139,29 +148,31 @@ async function AdminDashboardContent({
     responsesResult,
     resultsResult,
     departmentsResult,
+    caseGradesResult,
   ] = await Promise.all([
     db
       .from("assessment_assignments")
       .select(
-        "id,status,evaluator_name,relationship_type,public_token,created_at,started_at,completed_at,process_id,template_id",
+        "id,status,evaluator_name,evaluator_email,evaluator_phone,relationship_type,public_token,created_at,started_at,completed_at,process_id,template_id",
       )
       .order("created_at", { ascending: false }),
     db
       .from("assessment_processes")
-.select("id,name,person_id,organization_id,department_id"),
+.select("id,name,person_id,organization_id,public_token,department_id"),
     db
       .from("people")
-      .select("id,first_name,last_name,job_title,area"),
+      .select("id,first_name,last_name,email,phone,job_title,area"),
     db.from("organizations").select("id,name"),
     db.from("assessment_templates").select("id,name,assessment_type"),
     db
       .from("assessment_questions")
-      .select("id,template_id,question_type"),
+      .select("id,template_id,question_type,required"),
     db
       .from("assessment_responses")
-      .select("assignment_id,question_id"),
+      .select("assignment_id,question_id,text_value"),
     db.from("assessment_results").select("assignment_id,score"),
     db.from("organization_departments").select("id,name,organization_id").order("name"),
+    db.from("leadership_case_ratings").select("assignment_id,question_id"),
   ]);
 
   const firstError =
@@ -173,7 +184,8 @@ async function AdminDashboardContent({
     questionsResult.error ||
     responsesResult.error ||
     resultsResult.error ||
-    departmentsResult.error;
+    departmentsResult.error ||
+    caseGradesResult.error;
 
   if (firstError) {
     return (
@@ -224,6 +236,23 @@ async function AdminDashboardContent({
     );
   }
 
+  const textRequiredByTemplate=new Map<string,number>();
+  for(const q of questions){
+    if(q.question_type==="text"&&q.required)
+      textRequiredByTemplate.set(q.template_id,(textRequiredByTemplate.get(q.template_id)??0)+1);
+  }
+  const textAnsweredByAssignment=new Map<string,number>();
+  const questionRequiredById=new Map(questions.map(q=>[q.id,q.required]));
+  for(const row of responses){
+    if(questionTypeById.get(row.question_id)==="text"&&questionRequiredById.get(row.question_id)
+      &&typeof row.text_value==="string"&&row.text_value.trim()){
+      textAnsweredByAssignment.set(row.assignment_id,(textAnsweredByAssignment.get(row.assignment_id)??0)+1);
+    }
+  }
+  const professionalGradesByAssignment=new Map<string,number>();
+  for(const grade of caseGradesResult.data??[]){
+    professionalGradesByAssignment.set(grade.assignment_id,(professionalGradesByAssignment.get(grade.assignment_id)??0)+1);
+  }
   const scoresByAssignment = new Map<string, number[]>();
   for (const result of resultRows) {
     const list = scoresByAssignment.get(result.assignment_id) ?? [];
@@ -241,6 +270,10 @@ async function AdminDashboardContent({
   const completedAverages = assignments
     .filter((assignment) => assignment.status === "completed")
     .map((assignment) => {
+      const assessmentType=templates.get(assignment.template_id)?.assessment_type;
+      if(assessmentType==="leadership_cases" &&
+         (professionalGradesByAssignment.get(assignment.id)??0)<(scaleTotalByTemplate.get(assignment.template_id)??0))
+        return null;
       const values = scoresByAssignment.get(assignment.id) ?? [];
       if (!values.length) return null;
       return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -260,12 +293,18 @@ async function AdminDashboardContent({
       ? organizations.get(process.organization_id)
       : undefined;
     const template = templates.get(assignment.template_id);
-    const scaleTotal = scaleTotalByTemplate.get(assignment.template_id) ?? 0;
-    const scaleAnswered = scaleAnsweredByAssignment.get(assignment.id) ?? 0;
+    const isCases=template?.assessment_type==="leadership_cases";
+    const scaleTotal=isCases?(textRequiredByTemplate.get(assignment.template_id)??0):
+      (scaleTotalByTemplate.get(assignment.template_id)??0);
+    const scaleAnswered=isCases?(textAnsweredByAssignment.get(assignment.id)??0):
+      (scaleAnsweredByAssignment.get(assignment.id)??0);
     const progress = scaleTotal
       ? Math.round((scaleAnswered / scaleTotal) * 100)
       : 0;
-    const scores = scoresByAssignment.get(assignment.id) ?? [];
+    const gradesComplete=!isCases||
+      (professionalGradesByAssignment.get(assignment.id)??0)>0&&
+      (professionalGradesByAssignment.get(assignment.id)??0)===(scaleTotalByTemplate.get(assignment.template_id)??0);
+    const scores=gradesComplete?scoresByAssignment.get(assignment.id)??[]:[];
     const average = scores.length
       ? scores.reduce((sum, value) => sum + value, 0) / scores.length
       : null;
@@ -930,15 +969,27 @@ function AssessmentCard({
               </Link>
             )}
           {assignment.status !== "completed" &&
-            assignment.status !== "cancelled" && (
-              <Link
-                href={`/e/${assignment.public_token}`}
-                target="_blank"
-                className="text-xs font-medium text-neutral-500 hover:text-neutral-900"
-              >
-                Abrir evaluación
-              </Link>
-            )}
+             assignment.status !== "cancelled" && (
+               <>
+                 <ResendAssessmentLink
+                   path={assignment.relationship_type==="self"&&process?.public_token
+                     ? `/p/${process.public_token}`
+                     : `/e/${assignment.public_token}`}
+                   personName={assignment.relationship_type==="self"?personName:assignment.evaluator_name||"Evaluador"}
+                   evaluatedPersonName={assignment.relationship_type==="self"?null:personName}
+                   relationshipLabel={assignment.relationship_type==="self"?null:relationshipLabel(assignment.relationship_type)}
+                   templateName={template?.name??"Evaluación"}
+                   organizationName={view.organization?.name??"FactoRH"}
+                   email={assignment.relationship_type==="self"?view.person?.email:assignment.evaluator_email}
+                   phone={assignment.relationship_type==="self"?view.person?.phone:assignment.evaluator_phone}
+                 />
+                 <a href={buildPdlPublicUrl(`/e/${assignment.public_token}`)}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-xs font-medium text-neutral-500 hover:text-neutral-900">
+                   Abrir evaluación
+                 </a>
+               </>
+             )}
           <DeleteAssessmentButton
             assignmentId={assignment.id}
             participantName={personName}
