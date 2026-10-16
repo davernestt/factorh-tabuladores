@@ -74,5 +74,7 @@ jobs:
         run: npx --yes tsx scripts/client-center-pricing-smoke.ts
       - name: Validate operational client center
         run: npx --yes tsx scripts/centro-clientes-operativo-smoke.ts
+      - name: Validate client service demos and plans
+        run: npx --yes tsx scripts/client-service-demos-smoke.ts
       - name: Build app
         run: npm run build
