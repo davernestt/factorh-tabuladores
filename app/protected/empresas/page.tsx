@@ -1,279 +1,60 @@
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { Suspense } from "react";
-import CompanyTestSettings from "./company-test-settings";
+import {redirect} from "next/navigation";
+import {getCurrentAppUser} from "@/lib/app-auth";
+import {createAdminClient} from "@/lib/supabase/admin";
 import CompanyManager from "./company-manager";
-import CompanyCreditManager, { type CreditPlan } from "./company-credit-manager";
-
-type Organization = {
-  id: string;
-  name: string;
-  slug: string;
-  active: boolean;
-  lifecycle_stage: "prospect" | "client" | "inactive";
-  website: string | null;
-  phone: string | null;
-  commercial_email: string | null;
-  notes: string | null;
-};
-
-type Template = {
-  id: string;
-  organization_id: string | null;
-  name: string;
-  description: string | null;
-};
-
-type AccessRow = {
-  organization_id: string;
-  template_id: string;
-  enabled: boolean;
-  participant_sendable: boolean;
-};
-
-type ReminderRow = {
-  organization_id: string;
-  module_key: string;
-  ends_on: string;
-  days_remaining: number;
-};
-
-export default function CompaniesPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="rounded-3xl border border-neutral-200 bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200 border-t-orange-500" />
-          <p className="text-neutral-600">Cargando empresas...</p>
-        </div>
-      }
-    >
-      <CompaniesContent />
-    </Suspense>
-  );
-}
-
-async function CompaniesContent() {
-  const authClient = await createClient();
-  const { data: authData, error: authError } = await authClient.auth.getClaims();
-
-  if (authError || !authData?.claims) {
-    redirect("/auth/login");
-  }
-
-  const db = createAdminClient();
-  const [
-    organizationsResult,
-    templatesResult,
-    accessResult,
-    creditsResult,
-    remindersResult,
-    modulesResult,
-  ] = await Promise.all([
-    db
-      .from("organizations")
-      .select("id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes")
-      .order("active", { ascending: false })
-      .order("name"),
-    db
-      .from("assessment_templates")
-      .select("id,organization_id,name,description")
-      .eq("active", true)
-      .order("name"),
-    db
-      .from("organization_assessment_templates")
-      .select("organization_id,template_id,enabled,participant_sendable"),
-    db
-      .from("organization_psychometric_credits")
-      .select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only"),
-    db
-      .from("module_expiry_reminders")
-      .select("organization_id,module_key,ends_on,days_remaining")
-      .order("days_remaining"),
-    db
-      .from("platform_modules")
-      .select("module_key,name")
-      .eq("active", true),
-  ]);
-
-  const firstError =
-    organizationsResult.error ||
-    templatesResult.error ||
-    accessResult.error ||
-    creditsResult.error ||
-    remindersResult.error ||
-    modulesResult.error;
-
-  if (firstError) {
-    return (
-      <div className="rounded-3xl border border-red-200 bg-red-50 p-7">
-        <h1 className="font-bold text-red-800">No fue posible cargar empresas</h1>
-        <p className="mt-2 text-sm text-red-700">{firstError.message}</p>
-      </div>
-    );
-  }
-
-  const organizations = (organizationsResult.data ?? []) as Organization[];
-  const templates = (templatesResult.data ?? []) as Template[];
-  const access = (accessResult.data ?? []) as AccessRow[];
-  const creditPlans = (creditsResult.data ?? []) as CreditPlan[];
-  const reminders = (remindersResult.data ?? []) as ReminderRow[];
-
-  const organizationById = new Map(
-    organizations.map((organization) => [organization.id, organization]),
-  );
-  const moduleNameByKey = new Map(
-    (modulesResult.data ?? []).map((module) => [module.module_key, module.name]),
-  );
-  const creditPlanByOrganization = new Map(
-    creditPlans.map((plan) => [plan.organization_id, plan]),
-  );
-
-  const grouped = Array.from(
-    templates.reduce((map, template) => {
-      const current = map.get(template.name) ?? [];
-      current.push({
-        id: template.id,
-        organization_id: template.organization_id,
-      });
-      map.set(template.name, current);
-      return map;
-    }, new Map<string, Array<{ id: string; organization_id: string | null }>>()),
-  ).map(([name, variants]) => {
-    const description =
-      templates.find((template) => template.name === name)?.description ?? null;
-
-    return { name, description, variants };
-  });
-
-  return (
-    <div>
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-orange-600">
-            Administración
-          </div>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-neutral-900">
-            Empresas y pruebas
-          </h1>
-          <p className="mt-2 max-w-3xl text-neutral-600">
-            Administra accesos, demos, planes, módulos, vencimientos y pruebas disponibles por empresa.
-          </p>
-        </div>
-        <CompanyManager />
-      </div>
-
-      {reminders.length > 0 && (
-        <section className="mt-7 rounded-3xl border border-amber-200 bg-amber-50 p-6">
-          <div className="text-xs font-bold uppercase tracking-[.16em] text-amber-700">
-            Seguimiento de renovación
-          </div>
-          <h2 className="mt-2 text-xl font-black text-neutral-900">
-            Servicios próximos a vencer
-          </h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            Estos avisos se actualizan diariamente. El cliente también ve su cuenta regresiva cuando el aviso está habilitado.
-          </p>
-          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {reminders.map((reminder) => {
-              const organization = organizationById.get(reminder.organization_id);
-              return (
-                <Link
-                  key={reminder.organization_id + ":" + reminder.module_key}
-                  href={`/protected/empresas/${reminder.organization_id}`}
-                  className="rounded-2xl bg-white p-4 ring-1 ring-amber-200 hover:ring-amber-400"
-                >
-                  <div className="font-black text-neutral-900">
-                    {organization?.name ?? "Empresa"}
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-neutral-700">
-                    {moduleNameByKey.get(reminder.module_key) ?? reminder.module_key}
-                  </div>
-                  <div className="mt-2 text-xs font-bold text-amber-700">
-                    {reminder.days_remaining >= 0
-                      ? `Vence en ${reminder.days_remaining} días`
-                      : `Venció hace ${Math.abs(reminder.days_remaining)} días`}
-                    {" · "}
-                    {new Date(reminder.ends_on + "T12:00:00").toLocaleDateString("es-MX")}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      <div className="mt-7 space-y-6">
-        {organizations.map((organization) => (
-          <section
-            key={organization.id}
-            className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm"
-          >
-            <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-orange-600">
-                    Empresa
-                  </div>
-                  <span
-                    className={
-                      organization.lifecycle_stage === "inactive"
-                        ? "rounded-full bg-neutral-100 px-2.5 py-1 text-[11px] font-bold text-neutral-500"
-                        : organization.lifecycle_stage === "prospect"
-                          ? "rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700"
-                          : "rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700"
-                    }
-                  >
-                    {organization.lifecycle_stage === "inactive"
-                      ? "Inactiva"
-                      : organization.lifecycle_stage === "prospect"
-                        ? "Prospecto"
-                        : "Cliente"}
-                  </span>
-                </div>
-                <h2 className="mt-1 text-2xl font-black text-neutral-900">
-                  {organization.name}
-                </h2>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
-                  {organization.commercial_email && <span>{organization.commercial_email}</span>}
-                  {organization.phone && <span>{organization.phone}</span>}
-                  {organization.website && <span>{organization.website}</span>}
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href={`/protected/empresas/${organization.id}`}
-                  className="rounded-xl bg-[#4A4A4A] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#3F3F3F]"
-                >
-                  Abrir ficha
-                </Link>
-                <CompanyCreditManager
-                  organizationId={organization.id}
-                  organizationName={organization.name}
-                  plan={creditPlanByOrganization.get(organization.id)}
-                />
-                <CompanyManager organization={organization} />
-              </div>
-            </div>
-
-            {organization.active ? (
-              <CompanyTestSettings
-                organizationId={organization.id}
-                catalog={grouped}
-                access={access.filter(
-                  (row) => row.organization_id === organization.id,
-                )}
-              />
-            ) : (
-              <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-600">
-                Esta empresa está inactiva. Puedes reactivarla desde <strong>Editar empresa</strong>.
-              </div>
-            )}
-          </section>
-        ))}
-      </div>
-    </div>
-  );
+import CompanyDirectory from "./company-directory";
+export default async function CompaniesPage(){
+ const user=await getCurrentAppUser();
+ if(!user)redirect("/auth/login");
+ if(user.role!=="super_admin")redirect("/protected/evaluaciones");
+ const db=createAdminClient();
+ const [orgsR,usersR,subsR,creditR,expiryR]=await Promise.all([
+  db.from("organizations").select("id,name,slug,active,lifecycle_stage,commercial_email").order("name"),
+  db.from("app_users").select("organization_id,user_id,active").eq("role","client"),
+  db.from("organization_module_subscriptions").select("organization_id,status,ends_on"),
+  db.from("organization_psychometric_credits").select("organization_id,credits_total,credits_used,plan_type,active"),
+  db.from("module_expiry_reminders").select("organization_id,days_remaining")
+ ]);
+ const err=orgsR.error||usersR.error||subsR.error||creditR.error||expiryR.error;
+ if(err)return <div className="rounded-2xl border border-red-200 bg-red-50 p-7 text-red-700">No se pudo cargar el Centro de Clientes: {err.message}</div>;
+ const orgs=orgsR.data??[];
+ const subs=subsR.data??[];
+ const credits=creditR.data??[];
+ const users=usersR.data??[];
+ const expiring=expiryR.data??[];
+ const summary=orgs.map(o=>({
+  id:o.id,name:o.name,slug:o.slug,active:o.active,lifecycle_stage:o.lifecycle_stage,
+  email:o.commercial_email,
+  users:users.filter(u=>u.organization_id===o.id&&u.active).length,
+  services:subs.filter(s=>s.organization_id===o.id&&s.status==="active").length,
+  trials:subs.filter(s=>s.organization_id===o.id&&s.status==="trial").length,
+  expiring:expiring.filter(e=>e.organization_id===o.id&&e.days_remaining<=30).length,
+  creditsRemaining:credits.filter(c=>c.organization_id===o.id).reduce((sum,c)=>sum+Math.max(0,c.credits_total-c.credits_used),0)
+ }));
+ const totalActive=summary.reduce((sum,c)=>sum+c.services,0);
+ const totalTrial=summary.reduce((sum,c)=>sum+c.trials,0);
+ const totalExpiring=summary.reduce((sum,c)=>sum+c.expiring,0);
+ return <div className="space-y-6">
+  <header className="flex flex-wrap items-end justify-between gap-4 rounded-3xl bg-neutral-800 p-7 text-white sm:p-9">
+   <div>
+    <p className="text-xs font-bold uppercase tracking-[.18em] text-orange-300">FactoRH · Administración</p>
+    <h1 className="mt-2 text-3xl font-black sm:text-4xl">Centro de Clientes</h1>
+    <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-200">Empresas, usuarios, servicios, demos, licencias, propuestas y renovaciones desde un mismo lugar.</p>
+   </div>
+   <CompanyManager/>
+  </header>
+  <section className="grid gap-3 sm:grid-cols-4">
+   {([
+    ["Empresas",orgs.length],
+    ["Licencias activas",totalActive],
+    ["Servicios demo",totalTrial],
+    ["Próximos a vencer",totalExpiring]
+   ] as const).map(([label,total])=><div key={label} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">{label}</p>
+    <div className="mt-2 text-3xl font-black text-neutral-900">{total}</div>
+   </div>)}
+  </section>
+  <CompanyDirectory companies={summary}/>
+  <p className="text-xs text-neutral-500">Las propuestas comerciales son cotizaciones, no ingresos cobrados. Los consumos, usuarios y licencias existentes permanecen en sus tablas originales.</p>
+ </div>;
 }
