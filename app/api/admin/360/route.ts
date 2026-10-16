@@ -49,7 +49,10 @@ export async function POST(request: NextRequest) {
   const personName = `${person.first_name} ${person.last_name ?? ''}`.trim();
   if (self.name.localeCompare(personName,'es',{sensitivity:'base'}) !== 0) return fail('El evaluador AUTO debe ser la misma persona evaluada.');
   const { data: cycle, error: createError } = await db.from('feedback360_cycles').insert({ organization_id, person_id, department_id:person.department_id, name, due_date, status:'open' }).select('id').single();
-  if (createError || !cycle) return fail(createError?.message ?? 'No se pudo abrir el ciclo.',500);
+  if (createError || !cycle) {
+    if(createError?.message?.includes('feedback360_evaluation_limit_reached')) return fail('Se alcanzó el cupo de evaluaciones 360° de esta empresa. Solicita a FactoRH una ampliación del plan.',409);
+    return fail('No se pudo abrir el ciclo 360°.',500);
+  }
   const invitations = raters.map(r => {
     const token = randomBytes(32).toString('base64url');
     return { ...r, token, token_hash: createHash('sha256').update(token).digest('hex') };
