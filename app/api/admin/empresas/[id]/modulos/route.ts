@@ -92,10 +92,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
    if(!demoConfig||demoConfig.kind!=="live"||!demoConfig.days)return NextResponse.json({error:"Este módulo sólo tiene demostración visual; aún no se habilita una demo real."},{status:409});
    const start=dateOrNull(body.starts_on),end=dateOrNull(body.ends_on);
    const now=new Date().toISOString().slice(0,10);
-   const limitDate=new Date(now+"T00:00:00Z");
+   const {data:existingTrial,error:trialError}=await db.from("organization_module_subscriptions")
+     .select("status,starts_on").eq("organization_id",id).eq("module_key",moduleKey).maybeSingle();
+   if(trialError)return NextResponse.json({error:"No se pudo validar la vigencia de la demo."},{status:500});
+   const isExistingTrial=existingTrial?.status==="trial";
+   if(!start||!end||isExistingTrial&&start!==existingTrial?.starts_on||!isExistingTrial&&start!==now){
+     return NextResponse.json({error:"La demo nueva debe iniciar hoy; las demos existentes conservan su fecha original."},{status:400});
+   }
+   const limitDate=new Date(start+"T00:00:00Z");
    limitDate.setUTCDate(limitDate.getUTCDate()+demoConfig.days);
    const maxEnd=limitDate.toISOString().slice(0,10);
-   if(!start||!end||start<now||start>maxEnd||end<start||end>maxEnd)return NextResponse.json({error:"La demo debe iniciar hoy y durar máximo "+demoConfig.days+" días."},{status:400});
+   if(end<start||end>maxEnd)return NextResponse.json({error:"Esta demo tiene vigencia máxima de "+demoConfig.days+" días desde su activación original."},{status:400});
   }
   const evaluationLimit = body.evaluation_limit;
   if(moduleKey==="feedback360"&&status==="trial"&&evaluationLimit!==1)
