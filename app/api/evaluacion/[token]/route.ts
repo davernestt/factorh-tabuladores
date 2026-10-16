@@ -138,11 +138,15 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       ...dimension,
       description: adaptText(dimension.description),
     })),
-    questions: (questionsResult.data ?? []).map((question) => ({
-      ...question,
-      prompt: adaptText(question.prompt) ?? question.prompt,
-    })),
-    responses: responsesResult.data ?? [],
+    questions: (questionsResult.data ?? [])
+      .filter((question)=>templateResult.data.assessment_type!=="leadership_cases"||question.question_type==="text")
+      .map((question) => ({
+        ...question,
+        prompt: adaptText(question.prompt) ?? question.prompt,
+      })),
+    responses: templateResult.data.assessment_type==="leadership_cases"
+      ? (responsesResult.data ?? []).filter(row=>(questionsResult.data??[]).some(q=>q.id===row.question_id&&q.question_type==="text"))
+      : responsesResult.data ?? [],
     results: [],
   });
 }
@@ -160,6 +164,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
   if (assignmentError) return errorResponse(assignmentError.message, 500);
   if (!assignment) return errorResponse("Evaluación no encontrada.", 404);
+  const {data:assignmentTemplate,error:templateError}=await db.from("assessment_templates")
+    .select("assessment_type").eq("id",assignment.template_id).single();
+  if(templateError||!assignmentTemplate)return errorResponse("No se pudo validar el instrumento.",500);
+  const isLeadershipCases=assignmentTemplate.assessment_type==="leadership_cases";
 
   if (body.action === "save") {
     if (!["pending", "in_progress"].includes(assignment.status)) {
@@ -181,6 +189,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (questionError) return errorResponse(questionError.message, 500);
     if (!question) return errorResponse("La pregunta no pertenece a esta evaluación.", 400);
+    if(isLeadershipCases&&question.question_type!=="text")
+      return errorResponse("La rúbrica de estos casos sólo puede ser calificada por FactoRH.",403);
 
     const isNotObserved = body.is_not_observed === true;
     const textValue =
@@ -311,6 +321,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     );
 
     const missing = (requiredResult.data ?? []).filter((question) => {
+      if(isLeadershipCases&&question.question_type!=="text")return false;
       const response = responseMap.get(question.id);
       if (!response) return true;
 
@@ -339,12 +350,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const { error: calculateError } = await db.rpc(
-      "calculate_assessment_results",
-      { p_assignment_id: assignment.id },
-    );
-
-    if (calculateError) return errorResponse(calculateError.message, 500);
+    // Para los casos no existe auto-calificación: la realiza FactoRH en su
+    // pantalla privada después de que el participante entrega sus respuestas.
+    if(!isLeadershipCases){
+      const {error:calculateError}=await db.rpc("calculate_assessment_results",
+        {p_assignment_id:assignment.id});
+      if(calculateError)return errorResponse(calculateError.message,500);
+    }
 
     const { error: completeError } = await db
       .from("assessment_assignments")
