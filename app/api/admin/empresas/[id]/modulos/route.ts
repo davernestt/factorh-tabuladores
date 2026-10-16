@@ -88,6 +88,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json({error:"Indica un cupo de 1 a 10,000 evaluaciones 360°."},{status:400});
     }
   }
+  if(moduleKey==="feedback360" && ["trial","active"].includes(String(status)) && evaluationLimit !== undefined && evaluationLimit !== null){
+    const {count,error:usedError}=await db.from("feedback360_cycles").select("id",{count:"exact",head:true}).eq("organization_id",id);
+    if(usedError)return NextResponse.json({error:"No se pudo verificar el consumo del 360°."},{status:500});
+    if((count??0)>evaluationLimit)return NextResponse.json({error:"El cupo es menor al número de ciclos 360° ya creados."},{status:409});
+  }
   const reminderDays = Math.max(
     1,
     Math.min(120, Number(body.reminder_days ?? 30) || 30),
