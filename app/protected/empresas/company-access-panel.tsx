@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import UserManager from "../usuarios/user-manager";
 
 type ClientUser = {
   user_id: string;
@@ -11,9 +12,12 @@ type ClientUser = {
 
 export default function CompanyAccessPanel({
   organizationSlug,
+  organizationId,
+  organizationName,
   users,
 }: {
   organizationId: string;
+  organizationName: string;
   organizationSlug: string;
   users: ClientUser[];
 }) {
@@ -44,6 +48,8 @@ export default function CompanyAccessPanel({
       <p className="mt-2 text-sm leading-6 text-neutral-600">
         Esta liga es permanente para la empresa. Cada persona entra con su propio correo y contraseña.
       </p>
+
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-orange-50 p-4"><p className="text-sm font-semibold text-neutral-700">Crea usuarios directamente dentro de esta empresa.</p><UserManager organizations={[{id:organizationId,name:organizationName,active:true}]}/></div>
 
       <div className="mt-5 rounded-2xl bg-neutral-50 p-4">
         <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
@@ -79,7 +85,7 @@ export default function CompanyAccessPanel({
       <div className="mt-6 space-y-3">
         {users.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-neutral-300 p-5 text-sm text-neutral-500">
-            Aún no hay usuarios de empresa. Créalo desde la sección Usuarios.
+            Todavía no hay usuarios. Utiliza «Crear usuario» arriba para invitarlos al portal de esta empresa.
           </div>
         ) : (
           users.map((user) => (
@@ -98,6 +104,7 @@ export default function CompanyAccessPanel({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <UserManager organizations={[{id:organizationId,name:organizationName,active:true}]} user={{user_id:user.user_id,email:user.email,display_name:user.display_name,active:user.active,role:"client",organization_id:organizationId}}/>
                   <button
                     type="button"
                     onClick={() => void copy(user.email, "email:" + user.user_id)}
