@@ -23,6 +23,7 @@ export type ModuleSubscription = {
   requested_notes: string | null;
   reminder_days: number;
   client_notice: boolean;
+  evaluation_limit?: number | null;
 };
 
 const statusLabel: Record<ModuleSubscription["status"], string> = {
