@@ -41,7 +41,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   let creditsTotal = 2;
   let planName = "Prueba gratuita";
   let validUntil = trialEnd.toISOString().slice(0, 10);
-  let trialSingle = true;
+  let trialSingle = false;
 
   if (mode === "package") {
     creditsTotal = Number(body.credits_total ?? 0);
