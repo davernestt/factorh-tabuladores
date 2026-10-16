@@ -193,15 +193,17 @@ export default function AssessmentClient({ token }: { token: string }) {
     [data],
   );
 
-  const answeredScored = useMemo(
-    () => scoredQuestions.filter((question) => savedQuestionIds.has(question.id)).length,
-    [savedQuestionIds, scoredQuestions],
-  );
-
-  const progress =
-    scoredQuestions.length === 0
-      ? 0
-      : Math.round((answeredScored / scoredQuestions.length) * 100);
+  const isLeadershipCases=data?.template.assessment_type==="leadership_cases";
+  const progressQuestions=useMemo(()=>
+    isLeadershipCases
+      ? (data?.questions??[]).filter(q=>q.question_type==="text"&&q.required)
+      : scoredQuestions,
+    [isLeadershipCases,data,scoredQuestions]);
+  const answeredScored=useMemo(()=>
+    progressQuestions.filter(q=>savedQuestionIds.has(q.id)).length,
+    [savedQuestionIds,progressQuestions]);
+  const progress=progressQuestions.length===0?0:
+    Math.round(answeredScored/progressQuestions.length*100);
 
   const relationship = data?.assignment.relationship_type ?? "self";
   const isExternalEvaluator = relationship !== "self";
@@ -350,12 +352,12 @@ export default function AssessmentClient({ token }: { token: string }) {
       return;
     }
 
-    if (answeredScored < scoredQuestions.length) {
-      const firstPending = scoredQuestions.find(
+    if (answeredScored < progressQuestions.length) {
+      const firstPending = progressQuestions.find(
         (question) => !savedQuestionIds.has(question.id),
       );
       setMessage(
-        `Aún faltan ${scoredQuestions.length - answeredScored} respuestas guardadas. Te llevamos a la primera pendiente.`,
+        `Aún faltan ${progressQuestions.length - answeredScored} respuestas guardadas. Te llevamos a la primera pendiente.`,
       );
       if (firstPending) {
         requestAnimationFrame(() => {
@@ -514,7 +516,7 @@ export default function AssessmentClient({ token }: { token: string }) {
                 <Info label={isExternalEvaluator ? "Persona evaluada" : "Participante"} value={evaluatedName} />
                 <Info label="Puesto" value={data.person.job_title ?? "No especificado"} />
                 <Info label="Área" value={data.person.area ?? "No especificada"} />
-                <Info label="Reactivos calificables" value={String(scoredQuestions.length)} />
+                <Info label={isLeadershipCases?"Preguntas abiertas requeridas":"Reactivos calificables"} value={String(progressQuestions.length)} />
               </div>
 
               <div className="mt-8">
@@ -522,7 +524,9 @@ export default function AssessmentClient({ token }: { token: string }) {
                   Antes de comenzar
                 </h2>
                 <p className="mt-2 text-neutral-600">
-                  {isVectorConductual
+                  {isLeadershipCases
+                    ? "Lee con atención cada situación y responde con tus propias palabras qué harías, por qué y cómo darías seguimiento. Tus respuestas serán revisadas posteriormente por un evaluador de FactoRH. No debes calificarte a ti mismo."
+                    : isVectorConductual
                     ? "No hay respuestas correctas o incorrectas. Responde pensando en cómo actúas habitualmente en el trabajo, no en cómo crees que deberías actuar. Procura usar toda la escala cuando corresponda y contesta de manera espontánea."
                     : isNeedsAssessment
                       ? "No hay respuestas buenas o malas. Responde según qué tan importante es cada condición para mantenerte motivado en el trabajo, no según lo que creas que una empresa espera escuchar."
@@ -542,7 +546,13 @@ export default function AssessmentClient({ token }: { token: string }) {
                 </p>
               </div>
 
-              {isObjectiveAssessment ? (
+              {isLeadershipCases ? (
+                <div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5 text-sm leading-6 text-orange-900">
+                  <strong>Cómo funciona:</strong> primero respondes los seis casos de liderazgo.
+                  FactoRH revisará las respuestas y calificará por separado los criterios de cada caso.
+                  Las escalas de evaluación no forman parte de tu cuestionario.
+                </div>
+              ) : isObjectiveAssessment ? (
                 <div className="mt-6 rounded-2xl border border-neutral-200 bg-neutral-50 p-5 text-sm leading-6 text-neutral-700">
                   <strong className="text-neutral-900">Formato:</strong>{" "}
                   {isReasoningAssessment
@@ -635,7 +645,7 @@ export default function AssessmentClient({ token }: { token: string }) {
             </div>
             <div className="text-right">
               <div className="text-sm font-bold text-neutral-900">
-                {answeredScored}/{scoredQuestions.length}
+                {answeredScored}/{progressQuestions.length}
               </div>
               <div className="text-xs text-neutral-500">{progress}% completado</div>
             </div>
@@ -915,7 +925,9 @@ export default function AssessmentClient({ token }: { token: string }) {
             <div>
               <h2 className="text-xl font-bold">Finalizar evaluación</h2>
               <p className="mt-1 text-sm text-neutral-300">
-                Debes responder y guardar los {scoredQuestions.length} reactivos calificables.
+                {isLeadershipCases
+                  ? `Debes responder y guardar las ${progressQuestions.length} preguntas obligatorias. La calificación corresponde a FactoRH.`
+                  : `Debes responder y guardar los ${scoredQuestions.length} reactivos calificables.`}
               </p>
             </div>
             <button
