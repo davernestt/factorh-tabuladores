@@ -10,7 +10,7 @@ export default function CompanyDetailTabs({overview,users,services,usage,history
   {id:"servicios",label:"Servicios y precios"},{id:"consumos",label:"Consumos"},
   {id:"historial",label:"Historial"}
  ];
- const contents:{[K in Tab]:ReactNode}={resumen:overview,usuarios:users,servicios,consumos:usage,historial:history};
+ const contents:{[K in Tab]:ReactNode}={resumen:overview,usuarios:users,servicios:services,consumos:usage,historial:history};
  return <div className="space-y-5">
   <nav className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm" aria-label="Secciones de empresa">
    {tabs.map(item=><button type="button" key={item.id} onClick={()=>setTab(item.id)}
