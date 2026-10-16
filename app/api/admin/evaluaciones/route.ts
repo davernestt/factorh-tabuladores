@@ -50,18 +50,11 @@ function addDays(value: string, days: number) {
 }
 
 function psychometricCreditError(message: string) {
-  if (message.includes("trial_single_test_only")) {
-    return {
-      code: "trial_single_test_only",
-      message:
-        "Tu prueba gratuita permite una sola psicometría por liga. Selecciona un instrumento para continuar.",
-    };
-  }
   if (message.includes("psychometric_credits_exhausted")) {
     return {
       code: "psychometric_credits_exhausted",
       message:
-        "Ya utilizaste los créditos disponibles. Contacta a FactorRH para activar tu paquete.",
+        "Ya utilizaste los créditos disponibles. Contacta a FactoRH para activar tu paquete.",
     };
   }
   if (message.includes("psychometric_plan_expired")) {
