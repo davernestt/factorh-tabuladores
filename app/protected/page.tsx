@@ -57,11 +57,13 @@ type Question = {
   id: string;
   template_id: string;
   question_type: string;
+  required: boolean;
 };
 
 type ResponseRow = {
   assignment_id: string;
   question_id: string;
+  text_value: string | null;
 };
 
 type ResultRow = {
@@ -146,6 +148,7 @@ async function AdminDashboardContent({
     responsesResult,
     resultsResult,
     departmentsResult,
+    caseGradesResult,
   ] = await Promise.all([
     db
       .from("assessment_assignments")
@@ -163,12 +166,13 @@ async function AdminDashboardContent({
     db.from("assessment_templates").select("id,name,assessment_type"),
     db
       .from("assessment_questions")
-      .select("id,template_id,question_type"),
+      .select("id,template_id,question_type,required"),
     db
       .from("assessment_responses")
-      .select("assignment_id,question_id"),
+      .select("assignment_id,question_id,text_value"),
     db.from("assessment_results").select("assignment_id,score"),
     db.from("organization_departments").select("id,name,organization_id").order("name"),
+    db.from("leadership_case_ratings").select("assignment_id,question_id"),
   ]);
 
   const firstError =
@@ -180,7 +184,8 @@ async function AdminDashboardContent({
     questionsResult.error ||
     responsesResult.error ||
     resultsResult.error ||
-    departmentsResult.error;
+    departmentsResult.error ||
+    caseGradesResult.error;
 
   if (firstError) {
     return (
@@ -231,6 +236,23 @@ async function AdminDashboardContent({
     );
   }
 
+  const textRequiredByTemplate=new Map<string,number>();
+  for(const q of questions){
+    if(q.question_type==="text"&&q.required)
+      textRequiredByTemplate.set(q.template_id,(textRequiredByTemplate.get(q.template_id)??0)+1);
+  }
+  const textAnsweredByAssignment=new Map<string,number>();
+  const questionRequiredById=new Map(questions.map(q=>[q.id,q.required]));
+  for(const row of responses){
+    if(questionTypeById.get(row.question_id)==="text"&&questionRequiredById.get(row.question_id)
+      &&typeof row.text_value==="string"&&row.text_value.trim()){
+      textAnsweredByAssignment.set(row.assignment_id,(textAnsweredByAssignment.get(row.assignment_id)??0)+1);
+    }
+  }
+  const professionalGradesByAssignment=new Map<string,number>();
+  for(const grade of caseGradesResult.data??[]){
+    professionalGradesByAssignment.set(grade.assignment_id,(professionalGradesByAssignment.get(grade.assignment_id)??0)+1);
+  }
   const scoresByAssignment = new Map<string, number[]>();
   for (const result of resultRows) {
     const list = scoresByAssignment.get(result.assignment_id) ?? [];
@@ -248,6 +270,10 @@ async function AdminDashboardContent({
   const completedAverages = assignments
     .filter((assignment) => assignment.status === "completed")
     .map((assignment) => {
+      const assessmentType=templates.get(assignment.template_id)?.assessment_type;
+      if(assessmentType==="leadership_cases" &&
+         (professionalGradesByAssignment.get(assignment.id)??0)<(scaleTotalByTemplate.get(assignment.template_id)??0))
+        return null;
       const values = scoresByAssignment.get(assignment.id) ?? [];
       if (!values.length) return null;
       return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -267,12 +293,18 @@ async function AdminDashboardContent({
       ? organizations.get(process.organization_id)
       : undefined;
     const template = templates.get(assignment.template_id);
-    const scaleTotal = scaleTotalByTemplate.get(assignment.template_id) ?? 0;
-    const scaleAnswered = scaleAnsweredByAssignment.get(assignment.id) ?? 0;
+    const isCases=template?.assessment_type==="leadership_cases";
+    const scaleTotal=isCases?(textRequiredByTemplate.get(assignment.template_id)??0):
+      (scaleTotalByTemplate.get(assignment.template_id)??0);
+    const scaleAnswered=isCases?(textAnsweredByAssignment.get(assignment.id)??0):
+      (scaleAnsweredByAssignment.get(assignment.id)??0);
     const progress = scaleTotal
       ? Math.round((scaleAnswered / scaleTotal) * 100)
       : 0;
-    const scores = scoresByAssignment.get(assignment.id) ?? [];
+    const gradesComplete=!isCases||
+      (professionalGradesByAssignment.get(assignment.id)??0)>0&&
+      (professionalGradesByAssignment.get(assignment.id)??0)===(scaleTotalByTemplate.get(assignment.template_id)??0);
+    const scores=gradesComplete?scoresByAssignment.get(assignment.id)??[]:[];
     const average = scores.length
       ? scores.reduce((sum, value) => sum + value, 0) / scores.length
       : null;
