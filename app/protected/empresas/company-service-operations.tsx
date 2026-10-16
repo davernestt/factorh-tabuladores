@@ -1,6 +1,8 @@
 "use client";
 import {useEffect,useState} from "react";
 import {useRouter} from "next/navigation";
+import Link from "next/link";
+import {clientServiceDemos} from "@/lib/client-service-demos";
 import type {CreditPlan} from "./company-credit-manager";
 import type {ModuleSubscription,PlatformModule} from "./company-module-manager";
 
@@ -27,6 +29,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
  const [selection,setSelection]=useState<{module:PlatformModule;action:Action}|null>(null);
  const [qty,setQty]=useState("1");
  const [planName,setPlanName]=useState("");
+ const [selectedPreset,setSelectedPreset]=useState("");
  const [endsOn,setEndsOn]=useState("");
  const [note,setNote]=useState("");
  const [busy,setBusy]=useState(false);
@@ -37,19 +40,22 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
   const {module,action}=selection;
   const existing=map.get(module.module_key);
   const keep=action==="edit"||action==="paused"||action==="resume";
+  const config=clientServiceDemos[module.module_key];
+  const standard=config?.plans.find(p=>p.quantity!==null&&p.quantity>1)??config?.plans[0];
+  setSelectedPreset(action==="active"?(standard?.name||""):"");
   setQty(module.module_key==="psychometrics"?
-   String(keep&&credit?credit.credits_total:action==="trial"?2:50):
+   String(keep&&credit?credit.credits_total:action==="trial"?2:standard?.quantity??50):
    module.module_key==="feedback360"?
-   String(keep?(existing?.evaluation_limit??(existing?.status==="trial"?1:15)):action==="trial"?1:15):"");
-  setPlanName(keep?existing?.plan_name||"":action==="trial"?"Prueba gratuita":action==="active"?"Plan contratado":"");
-  setEndsOn(keep?existing?.ends_on||"":action==="trial"?datePlus(module.module_key==="psychometrics"?30:14):datePlus(365));
+   String(keep?(existing?.evaluation_limit??(existing?.status==="trial"?1:15)):action==="trial"?1:standard?.quantity??15):"");
+  setPlanName(keep?existing?.plan_name||"":action==="trial"?"Demo "+(config?.days||14)+" días":action==="active"?(standard?.name||"Plan contratado"):"");
+  setEndsOn(keep?existing?.ends_on||"":action==="trial"?datePlus(config?.days||14):datePlus(365));
   setNote(keep?existing?.requested_notes||"":"");
   setError("");
  },[selection]);
  const hasPsych=selection?.module.module_key==="psychometrics";
  const has360=selection?.module.module_key==="feedback360";
  const limitRelevant=Boolean(hasPsych||has360);
- const modalTitle=selection?.action==="trial"?"Dar demo":selection?.action==="active"?"Activar plan":selection?.action==="paused"?"Suspender servicio":selection?.action==="resume"?"Reactivar servicio":selection?.action==="requested"?"Registrar interés":"Modificar servicio";
+ const modalTitle=selection?.action==="trial"?"Activar demo":selection?.action==="active"?"Activar servicio":selection?.action==="paused"?"Suspender servicio":selection?.action==="resume"?"Reactivar servicio":selection?.action==="requested"?"Registrar interés":"Modificar servicio";
  async function submit(){
   if(!selection||busy)return;
   const {module,action}=selection;
@@ -98,25 +104,27 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
   if(!m.client_available)return [{action:"requested" as Action,text:s?"Actualizar solicitud":"Registrar interés"}];
   const actions:{action:Action;text:string}[]=[];
   if(!s||["requested","cancelled","expired"].includes(s.status)){
-   actions.push({action:"trial",text:"Dar demo"},{action:"active",text:"Activar plan"});
+   actions.push({action:"trial",text:"Activar demo"},{action:"active",text:"Activar servicio"});
   }else if(s.status==="paused"){
    actions.push({action:"resume",text:"Reactivar"});
   }else{
-   actions.push({action:"edit",text:"Modificar"});
+   if(s.status==="trial")actions.push({action:"active",text:"Activar servicio"});
+   actions.push({action:"edit",text:s.status==="trial"?"Modificar demo":"Modificar"});
    if(["active","trial"].includes(s.status))actions.push({action:"paused",text:"Suspender"});
   }
   return actions;
  };
  return <section className="space-y-4">
   <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
-   <h2 className="text-2xl font-black text-neutral-900">Habilitar servicios</h2>
-   <p className="mt-2 text-sm leading-7 text-neutral-600">Selecciona un módulo y decide si deseas habilitar una prueba, activar un plan, modificar sus condiciones o suspenderlo. Ningún servicio cambia hasta que lo confirmes.</p>
+   <h2 className="text-2xl font-black text-neutral-900">Servicios de la empresa</h2>
+   <p className="mt-2 text-sm leading-7 text-neutral-600">Primero puedes ver una muestra sin afectar al cliente. Después decide si activas una demo real o un servicio contratado. Nada se habilita hasta tu confirmación.</p>
    <div className="mt-5 grid gap-4 lg:grid-cols-2">
     {modules.map(m=>{
+     const config=clientServiceDemos[m.module_key];
      const s=map.get(m.module_key);
      const psych=m.module_key==="psychometrics";
      const currentStatus=psych&&credit?(credit.active?credit.plan_type==="trial"?"trial":"active":"paused"):s?.status;
-     const effective={...s,status:currentStatus||s?.status} as ModuleSubscription|undefined;
+     const effective=currentStatus?{...s,status:currentStatus} as ModuleSubscription:s;
      const remaining=psych&&credit?Math.max(0,credit.credits_total-credit.credits_used):null;
      return <article key={m.module_key} className="rounded-2xl border border-neutral-200 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -126,12 +134,19 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
        </span>
       </div>
       <p className="mt-2 text-sm leading-6 text-neutral-600">{m.description}</p>
+      {config&&<p className="mt-2 text-xs leading-5 text-neutral-500">
+       {config.kind==="live"?`Demo real: ${config.days} días${config.quantity?" · "+config.quantity+" "+config.unit:" · piloto sin cupo automático"}`:"Muestra comercial ficticia disponible · portal cliente pendiente"}
+      </p>}
       {s?.plan_name&&<p className="mt-2 text-sm font-semibold text-neutral-800">{s.plan_name}</p>}
       <p className="mt-1 text-xs text-neutral-500">Inicio: {readable(s?.starts_on)} · Vence: {readable(s?.ends_on)}</p>
       {psych&&credit&&<p className="mt-2 text-xs font-bold text-neutral-700">{remaining} de {credit.credits_total} aplicaciones disponibles</p>}
       {m.module_key==="feedback360"&&<p className="mt-2 text-xs font-bold text-neutral-700">{cycleCount} ciclos creados{s?.evaluation_limit?" · cupo "+s.evaluation_limit:s?.status==="trial"?" · demo: 1 líder":""}</p>}
       {!m.client_available&&<p className="mt-2 text-xs font-bold text-amber-700">Portal de este módulo aún no habilitado para clientes.</p>}
       <div className="mt-4 flex flex-wrap gap-2">
+       {config&&<Link href={config.previewHref} target="_blank" rel="noopener noreferrer"
+        className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-bold text-orange-700 hover:bg-orange-100">
+        Ver demo <span aria-hidden="true">↗</span>
+       </Link>}
        {getActions(m,effective).map(a=><button key={a.action} type="button" onClick={()=>setSelection({module:m,action:a.action})}
         className={`rounded-xl px-4 py-2.5 text-sm font-bold ${a.action==="trial"||a.action==="active"?"bg-orange-600 text-white hover:bg-orange-700":"border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"}`}>{a.text}</button>)}
       </div>
@@ -147,8 +162,26 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
       <p className="mt-1 text-sm text-neutral-600">{selection.module.name}</p></div>
      <button type="button" onClick={()=>setSelection(null)} className="rounded-xl bg-neutral-100 px-3 py-2 font-bold" aria-label="Cerrar">✕</button>
     </div>
+    {clientServiceDemos[selection.module.module_key]&&<section className="mt-4 rounded-xl border border-orange-100 bg-orange-50 p-4">
+      <p className="text-sm font-black text-orange-900">{selection.action==="trial"?"Qué incluye esta demo":"Alcance del módulo"}</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-neutral-700">
+       {clientServiceDemos[selection.module.module_key].includes.map((line,i)=><li key={i}>{line}</li>)}
+      </ul>
+      {clientServiceDemos[selection.module.module_key].warning&&<p className="mt-3 text-xs font-semibold leading-5 text-amber-900">{clientServiceDemos[selection.module.module_key].warning}</p>}
+    </section>}
     <p className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm leading-6 text-neutral-600">{hint[selection.module.module_key]||"Configura vigencia y condiciones de uso."}</p>
     {selection.action!=="paused"&&selection.action!=="resume"&&<div className="mt-4 space-y-4">
+     {selection.action==="active"&&clientServiceDemos[selection.module.module_key]?.plans&&<label className="block text-sm font-bold text-neutral-700">Selecciona el paquete
+      <select className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3" value={selectedPreset} onChange={event=>{
+       const name=event.target.value;
+       const preset=clientServiceDemos[selection.module.module_key].plans.find(p=>p.name===name);
+       setSelectedPreset(name);
+       setPlanName(name);
+       if(preset?.quantity!=null)setQty(String(preset.quantity));
+      }}>
+       {clientServiceDemos[selection.module.module_key].plans.map(p=><option key={p.name} value={p.name}>{p.name}</option>)}
+      </select>
+     </label>}
      {selection.action!=="requested"&&<label className="block text-sm font-bold text-neutral-700">Nombre del plan
       <input value={planName} onChange={e=>setPlanName(e.target.value)} maxLength={100} placeholder="Ej. Paquete de 17 líderes" className="mt-2 w-full rounded-xl border border-neutral-300 p-3"/>
      </label>}
@@ -158,7 +191,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
       {has360&&<span className="mt-1 block text-xs font-normal text-neutral-500">Se bloquea la creación al alcanzar el cupo. Ciclos ya creados: {cycleCount}.</span>}
      </label>}
      {selection.action!=="requested"&&<label className="block text-sm font-bold text-neutral-700">Vigencia hasta
-      <input type="date" min={today()} value={endsOn} onChange={e=>setEndsOn(e.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 p-3"/>
+      <input type="date" min={today()} value={endsOn} disabled={selection.action==="trial"} onChange={e=>setEndsOn(e.target.value)} className="mt-2 w-full rounded-xl border border-neutral-300 p-3 disabled:bg-neutral-100"/>
      </label>}
      <label className="block text-sm font-bold text-neutral-700">Nota o condiciones (opcional)
       <textarea value={note} onChange={e=>setNote(e.target.value)} maxLength={1200} placeholder="Ej. Prospecto solicita habilitación después de demo." className="mt-2 w-full rounded-xl border border-neutral-300 p-3" rows={3}/>

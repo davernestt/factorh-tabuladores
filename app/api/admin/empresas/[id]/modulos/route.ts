@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import {clientServiceDemos} from "@/lib/client-service-demos";
 
 type RouteContext = { params: Promise<{ id: string }> };
 type Body = {
@@ -27,8 +28,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
+  const origin=request.headers.get("origin");
+  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:"Origen no autorizado."},{status:403});
+  if(Number(request.headers.get("content-length")||0)>20000)return NextResponse.json({error:"Solicitud demasiado extensa."},{status:413});
   const { id } = await context.params;
-  const body = (await request.json()) as Body;
+  let body:Body;
+  try{body=await request.json() as Body}catch{return NextResponse.json({error:"Datos inválidos."},{status:400});}
   const moduleKey = String(body.module_key ?? "").trim();
   const allowedStatuses = [
     "requested",
@@ -82,7 +87,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     );
   }
 
+  const demoConfig=clientServiceDemos[moduleKey];
+  if(status==="trial"){
+   if(!demoConfig||demoConfig.kind!=="live"||!demoConfig.days)return NextResponse.json({error:"Este módulo sólo tiene demostración visual; aún no se habilita una demo real."},{status:409});
+   const start=dateOrNull(body.starts_on),end=dateOrNull(body.ends_on);
+   const now=new Date().toISOString().slice(0,10);
+   const {data:existingTrial,error:trialError}=await db.from("organization_module_subscriptions")
+     .select("status,starts_on").eq("organization_id",id).eq("module_key",moduleKey).maybeSingle();
+   if(trialError)return NextResponse.json({error:"No se pudo validar la vigencia de la demo."},{status:500});
+   const isExistingTrial=existingTrial?.status==="trial";
+   if(!start||!end||isExistingTrial&&start!==existingTrial?.starts_on||!isExistingTrial&&start!==now){
+     return NextResponse.json({error:"La demo nueva debe iniciar hoy; las demos existentes conservan su fecha original."},{status:400});
+   }
+   const limitDate=new Date(start+"T00:00:00Z");
+   limitDate.setUTCDate(limitDate.getUTCDate()+demoConfig.days);
+   const maxEnd=limitDate.toISOString().slice(0,10);
+   if(end<start||end>maxEnd)return NextResponse.json({error:"Esta demo tiene vigencia máxima de "+demoConfig.days+" días desde su activación original."},{status:400});
+  }
   const evaluationLimit = body.evaluation_limit;
+  if(moduleKey==="feedback360"&&status==="trial"&&evaluationLimit!==1)
+   return NextResponse.json({error:"La demostración 360° es de un líder. Para más evaluaciones activa un servicio contratado."},{status:400});
   if (moduleKey === "feedback360" && ["trial","active"].includes(String(status))) {
     if (evaluationLimit !== undefined && evaluationLimit !== null && (!Number.isInteger(evaluationLimit) || evaluationLimit < 1 || evaluationLimit > 10000)) {
       return NextResponse.json({error:"Indica un cupo de 1 a 10,000 evaluaciones 360°."},{status:400});
