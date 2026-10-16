@@ -13,6 +13,7 @@ type Body = {
   requested_notes?: string;
   reminder_days?: number;
   client_notice?: boolean;
+  evaluation_limit?: number | null;
 };
 
 function dateOrNull(value: unknown) {
@@ -81,6 +82,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     );
   }
 
+  const evaluationLimit = body.evaluation_limit;
+  if (moduleKey === "feedback360" && ["trial","active"].includes(String(status))) {
+    if (evaluationLimit !== undefined && evaluationLimit !== null && (!Number.isInteger(evaluationLimit) || evaluationLimit < 1 || evaluationLimit > 10000)) {
+      return NextResponse.json({error:"Indica un cupo de 1 a 10,000 evaluaciones 360°."},{status:400});
+    }
+  }
   const reminderDays = Math.max(
     1,
     Math.min(120, Number(body.reminder_days ?? 30) || 30),
@@ -98,13 +105,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     reminder_days: reminderDays,
     client_notice: body.client_notice !== false,
     updated_at: new Date().toISOString(),
+    ...(moduleKey === "feedback360" && evaluationLimit !== undefined ? {evaluation_limit: status === "trial" ? (evaluationLimit ?? 1) : evaluationLimit} : {}),
   };
 
   const { data, error } = await db
     .from("organization_module_subscriptions")
     .upsert(payload, { onConflict: "organization_id,module_key" })
     .select(
-      "id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice",
+      "id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice,evaluation_limit",
     )
     .single();
 
