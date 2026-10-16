@@ -18,6 +18,7 @@ on:
       - 'feature/ese-formato-*'
       - 'feature/marca-*'
       - 'fix/logotipo-*'
+      - 'fix/leadership-*'
   workflow_dispatch:
 
 jobs:
@@ -76,5 +77,7 @@ jobs:
         run: npx --yes tsx scripts/centro-clientes-operativo-smoke.ts
       - name: Validate client service demos and plans
         run: npx --yes tsx scripts/client-service-demos-smoke.ts
+      - name: Validate private leadership cases rubric
+        run: npx --yes tsx scripts/leadership-cases-private-rubric-smoke.ts
       - name: Build app
         run: npm run build
