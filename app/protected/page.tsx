@@ -4,12 +4,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import DeleteAssessmentButton from "./delete-assessment-button";
+import ResendAssessmentLink from "./resend-assessment-link";
+import {buildPdlPublicUrl} from "@/lib/pdl-public-url";
 import { relationshipLabel } from "@/lib/pdl-evaluation-role";
 
 type Assignment = {
   id: string;
   status: string;
   evaluator_name: string | null;
+  evaluator_email: string | null;
+  evaluator_phone: string | null;
   relationship_type: string;
   public_token: string;
   created_at: string;
@@ -24,6 +28,7 @@ type ProcessRow = {
   name: string;
   person_id: string;
   organization_id: string;
+  public_token: string;
   department_id: string|null;
 };
 
@@ -31,6 +36,8 @@ type Person = {
   id: string;
   first_name: string;
   last_name: string | null;
+  email: string | null;
+  phone: string | null;
   job_title: string | null;
   area: string | null;
 };
@@ -143,15 +150,15 @@ async function AdminDashboardContent({
     db
       .from("assessment_assignments")
       .select(
-        "id,status,evaluator_name,relationship_type,public_token,created_at,started_at,completed_at,process_id,template_id",
+        "id,status,evaluator_name,evaluator_email,evaluator_phone,relationship_type,public_token,created_at,started_at,completed_at,process_id,template_id",
       )
       .order("created_at", { ascending: false }),
     db
       .from("assessment_processes")
-.select("id,name,person_id,organization_id,department_id"),
+.select("id,name,person_id,organization_id,public_token,department_id"),
     db
       .from("people")
-      .select("id,first_name,last_name,job_title,area"),
+      .select("id,first_name,last_name,email,phone,job_title,area"),
     db.from("organizations").select("id,name"),
     db.from("assessment_templates").select("id,name,assessment_type"),
     db
@@ -930,15 +937,27 @@ function AssessmentCard({
               </Link>
             )}
           {assignment.status !== "completed" &&
-            assignment.status !== "cancelled" && (
-              <Link
-                href={`/e/${assignment.public_token}`}
-                target="_blank"
-                className="text-xs font-medium text-neutral-500 hover:text-neutral-900"
-              >
-                Abrir evaluación
-              </Link>
-            )}
+             assignment.status !== "cancelled" && (
+               <>
+                 <ResendAssessmentLink
+                   path={assignment.relationship_type==="self"&&process?.public_token
+                     ? `/p/${process.public_token}`
+                     : `/e/${assignment.public_token}`}
+                   personName={assignment.relationship_type==="self"?personName:assignment.evaluator_name||"Evaluador"}
+                   evaluatedPersonName={assignment.relationship_type==="self"?null:personName}
+                   relationshipLabel={assignment.relationship_type==="self"?null:relationshipLabel(assignment.relationship_type)}
+                   templateName={template?.name??"Evaluación"}
+                   organizationName={view.organization?.name??"FactoRH"}
+                   email={assignment.relationship_type==="self"?view.person?.email:assignment.evaluator_email}
+                   phone={assignment.relationship_type==="self"?view.person?.phone:assignment.evaluator_phone}
+                 />
+                 <a href={buildPdlPublicUrl(`/e/${assignment.public_token}`)}
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-xs font-medium text-neutral-500 hover:text-neutral-900">
+                   Abrir evaluación
+                 </a>
+               </>
+             )}
           <DeleteAssessmentButton
             assignmentId={assignment.id}
             participantName={personName}
