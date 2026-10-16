@@ -72,5 +72,7 @@ jobs:
         run: npx --yes tsx scripts/psychometric-trial-batteries-smoke.ts
       - name: Validate client center pricing and promotion
         run: npx --yes tsx scripts/client-center-pricing-smoke.ts
+      - name: Validate operational client center
+        run: npx --yes tsx scripts/centro-clientes-operativo-smoke.ts
       - name: Build app
         run: npm run build
