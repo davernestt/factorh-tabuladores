@@ -4,8 +4,9 @@ import {createAdminClient} from "@/lib/supabase/admin";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import CompanyManager from "../company-manager";
 import CompanyAccessPanel from "../company-access-panel";
-import CompanyCreditManager,{type CreditPlan} from "../company-credit-manager";
-import CompanyModuleManager,{type ModuleSubscription,type PlatformModule} from "../company-module-manager";
+import {type CreditPlan} from "../company-credit-manager";
+import {type ModuleSubscription,type PlatformModule} from "../company-module-manager";
+import CompanyServiceOperations from "../company-service-operations";
 import CompanyTestSettings from "../company-test-settings";
 import CompanyQuoteBuilder from "../company-quote-builder";
 import CompanyDetailTabs from "../company-detail-tabs";
@@ -26,7 +27,7 @@ export default async function CompanyDetailPage({params}:RouteProps){
   db.from("app_users").select("user_id,email,display_name,active").eq("organization_id",id).eq("role","client").order("created_at"),
   db.from("organization_psychometric_credits").select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only").eq("organization_id",id).maybeSingle(),
   db.from("platform_modules").select("module_key,name,description,route,client_available").eq("active",true).order("sort_order"),
-  db.from("organization_module_subscriptions").select("id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice").eq("organization_id",id),
+  db.from("organization_module_subscriptions").select("id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice,evaluation_limit").eq("organization_id",id),
   db.from("module_expiry_reminders").select("module_key,ends_on,days_remaining").eq("organization_id",id),
   db.from("assessment_processes").select("id,person_id,name,status,created_at").eq("organization_id",id).order("created_at",{ascending:false}).limit(100),
   db.from("organization_assessment_templates").select("organization_id,template_id,enabled,participant_sendable").eq("organization_id",id),
@@ -120,23 +121,12 @@ export default async function CompanyDetailPage({params}:RouteProps){
    </div>}
    users={<CompanyAccessPanel organizationId={org.id} organizationName={org.name} organizationSlug={org.slug} users={users}/>}
    services={<div className="space-y-5">
-    <CompanyQuoteBuilder organizationId={org.id}/>
-    <section className={box}>
-     <h2 className="text-xl font-black text-neutral-900">Habilitación y licencias actuales</h2>
-     <p className="mt-2 text-sm leading-7 text-neutral-600">La cotización anterior no activa módulos. Utiliza los controles siguientes para habilitar o renovar licencias reales según la disponibilidad de cada servicio. Se conservará el historial de cambios.</p>
-     <div className="mt-5 rounded-2xl bg-orange-50 p-5">
-      <h3 className="font-black text-neutral-900">Psicometrías · Créditos y plan operativo</h3>
-      <div className="mt-3"><CompanyCreditManager organizationId={org.id} organizationName={org.name} plan={credit}/></div>
-      <p className="mt-2 text-xs text-neutral-600">La demo consume una aplicación por candidato; los paquetes pagados actuales todavía descuentan por instrumento. No actives cantidades de candidatos del nuevo modelo sin completar esta regla.</p>
-     </div>
-     <div className="mt-4 space-y-3">{modules.filter(m=>m.module_key!=="psychometrics").map(m=>
-      <CompanyModuleManager key={m.module_key} organizationId={org.id} module={m} subscription={subMap.get(m.module_key)}/>)}</div>
-    </section>
-    <section className={box}>
-     <h2 className="text-xl font-black text-neutral-900">Psicometrías disponibles para esta empresa</h2>
-     <p className="mt-2 text-sm text-neutral-500">{psych.length} pruebas habilitadas para la cuenta. Modifica aquí el catálogo autorizado.</p>
+    <CompanyServiceOperations organizationId={org.id} modules={modules} subscriptions={subscriptions} credit={credit} cycleCount={cyclesR.data?.length??0}/>
+    <details className={box}>
+     <summary className="cursor-pointer text-lg font-black text-neutral-900">Opciones avanzadas · Psicometrías habilitadas ({psych.length})</summary>
+     <p className="mt-2 text-sm text-neutral-600">Selecciona cuáles instrumentos psicométricos podrán aplicar los usuarios de esta empresa.</p>
      <div className="mt-5"><CompanyTestSettings organizationId={org.id} catalog={group} access={access}/></div>
-    </section>
+    </details>
    </div>}
    usage={<div className="space-y-5">
     <section className="grid gap-3 sm:grid-cols-4">
@@ -160,6 +150,11 @@ export default async function CompanyDetailPage({params}:RouteProps){
     </section>
    </div>}
    history={<div className="space-y-5">
+    <details className={box}>
+     <summary className="cursor-pointer text-lg font-black text-neutral-900">Opcional · Cotizaciones y precios</summary>
+     <p className="mt-2 text-sm text-neutral-600">Puedes seguir llevando precios por fuera. Esta herramienta se conserva para una etapa comercial posterior.</p>
+     <div className="mt-5"><CompanyQuoteBuilder organizationId={org.id}/></div>
+    </details>
     <section className={box}>
      <h2 className="text-xl font-black text-neutral-900">Cotizaciones registradas</h2>
      <p className="mt-2 text-xs text-neutral-500">Son propuestas, no pagos cobrados. Las cantidades negociadas y el descuento se conservan para seguimiento.</p>
