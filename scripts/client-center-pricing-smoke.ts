@@ -1,0 +1,18 @@
+import {strict as assert} from "node:assert";
+import {calculateQuote} from "../lib/company-commercial-pricing";
+const date="2026-10-15";
+const one=calculateQuote([{packageId:"360-15",quantity:17,negotiatedPrice:8200}],false,date);
+assert.equal(one.items[0].quantity,17);
+assert.equal(one.items[0].customQuantity,true);
+assert.equal(one.total,8200);
+assert.throws(()=>calculateQuote([{packageId:"360-15",quantity:17,negotiatedPrice:8200}],true,date),/dos módulos/);
+const two=calculateQuote([{packageId:"360-15",quantity:17,negotiatedPrice:8200},{packageId:"psy-8-50",quantity:50,negotiatedPrice:4190}],true,date);
+assert.equal(two.total,6195);
+assert.equal(two.discount,6195);
+const ese=calculateQuote([{packageId:"360-15",quantity:17,negotiatedPrice:8200},{packageId:"psy-8-50",quantity:50,negotiatedPrice:4190},{packageId:"ese-integral",quantity:1,negotiatedPrice:980}],true,date);
+assert.equal(ese.total,7175);
+assert.equal(ese.items[2].discount,0);
+assert.throws(()=>calculateQuote([{packageId:"360-15",quantity:15,negotiatedPrice:6990},{packageId:"psy-8-50",quantity:50,negotiatedPrice:4190}],true,"2027-01-01"),/octubre y diciembre/);
+assert.throws(()=>calculateQuote([{packageId:"360-15",quantity:15,negotiatedPrice:6990},{packageId:"360-5",quantity:5,negotiatedPrice:2990}],true,date),/dos módulos/);
+assert.throws(()=>calculateQuote([{packageId:"ese-integral",quantity:0,negotiatedPrice:980}],false,date),/cantidad/);
+console.log("CLIENT_CENTER_PRICING_OK: cantidades, no promo en ESE, fechas y dos módulos diferentes.");
