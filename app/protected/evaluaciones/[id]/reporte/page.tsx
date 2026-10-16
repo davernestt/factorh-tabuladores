@@ -1,6 +1,7 @@
 import FactoRHLogo from "@/components/factorh-logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import {getCurrentAppUser} from "@/lib/app-auth";
 import { buildLeadershipAnalysis } from "@/lib/leadership-analysis";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -123,6 +124,33 @@ async function LeadershipReportContent({ params }: PageProps) {
     );
   }
 
+  let professionalGrades:{question_id:string;score:number}[]=[];
+  if(template.assessment_type==="leadership_cases"){
+    const [grades,criteria]=await Promise.all([
+      db.from("leadership_case_ratings").select("question_id,score").eq("assignment_id",id),
+      db.from("assessment_questions").select("id",{count:"exact",head:true})
+        .eq("template_id",assignment.template_id).eq("question_type","scale")
+    ]);
+    if(grades.error||criteria.error)return <ErrorCard message="No fue posible validar la calificación profesional." />;
+    professionalGrades=(grades.data??[]).map(g=>({question_id:g.question_id,score:Number(g.score)}));
+    if(assignment.status!=="completed"||!criteria.count||professionalGrades.length!==criteria.count){
+      const currentUser=await getCurrentAppUser();
+      return <section className="rounded-3xl border border-amber-200 bg-amber-50 p-7">
+        <p className="text-xs font-black uppercase tracking-widest text-orange-700">FactoRH · Casos de liderazgo</p>
+        <h1 className="mt-3 text-2xl font-black text-neutral-900">Reporte pendiente de valoración profesional</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-700">
+          Las respuestas abiertas se conservaron. La escala del participante no es una
+          valoración profesional. El reporte se habilitará después de que FactoRH
+          califique los {criteria.count||0} criterios de los casos.
+        </p>
+        {currentUser?.role==="super_admin"&&<Link
+          href={`/protected/evaluaciones/${id}/calificar-casos`}
+          className="mt-5 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white">
+          Revisar y calificar casos →
+        </Link>}
+      </section>;
+    }
+  }
   const [personResult, organizationResult] = await Promise.all([
     db
       .from("people")
@@ -152,7 +180,15 @@ async function LeadershipReportContent({ params }: PageProps) {
   const organization = organizationResult.data;
   const dimensions = dimensionsResult.data ?? [];
   const questions = questionsResult.data ?? [];
-  const responses = responsesResult.data ?? [];
+  const typeByQuestion=new Map((questionsResult.data??[]).map(q=>[q.id,q.question_type]));
+  const responses=template.assessment_type==="leadership_cases"
+    ? [
+      ...(responsesResult.data??[]).filter(row=>typeByQuestion.get(row.question_id)!=="scale"),
+      ...professionalGrades.map(g=>({
+        question_id:g.question_id,numeric_value:g.score,
+        text_value:null,evidence_text:null,is_not_observed:false
+      }))
+    ] : responsesResult.data??[];
   const results = resultsResult.data ?? [];
 
   const analysis = buildLeadershipAnalysis({
@@ -188,6 +224,7 @@ async function LeadershipReportContent({ params }: PageProps) {
               organizationName: organization.name,
               templateName: template.name,
               sourceLabel:
+                template.assessment_type==="leadership_cases"?"Evaluación de casos · FactoRH":
                 assignment.relationship_type === "self"
                   ? "Autoevaluación"
                   : relationshipLabel(assignment.relationship_type),
@@ -283,7 +320,7 @@ async function LeadershipReportContent({ params }: PageProps) {
             />
             <Metric
               label="Fuente"
-              value={assignment.relationship_type === "self" ? "Autoevaluación" : relationshipLabel(assignment.relationship_type)}
+              value={template.assessment_type==="leadership_cases"?"Evaluación de casos · FactoRH":assignment.relationship_type === "self" ? "Autoevaluación" : relationshipLabel(assignment.relationship_type)}
               compact
             />
             <Metric
