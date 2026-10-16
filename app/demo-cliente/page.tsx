@@ -49,8 +49,8 @@ function DemoPsychometrics(){
   </div>
   <div className="rounded-3xl border border-orange-200 bg-orange-50 p-5">
    <p className="text-xs font-bold uppercase tracking-wider text-orange-700">Prueba gratuita FactoRH</p>
-   <p className="mt-2 text-xl font-black text-neutral-900">2 créditos disponibles</p>
-   <p className="mt-1 text-sm text-neutral-600">Tu demo incluye dos aplicaciones, cada una con una prueba psicométrica.</p>
+   <p className="mt-2 text-xl font-black text-neutral-900">2 candidatos de prueba disponibles</p>
+   <p className="mt-1 text-sm text-neutral-600">La prueba gratuita permite evaluar a 2 candidatos. Cada uno puede responder una, varias o todas las psicometrías habilitadas en una sola liga.</p>
   </div>
   <nav className="flex flex-wrap gap-2 rounded-2xl border border-neutral-200 bg-white p-2 shadow-sm">
    <Link href={demoLink("psicometrias")} className="rounded-xl bg-neutral-700 px-5 py-3 text-sm font-bold text-white">Personas y resultados</Link>

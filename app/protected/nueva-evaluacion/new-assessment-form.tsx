@@ -816,11 +816,16 @@ export default function NewAssessmentForm({
 
         {isPsychometrics && maxTemplateSelections === 1 && (
           <p className="mb-4 text-xs leading-5 text-neutral-500">
-            En la demo se selecciona una sola prueba por aplicación. Las baterías de varias pruebas
-            se utilizan en los paquetes que FactoRH habilite para tu empresa.
+            Puedes elegir una o varias pruebas habilitadas. Todas se contestarán desde una sola liga.
           </p>
         )}
 
+        {isPsychometrics && availableTemplates.length > 1 && maxTemplateSelections !== 1 && (
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <button type="button" onClick={() => {setTemplateIds(availableTemplates.map(item=>item.id));setSelectedBatteryId("");setValidResults([]);setValidDecisions({});}} className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-bold text-orange-700 hover:bg-orange-100">Seleccionar todas las psicometrías habilitadas ({availableTemplates.length})</button>
+            <button type="button" onClick={() => {setTemplateIds([]);setSelectedBatteryId("");setValidResults([]);setValidDecisions({});}} className="rounded-xl border border-neutral-300 px-4 py-2.5 text-sm font-bold text-neutral-600 hover:bg-neutral-50">Limpiar selección</button>
+          </div>
+        )}
         {availableBatteries.length > 0 && maxTemplateSelections !== 1 && (
           <div className="mb-5">
             <Field label="Batería predeterminada (opcional)">

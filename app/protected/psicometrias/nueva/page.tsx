@@ -228,11 +228,10 @@ async function NewPsychometricAssessmentContent() {
     );
   }
 
-  const maxTemplateSelections =
-    scopedOrganizationId && creditPlan?.plan_type === "trial" ? 1 : null;
+  const maxTemplateSelections = null;
   const creditNotice = scopedOrganizationId && creditPlan
     ? creditPlan.plan_type === "trial"
-      ? `Prueba gratuita: quedan ${creditsRemaining} de ${creditPlan.credits_total} aplicaciones. Cada liga demo permite una sola psicometría.`
+      ? `Prueba gratuita: quedan ${creditsRemaining} de ${creditPlan.credits_total} candidatos. Cada candidato puede responder una, varias o todas las psicometrías habilitadas mediante una sola liga; consume una aplicación por candidato.`
       : `${creditPlan.plan_name}: ${creditsRemaining} créditos disponibles. Cada instrumento nuevo consume 1 crédito; una batería consume un crédito por cada prueba incluida.`
     : null;
 
