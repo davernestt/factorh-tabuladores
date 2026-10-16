@@ -4,7 +4,7 @@ import {useRouter} from "next/navigation";
 import type {CreditPlan} from "./company-credit-manager";
 import type {ModuleSubscription,PlatformModule} from "./company-module-manager";
 
-type Action="trial"|"active"|"edit"|"paused"|"requested";
+type Action="trial"|"active"|"edit"|"paused"|"requested"|"resume";
 const datePlus=(days:number)=>{
  const d=new Date();d.setDate(d.getDate()+days);return d.toISOString().slice(0,10);
 };
@@ -36,7 +36,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
   if(!selection)return;
   const {module,action}=selection;
   const existing=map.get(module.module_key);
-  const keep=action==="edit"||action==="paused";
+  const keep=action==="edit"||action==="paused"||action==="resume";
   setQty(module.module_key==="psychometrics"?
    String(keep&&credit?credit.credits_total:action==="trial"?2:50):
    module.module_key==="feedback360"?
@@ -49,13 +49,13 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
  const hasPsych=selection?.module.module_key==="psychometrics";
  const has360=selection?.module.module_key==="feedback360";
  const limitRelevant=Boolean(hasPsych||has360);
- const modalTitle=selection?.action==="trial"?"Dar demo":selection?.action==="active"?"Activar plan":selection?.action==="paused"?"Suspender servicio":selection?.action==="requested"?"Registrar interés":"Modificar servicio";
+ const modalTitle=selection?.action==="trial"?"Dar demo":selection?.action==="active"?"Activar plan":selection?.action==="paused"?"Suspender servicio":selection?.action==="resume"?"Reactivar servicio":selection?.action==="requested"?"Registrar interés":"Modificar servicio";
  async function submit(){
   if(!selection||busy)return;
   const {module,action}=selection;
   const sub=map.get(module.module_key);
   const isPsych=module.module_key==="psychometrics";
-  let status:ModuleSubscription["status"]=action==="edit"?sub?.status||"requested":action==="paused"?"paused":action;
+  let status:ModuleSubscription["status"]=action==="edit"?sub?.status||"requested":action==="paused"?"paused":action==="resume"?(sub?.plan_name?.toLowerCase().includes("prueba")?"trial":"active"):action;
   if(action==="edit"&&!sub&&module.module_key!=="psychometrics"){setError("Primero habilita el servicio.");return;}
   if((action==="active"||action==="edit")&&limitRelevant&&(!Number.isInteger(Number(qty))||Number(qty)<1||Number(qty)>10000)){setError("Indica una cantidad válida.");return;}
   if(action==="edit"&&status==="trial"&&module.module_key==="feedback360"&&Number(qty)>1){setError("La demo 360° permite un líder. Para más, activa un plan.");return;}
@@ -65,11 +65,13 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
    if(!window.confirm("Al activar este nuevo plan de Psicometrías, el contador de créditos comenzará desde cero. El consumo histórico se conservará en la bitácora. ¿Continuar?"))return;
   }
   if(action==="paused"&&!window.confirm("¿Suspender el acceso al servicio de esta empresa? Se conservará su historial."))return;
+  if(action==="resume"&&!window.confirm("¿Reactivar el acceso anterior con su vigencia y cupo?"))return;
+  if(has360&&["trial","active","edit"].includes(action)&&Number(qty)<cycleCount){setError("El cupo no puede ser menor que los ciclos 360° ya creados.");return;}
   setBusy(true);setError("");
   try{
    let res:Response;
    if(isPsych&&action!=="requested"){
-    const operation=action==="paused"?"pause":action==="edit"?"adjust":"replace";
+    const operation=action==="paused"?"pause":action==="resume"?"resume":action==="edit"?"adjust":"replace";
     const mode=action==="trial"||action==="edit"&&credit?.plan_type==="trial"?"trial":"package";
     res=await fetch(`/api/admin/empresas/${organizationId}/creditos`,{
      method:"PATCH",headers:{"Content-Type":"application/json"},
@@ -98,7 +100,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
   if(!s||["requested","cancelled","expired"].includes(s.status)){
    actions.push({action:"trial",text:"Dar demo"},{action:"active",text:"Activar plan"});
   }else if(s.status==="paused"){
-   actions.push({action:"edit",text:"Reactivar / modificar"});
+   actions.push({action:"resume",text:"Reactivar"});
   }else{
    actions.push({action:"edit",text:"Modificar"});
    if(["active","trial"].includes(s.status))actions.push({action:"paused",text:"Suspender"});
@@ -146,7 +148,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
      <button type="button" onClick={()=>setSelection(null)} className="rounded-xl bg-neutral-100 px-3 py-2 font-bold" aria-label="Cerrar">✕</button>
     </div>
     <p className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm leading-6 text-neutral-600">{hint[selection.module.module_key]||"Configura vigencia y condiciones de uso."}</p>
-    {selection.action!=="paused"&&<div className="mt-4 space-y-4">
+    {selection.action!=="paused"&&selection.action!=="resume"&&<div className="mt-4 space-y-4">
      {selection.action!=="requested"&&<label className="block text-sm font-bold text-neutral-700">Nombre del plan
       <input value={planName} onChange={e=>setPlanName(e.target.value)} maxLength={100} placeholder="Ej. Paquete de 17 líderes" className="mt-2 w-full rounded-xl border border-neutral-300 p-3"/>
      </label>}
@@ -163,6 +165,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
      </label>
     </div>}
     {selection.action==="paused"&&<p className="mt-5 text-sm text-neutral-700">Suspender impide nuevas operaciones mientras el servicio permanezca inactivo. No elimina evaluaciones ni resultados.</p>}
+    {selection.action==="resume"&&<p className="mt-5 text-sm text-neutral-700">Se reactivará el servicio con la vigencia y el cupo anteriores. Si el periodo ya venció, modifica después su fecha.</p>}
     {error&&<p role="alert" className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     <div className="mt-6 flex justify-end gap-3">
      <button type="button" onClick={()=>setSelection(null)} className="rounded-xl border border-neutral-300 px-5 py-3 text-sm font-bold">Cancelar</button>
