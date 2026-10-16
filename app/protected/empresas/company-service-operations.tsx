@@ -124,7 +124,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
      const s=map.get(m.module_key);
      const psych=m.module_key==="psychometrics";
      const currentStatus=psych&&credit?(credit.active?credit.plan_type==="trial"?"trial":"active":"paused"):s?.status;
-     const effective={...s,status:currentStatus||s?.status} as ModuleSubscription|undefined;
+     const effective=currentStatus?{...s,status:currentStatus} as ModuleSubscription:s;
      const remaining=psych&&credit?Math.max(0,credit.credits_total-credit.credits_used):null;
      return <article key={m.module_key} className="rounded-2xl border border-neutral-200 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
