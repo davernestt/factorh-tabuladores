@@ -417,11 +417,11 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                   : "Prueba gratuita FactoRH"}
               </div>
               <div className="mt-1 text-xl font-black text-neutral-900">
-                {clientCreditsRemaining ?? 0} créditos disponibles
+                {clientCreditsRemaining ?? 0} {clientCreditPlan?.plan_type === "trial" ? "candidatos de prueba disponibles" : "créditos disponibles"}
               </div>
               <p className="mt-1 text-sm text-neutral-600">
                 {clientPlan?.plan_type === "trial"
-                  ? "La demo incluye 2 aplicaciones. Cada liga permite una sola psicometría."
+                  ? "La prueba gratuita incluye 2 candidatos durante 30 días. Puedes asignar una, varias o todas las psicometrías habilitadas en una sola liga por candidato."
                   : "Cada instrumento nuevo consume 1 crédito. Puedes agrupar varias pruebas en una sola liga."}
               </p>
             </div>
