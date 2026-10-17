@@ -65,9 +65,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if(appUser.role==="ese_operator")
+    return NextResponse.redirect(new URL("/protected/estudios/tareas",request.url),{status:303});
+  if(["commercial","recruiter","consultant"].includes(appUser.role))
+    return NextResponse.redirect(new URL("/protected/mi-acceso",request.url),{status:303});
   await supabase.auth.signOut();
-  return NextResponse.redirect(
-    new URL("/auth/login?error=unauthorized", request.url),
-    { status: 303 },
-  );
+  return NextResponse.redirect(new URL("/auth/login?error=unauthorized",request.url),{status:303});
 }

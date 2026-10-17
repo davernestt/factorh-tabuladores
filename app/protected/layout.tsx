@@ -78,6 +78,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
 
   const clientItems = [
     { href: "/protected/catalogo", name: "Explorar catálogo" },
+    { href: "/protected/solicitar-usuarios", name: "Solicitar usuarios" },
     { href: "/protected/estudios", name: "Estudios e Investigaciones" },
     { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
@@ -85,7 +86,15 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 
-  const items = isClient ? clientItems : adminItems;
+  const staffItems=appUser.role==="ese_operator"
+    ? [{href:"/protected/estudios/tareas",name:"Mis tareas de Estudios"}]
+    : [{href:"/protected/mi-acceso",name:"Mi acceso FactoRH"}];
+  const items=appUser.role==="super_admin"?adminItems
+    :isClient
+      ?appUser.clientAccessLevel==="collaborator"
+        ?[{href:"/protected/catalogo",name:"Catálogo autorizado"},{href:"/protected/solicitar-usuarios",name:"Solicitar usuarios"}]
+        :clientItems
+      :staffItems;
 
   return (
     <main className="min-h-screen bg-neutral-100">

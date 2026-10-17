@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 
+  if(currentUser.role==="client"&&currentUser.clientAccessLevel!=="administrator")
+    return NextResponse.json({error:"El rol colaborador no puede asignar evaluaciones."},{status:403});
   const body = (await request.json()) as CreateBody;
   const organizationId = clean(body.organization_id);
   const existingPersonId = clean(body.existing_person_id);

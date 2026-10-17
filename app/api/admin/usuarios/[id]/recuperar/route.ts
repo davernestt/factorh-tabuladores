@@ -19,8 +19,8 @@ export async function POST(request: NextRequest, { params }: Context) {
   const db=createAdminClient();
   const {data:user,error}=await db.from("app_users")
     .select("user_id,role,email,active").eq("user_id",id).maybeSingle();
-  if(error||!user||user.role!=="client")
-    return NextResponse.json({error:"No se encontró una cuenta cliente válida."},{status:404});
+  if(error||!user||user.role==="super_admin")
+    return NextResponse.json({error:"No se encontró una cuenta autorizada."},{status:404});
   if(!user.active)
     return NextResponse.json({error:"Activa primero el usuario si necesitas restablecer su acceso."},{status:400});
 

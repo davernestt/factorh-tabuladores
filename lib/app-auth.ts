@@ -14,6 +14,7 @@ export type CurrentAppUser = {
   email: string;
   displayName: string | null;
   role: AppUserRole;
+  clientAccessLevel: "administrator" | "collaborator";
   organizationId: string | null;
   organizationName: string | null;
   active: boolean;
@@ -29,7 +30,7 @@ export async function getCurrentAppUser(): Promise<CurrentAppUser | null> {
   const db = createAdminClient();
   const { data: appUser, error: userError } = await db
     .from("app_users")
-    .select("user_id,email,display_name,role,organization_id,active")
+    .select("user_id,email,display_name,role,client_access_level,organization_id,active")
     .eq("user_id", String(claims.sub))
     .maybeSingle();
 
@@ -50,6 +51,7 @@ export async function getCurrentAppUser(): Promise<CurrentAppUser | null> {
     email: String(appUser.email ?? claims.email ?? "").trim().toLowerCase(),
     displayName: appUser.display_name,
     role: appUser.role as AppUserRole,
+    clientAccessLevel: appUser.client_access_level === "collaborator" ? "collaborator" : "administrator",
     organizationId: appUser.organization_id,
     organizationName,
     active: appUser.active,
