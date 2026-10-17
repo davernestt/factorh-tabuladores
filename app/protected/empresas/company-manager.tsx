@@ -142,7 +142,7 @@ export default function CompanyManager({ organization }: Props) {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white text-neutral-900 shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-neutral-200 p-6">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
@@ -172,7 +172,7 @@ export default function CompanyManager({ organization }: Props) {
                   <input
                     value={form.name}
                     onChange={(event) => updateName(event.target.value)}
-                    className="input-company"
+                    className="input-company bg-white text-neutral-900 placeholder:text-neutral-400"
                     placeholder="Ej. Industrias Acme"
                   />
                 </Field>
@@ -187,7 +187,7 @@ export default function CompanyManager({ organization }: Props) {
                         slug: slugify(event.target.value),
                       }));
                     }}
-                    className="input-company"
+                    className="input-company bg-white text-neutral-900 placeholder:text-neutral-400"
                     placeholder="industrias-acme"
                   />
                 </Field>
@@ -201,7 +201,7 @@ export default function CompanyManager({ organization }: Props) {
                         lifecycle_stage: event.target.value as "prospect" | "client" | "inactive",
                       }))
                     }
-                    className="input-company bg-white"
+                    className="input-company bg-white text-neutral-900"
                   >
                     <option value="client">Cliente activo</option>
                     <option value="prospect">Prospecto</option>
@@ -216,7 +216,7 @@ export default function CompanyManager({ organization }: Props) {
                     onChange={(event) =>
                       setForm((current) => ({ ...current, commercial_email: event.target.value }))
                     }
-                    className="input-company"
+                    className="input-company bg-white text-neutral-900 placeholder:text-neutral-400"
                     placeholder="rh@empresa.com"
                   />
                 </Field>
@@ -227,7 +227,7 @@ export default function CompanyManager({ organization }: Props) {
                     onChange={(event) =>
                       setForm((current) => ({ ...current, phone: event.target.value }))
                     }
-                    className="input-company"
+                    className="input-company bg-white text-neutral-900 placeholder:text-neutral-400"
                     placeholder="33 0000 0000"
                   />
                 </Field>
@@ -238,7 +238,7 @@ export default function CompanyManager({ organization }: Props) {
                     onChange={(event) =>
                       setForm((current) => ({ ...current, website: event.target.value }))
                     }
-                    className="input-company"
+                    className="input-company bg-white text-neutral-900 placeholder:text-neutral-400"
                     placeholder="https://empresa.com"
                   />
                 </Field>
@@ -250,7 +250,7 @@ export default function CompanyManager({ organization }: Props) {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, notes: event.target.value }))
                   }
-                  className="input-company min-h-28 resize-y"
+                  className="input-company min-h-28 resize-y bg-white text-neutral-900 placeholder:text-neutral-400"
                   placeholder="Datos comerciales, condiciones, observaciones..."
                 />
               </Field>
@@ -273,7 +273,7 @@ export default function CompanyManager({ organization }: Props) {
                       Autorizar 2 aplicaciones demo de psicometrías
                     </span>
                     <span className="mt-1 block text-xs leading-5 text-neutral-600">
-                      Opcional. Activa un piloto de 30 días con dos aplicaciones (una psicometría por liga). Si no marcas esta casilla, el cliente sólo podrá explorar el catálogo hasta que autorices el acceso.
+                      Opcional. Activa un piloto de 30 días con dos aplicaciones (una, varias o todas las psicometrías habilitadas por candidato). Si no marcas esta casilla, el cliente sólo podrá explorar el catálogo hasta que autorices el acceso.
                     </span>
                   </span>
                 </label>
@@ -316,7 +316,14 @@ export default function CompanyManager({ organization }: Props) {
               border: 1px solid rgb(212 212 212);
               padding: 0.75rem 1rem;
               font-size: 0.875rem;
+              color: rgb(23 23 23);
+              background-color: rgb(255 255 255);
+              caret-color: rgb(234 88 12);
               outline: none;
+            }
+            .input-company::placeholder {
+              color: rgb(148 163 184);
+              opacity: 1;
             }
             .input-company:focus {
               border-color: rgb(251 146 60);
