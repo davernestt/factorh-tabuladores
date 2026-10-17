@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import {getCurrentAppUser} from "@/lib/app-auth";
 import { BookOpenCheck, ChartNoAxesCombined, CircleHelp, HeartHandshake, ListChecks, MessagesSquare, MoveUpRight } from 'lucide-react';
 
 const modules = [
