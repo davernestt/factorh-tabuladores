@@ -10,6 +10,7 @@ type AppUser = {
   email: string;
   display_name: string | null;
   role: string;
+  client_access_level?: string;
   organization_id: string | null;
   active: boolean;
 };
@@ -17,12 +18,15 @@ type AppUser = {
 export default function UserManager({
   organizations,
   user,
+  allowInternalRoles=false,
 }: {
   organizations: Organization[];
   user?: AppUser;
+  allowInternalRoles?: boolean;
 }) {
   const router = useRouter();
   const editing = Boolean(user);
+  const [roleTouched,setRoleTouched]=useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -37,6 +41,8 @@ export default function UserManager({
     display_name: user?.display_name ?? "",
     email: user?.email ?? "",
     organization_id: user?.organization_id ?? organizations[0]?.id ?? "",
+    role:user?.role??(allowInternalRoles?"":"client"),
+    client_access_level:user?.client_access_level??"administrator",
     active: user?.active ?? true,
   });
 
@@ -46,6 +52,8 @@ export default function UserManager({
       display_name: user.display_name ?? "",
       email: user.email,
       organization_id: user.organization_id ?? organizations[0]?.id ?? "",
+      role:user.role,
+      client_access_level:user.client_access_level??"administrator",
       active: user.active,
     });
     setMessage(null);
@@ -55,8 +63,8 @@ export default function UserManager({
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!form.display_name.trim() || !form.email.trim() || !form.organization_id) {
-      setMessage("Captura nombre, correo y empresa.");
+    if (!form.display_name.trim() || !form.email.trim() || !form.organization_id || !form.role) {
+      setMessage("Captura nombre, correo, empresa y perfil autorizado.");
       return;
     }
 
@@ -89,12 +97,20 @@ export default function UserManager({
           )?.name || "tu empresa"),
         };
         setInvite(invitation);
-        setWelcomeMessage(buildCompanyWelcome({
+        setWelcomeMessage(form.role==="client"?buildCompanyWelcome({
           personName: form.display_name,
           organizationName: invitation.companyName,
           email: invitation.email,
           inviteUrl: invitation.url,
-        }));
+        }):`Hola ${form.display_name}, te damos la bienvenida al equipo de FactoRH.
+
+Ya se creó tu cuenta como ${internalRoles.find(x=>x.value===form.role)?.label||"colaborador interno"}.
+
+Correo: ${invitation.email}
+Para crear tu contraseña, abre esta liga personal una sola vez:
+${invitation.url}
+
+Después inicia sesión desde la plataforma FactoRH. Tus permisos son asignados exclusivamente por administración.`);
         setMessage("Usuario creado. Revisa el mensaje de bienvenida y elige cómo compartir su invitación.");
         router.refresh();
       } else if (!editing) {
@@ -141,11 +157,20 @@ export default function UserManager({
         display_name: "",
         email: "",
         organization_id: organizations[0]?.id ?? "",
+        role:allowInternalRoles?"":"client",
+        client_access_level:"administrator",
         active: true,
       });
     }
     router.refresh();
   }
+
+  const internalRoles=[
+    {value:"commercial",label:"Comercial FactoRH"},
+    {value:"recruiter",label:"Reclutamiento FactoRH"},
+    {value:"ese_operator",label:"Aplicador / referencista de Estudios"},
+    {value:"consultant",label:"Consultor FactoRH"}
+  ];
 
   return (
     <>
@@ -163,14 +188,14 @@ export default function UserManager({
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
-          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white text-neutral-900 shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-neutral-200 p-6">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-                  Acceso de empresa
+                  Administración de usuarios y permisos
                 </div>
                 <h2 className="mt-2 text-2xl font-black text-neutral-900">
-                  {editing ? "Editar usuario" : "Crear usuario de empresa"}
+                  {editing ? "Editar usuario y permisos" : "Crear usuario y asignar perfil"}
                 </h2>
               </div>
               <button
@@ -192,7 +217,7 @@ export default function UserManager({
                   onChange={(e) =>
                     setForm((current) => ({ ...current, display_name: e.target.value }))
                   }
-                  className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                   placeholder="Ej. Ana López"
                   required
                 />
@@ -209,7 +234,7 @@ export default function UserManager({
                     setForm((current) => ({ ...current, email: e.target.value }))
                   }
                   disabled={editing}
-                  className="w-full rounded-xl border border-neutral-300 px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-neutral-100 disabled:text-neutral-500"
+                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 placeholder:text-neutral-400 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:bg-neutral-100 disabled:text-neutral-500"
                   placeholder="rh@empresa.com"
                   required
                 />
@@ -229,7 +254,7 @@ export default function UserManager({
                   onChange={(e) =>
                     setForm((current) => ({ ...current, organization_id: e.target.value }))
                   }
-                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
                   required
                 >
                   <option value="">Selecciona empresa</option>
@@ -240,6 +265,40 @@ export default function UserManager({
                   ))}
                 </select>
               </label>
+
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-500">Perfil autorizado por FactoRH *</span>
+                <select required value={form.role} onChange={event=>setForm(current=>({
+                  ...current,role:event.target.value,
+                  client_access_level:"administrator"
+                }))} className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900">
+                  {allowInternalRoles&&<option value="">Selecciona el perfil de trabajo</option>}
+                  {allowInternalRoles&&internalRoles.map(item=><option key={item.value} value={item.value}>{item.label}</option>)}
+                  <option value="client">{allowInternalRoles?"Cuenta cliente de prueba":"Cliente de empresa"}</option>
+                </select>
+                <p className="mt-2 text-xs leading-5 text-neutral-500">
+                  {allowInternalRoles?"Los perfiles del equipo pertenecen exclusivamente a FactoRH. Sólo el superadministrador asigna sus permisos.":"Estos usuarios sólo pueden pertenecer a su empresa. No se les concede administración de FactoRH."}
+                </p>
+              </label>
+              {form.role==="client"&&<label className="block">
+                <span className="mb-2 block text-xs font-bold uppercase tracking-wide text-neutral-500">Nivel de cuenta cliente</span>
+                <select value={form.client_access_level}
+                  onChange={event=>setForm(current=>({...current,client_access_level:event.target.value}))}
+                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900">
+                  <option value="administrator">Administrador RH de su empresa</option>
+                  <option value="collaborator">Colaborador · acceso limitado</option>
+                </select>
+                {form.client_access_level==="collaborator"&&
+                  <p className="mt-2 text-xs font-bold text-amber-700">
+                    Acceso restringido al catálogo mientras se terminan los permisos detallados de módulos.
+                  </p>}
+              </label>}
+              {form.role!==""&&form.role!=="client"&&<div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-6 text-amber-900">
+                {form.role==="ese_operator"
+                  ?"Operador de Estudios: sólo tendrá acceso a las tareas asignadas; actualmente ese módulo utiliza expedientes de prueba."
+                  :"Perfil interno registrado. Las funciones específicas permanecerán restringidas hasta completar su portal seguro."}
+              </div>}
 
               {editing && (
                 <label className="flex items-start gap-3 rounded-2xl bg-neutral-50 p-4">
