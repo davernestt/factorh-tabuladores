@@ -126,7 +126,7 @@ async function AdminDashboardContent({
 }) {
   const appUser = await getCurrentAppUser();
   if (!appUser) redirect("/auth/login");
-  if (appUser.role === "client") redirect("/protected/catalogo");
+  if (appUser.role !== "super_admin") redirect(appUser.role==="client"?"/protected/catalogo":"/protected/mi-acceso");
 
   const params = await searchParams;
   const query = normalizeSearch(paramValue(params.q));
