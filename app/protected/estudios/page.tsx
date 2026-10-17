@@ -19,6 +19,7 @@ async function Content(){
  if(!user)redirect("/auth/login");
  if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
+ if(user.role==="client"&&user.clientAccessLevel==="collaborator")redirect("/protected/catalogo");
  const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client";
  const [casesR,requestsR,orgsR]=await Promise.all([
   (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("organization_id",user.organizationId!).eq("is_demo",false):
