@@ -26,7 +26,6 @@ export default function UserManager({
 }) {
   const router = useRouter();
   const editing = Boolean(user);
-  const [roleTouched,setRoleTouched]=useState(false);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
