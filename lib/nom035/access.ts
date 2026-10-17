@@ -4,7 +4,7 @@ import {createAdminClient} from "@/lib/supabase/admin";
 /** Privileged evaluation access is checked on the server for every organization. */
 export async function hasNom035Subscription(user:CurrentAppUser):Promise<boolean>{
  if(user.role==="super_admin")return true;
- if(user.role!=="client"||!user.organizationId)return false;
+ if(user.role!=="client"||user.clientAccessLevel!=="administrator"||!user.organizationId)return false;
  const db=createAdminClient();
  const today=new Date().toISOString().slice(0,10);
  const {data,error}=await db.from("organization_module_subscriptions")
