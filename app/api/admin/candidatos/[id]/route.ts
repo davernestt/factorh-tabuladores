@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const auth = await createClient();
-  const { data, error } = await auth.auth.getClaims();
-  const email = String(data?.claims?.email ?? "").toLowerCase();
-  if (error || !data?.claims || !ADMIN_EMAILS.includes(email)) {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
+  const user=await getCurrentAppUser();
+  if(!user||!await hasStaffPermission(user,"candidates","operate"))
+    return NextResponse.json({error:"No autorizado para modificar candidatos."},{status:403});
+  const origin=request.headers.get("origin");
+  if(origin&&origin!==request.nextUrl.origin)
+    return NextResponse.json({error:"Origen no autorizado."},{status:403});
 
   const { id } = await context.params;
   let input: { organization_id?: string; first_name?: string; last_name?: string; job_title?: string; area?: string; email?: string; phone?: string };
@@ -34,6 +34,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   }
   const processes = processResult.data ?? [];
   const changingCompany = personResult.data.organization_id !== organization_id;
+  if(changingCompany&&user.role!=="super_admin")return NextResponse.json({error:"El cambio de empresa de un candidato requiere superadministrador."},{status:403});
   if (changingCompany && processes.length) {
     const { data: assignments, error: assignmentsError } = await db
       .from("assessment_assignments").select("id,status").in("process_id", processes.map(p => p.id));
