@@ -4,6 +4,7 @@ import {createAdminClient} from "@/lib/supabase/admin";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import CompanyManager from "../company-manager";
 import CompanyAccessPanel from "../company-access-panel";
+import CompanyUserRequests from "../company-user-requests";
 import {type CreditPlan} from "../company-credit-manager";
 import {type ModuleSubscription,type PlatformModule} from "../company-module-manager";
 import CompanyServiceOperations from "../company-service-operations";
@@ -22,7 +23,7 @@ export default async function CompanyDetailPage({params}:RouteProps){
  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound();
  const db=createAdminClient();
  const [orgR,usersR,creditR,modulesR,subsR,remindersR,processesR,accessR,
-  templatesR,quotesR,auditR,cyclesR,climateR,c3R]=await Promise.all([
+  templatesR,quotesR,auditR,cyclesR,climateR,c3R,userRequestsR]=await Promise.all([
   db.from("organizations").select("id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes").eq("id",id).maybeSingle(),
   db.from("app_users").select("user_id,email,display_name,role,client_access_level,active").eq("organization_id",id).order("created_at"),
   db.from("organization_psychometric_credits").select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only").eq("organization_id",id).maybeSingle(),
@@ -36,11 +37,12 @@ export default async function CompanyDetailPage({params}:RouteProps){
   db.from("company_service_audit").select("id,occurred_at,module_key,event_type,old_state,new_state").eq("organization_id",id).order("occurred_at",{ascending:false}).limit(100),
   db.from("feedback360_cycles").select("id,status,created_at").eq("organization_id",id),
   db.from("clima_campaigns").select("id,status").eq("organization_id",id),
-  db.from("c3_campaigns").select("id,status").eq("organization_id",id)
+  db.from("c3_campaigns").select("id,status").eq("organization_id",id),
+  db.from("client_user_requests").select("id,requested_count,notes,status,created_at").eq("organization_id",id).order("created_at",{ascending:false}).limit(50)
  ]);
  const firstError=orgR.error||usersR.error||creditR.error||modulesR.error||subsR.error||
   remindersR.error||processesR.error||accessR.error||templatesR.error||
-  quotesR.error||auditR.error||cyclesR.error||climateR.error||c3R.error;
+  quotesR.error||auditR.error||cyclesR.error||climateR.error||c3R.error||userRequestsR.error;
  if(firstError)return <div className="rounded-3xl border border-red-200 bg-red-50 p-7 text-red-700">No se pudo cargar el expediente: {firstError.message}. Comprueba que la migración del Centro de Clientes esté aplicada.</div>;
  const org=orgR.data;
  if(!org)notFound();
@@ -119,7 +121,7 @@ export default async function CompanyDetailPage({params}:RouteProps){
      </div>
     </section>
    </div>}
-   users={<CompanyAccessPanel organizationId={org.id} organizationName={org.name} organizationSlug={org.slug} users={users}/>}
+   users={<div className="space-y-5"><CompanyAccessPanel organizationId={org.id} organizationName={org.name} organizationSlug={org.slug} users={users}/><CompanyUserRequests organizationId={org.id} requests={userRequestsR.data??[]}/></div>}
    services={<div className="space-y-5">
     <CompanyServiceOperations organizationId={org.id} modules={modules} subscriptions={subscriptions} credit={credit} cycleCount={cyclesR.data?.length??0}/>
     <details className={box}>
