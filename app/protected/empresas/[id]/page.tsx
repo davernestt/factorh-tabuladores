@@ -24,7 +24,7 @@ export default async function CompanyDetailPage({params}:RouteProps){
  const [orgR,usersR,creditR,modulesR,subsR,remindersR,processesR,accessR,
   templatesR,quotesR,auditR,cyclesR,climateR,c3R]=await Promise.all([
   db.from("organizations").select("id,name,slug,active,lifecycle_stage,website,phone,commercial_email,notes").eq("id",id).maybeSingle(),
-  db.from("app_users").select("user_id,email,display_name,active").eq("organization_id",id).eq("role","client").order("created_at"),
+  db.from("app_users").select("user_id,email,display_name,role,client_access_level,active").eq("organization_id",id).order("created_at"),
   db.from("organization_psychometric_credits").select("organization_id,plan_type,plan_name,credits_total,credits_used,valid_from,valid_until,active,trial_single_test_only").eq("organization_id",id).maybeSingle(),
   db.from("platform_modules").select("module_key,name,description,route,client_available").eq("active",true).order("sort_order"),
   db.from("organization_module_subscriptions").select("id,organization_id,module_key,status,plan_name,starts_on,ends_on,requested_on,requested_notes,reminder_days,client_notice,evaluation_limit").eq("organization_id",id),
