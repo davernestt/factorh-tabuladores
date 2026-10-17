@@ -1,107 +1,54 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getCurrentAppUser } from "@/lib/app-auth";
+import {NextRequest,NextResponse} from "next/server";
+import {createAdminClient} from "@/lib/supabase/admin";
+import {getCurrentAppUser,type AppUserRole} from "@/lib/app-auth";
 
-type Body = {
-  display_name?: string;
-  email?: string;
-  organization_id?: string;
+type Body={
+ display_name?:string;email?:string;organization_id?:string;
+ role?:string;client_access_level?:string;
 };
+const internalRoles=new Set<AppUserRole>(["commercial","recruiter","ese_operator","consultant"]);
+const clientLevels=new Set(["administrator","collaborator"]);
+const safe=(v:unknown)=>String(v??"").trim();
+function fail(error:string,status=400){return NextResponse.json({error},{status});}
 
-function clean(value: unknown) {
-  return String(value ?? "").trim();
-}
-
-export async function POST(request: NextRequest) {
-  const currentUser = await getCurrentAppUser();
-  if (!currentUser || currentUser.role !== "super_admin") {
-    return NextResponse.json({ error: "No autorizado." }, { status: 403 });
-  }
-
-  const body = (await request.json()) as Body;
-  const displayName = clean(body.display_name);
-  const email = clean(body.email).toLowerCase();
-  const organizationId = clean(body.organization_id);
-
-  if (!displayName || !email || !organizationId) {
-    return NextResponse.json(
-      { error: "Captura nombre, correo y empresa." },
-      { status: 400 },
-    );
-  }
-
-  const db = createAdminClient();
-
-  const { data: organization, error: organizationError } = await db
-    .from("organizations")
-    .select("id,name,active")
-    .eq("id", organizationId)
-    .eq("active", true)
-    .maybeSingle();
-
-  if (organizationError) {
-    return NextResponse.json({ error: organizationError.message }, { status: 500 });
-  }
-  if (!organization) {
-    return NextResponse.json(
-      { error: "La empresa seleccionada no está disponible." },
-      { status: 400 },
-    );
-  }
-
-  const { data: existing } = await db
-    .from("app_users")
-    .select("user_id")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (existing) {
-    return NextResponse.json(
-      { error: "Ya existe un usuario de plataforma con ese correo." },
-      { status: 409 },
-    );
-  }
-
-  // Crear una cuenta no concede créditos ni activa módulos.
-  // Las dos demos se autorizan por empresa desde su plan psicométrico.
-
-  const origin = request.nextUrl.origin;
-  const { data: linkData, error: linkError } = await db.auth.admin.generateLink({
-    type: "invite",
-    email,
-  });
-
-  if (linkError || !linkData.user) {
-    return NextResponse.json(
-      { error: linkError?.message ?? "No fue posible crear la invitación." },
-      { status: 400 },
-    );
-  }
-
-  const { error: appUserError } = await db.from("app_users").insert({
-    user_id: linkData.user.id,
-    email,
-    display_name: displayName,
-    role: "client",
-    organization_id: organizationId,
-    active: true,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (appUserError) {
-    await db.auth.admin.deleteUser(linkData.user.id);
-    return NextResponse.json({ error: appUserError.message }, { status: 500 });
-  }
-
-  const hashedToken = linkData.properties?.hashed_token;
-  const inviteUrl = hashedToken
-    ? `${origin}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=invite&next=${encodeURIComponent("/auth/update-password")}`
-    : linkData.properties?.action_link ?? null;
-
-  return NextResponse.json({
-    ok: true,
-    user_id: linkData.user.id,
-    organization_name: organization.name,
-    invite_url: inviteUrl,
-  });
+export async function POST(request:NextRequest){
+ const actor=await getCurrentAppUser();
+ if(!actor||actor.role!=="super_admin")return fail("Sólo el administrador general puede crear usuarios.",403);
+ const origin=request.headers.get("origin");
+ if(origin&&origin!==request.nextUrl.origin)return fail("Origen no autorizado.",403);
+ let body:Body;
+ try{body=await request.json() as Body}catch{return fail("Datos inválidos.");}
+ const displayName=safe(body.display_name),email=safe(body.email).toLowerCase();
+ const organizationId=safe(body.organization_id),role=safe(body.role||"client");
+ const accessLevel=safe(body.client_access_level||"administrator");
+ if(!displayName||displayName.length>120||!email||!email.includes("@")||!organizationId)
+  return fail("Captura nombre, correo y empresa.");
+ if(!clientLevels.has(accessLevel))return fail("Tipo de acceso cliente inválido.");
+ if(role!=="client"&&!internalRoles.has(role as AppUserRole))
+  return fail("Perfil no autorizado. Sólo el propietario conserva el rol superadministrador.");
+ const db=createAdminClient();
+ const {data:organization,error:orgError}=await db.from("organizations")
+  .select("id,name,slug,active").eq("id",organizationId).eq("active",true).maybeSingle();
+ if(orgError)return fail("No se pudo consultar la empresa.",500);
+ if(!organization)return fail("La empresa no está disponible.");
+ if(role!=="client"&&organization.slug!=="factorh")
+  return fail("Los perfiles internos de FactoRH sólo se asignan a la empresa FactoRH.",403);
+ // No se crean perfiles internos en empresas externas, incluso manipulando el formulario.
+ const {data:existing,error:existingError}=await db.from("app_users").select("user_id").eq("email",email).maybeSingle();
+ if(existingError)return fail("No se pudo comprobar el correo.",500);
+ if(existing)return fail("Ya existe un usuario de plataforma con ese correo.",409);
+ const {data:link,error:linkError}=await db.auth.admin.generateLink({type:"invite",email});
+ if(linkError||!link.user)return fail(linkError?.message||"No fue posible crear la invitación.",400);
+ const {error:saveError}=await db.from("app_users").insert({
+  user_id:link.user.id,email,display_name:displayName,role,
+  organization_id:organizationId,client_access_level:role==="client"?accessLevel:"administrator",
+  active:true,updated_at:new Date().toISOString()
+ });
+ if(saveError){
+  await db.auth.admin.deleteUser(link.user.id);
+  return fail("No fue posible guardar el perfil asignado: "+saveError.message,500);
+ }
+ const hash=link.properties?.hashed_token;
+ const url=hash?`${request.nextUrl.origin}/auth/confirm?token_hash=${encodeURIComponent(hash)}&type=invite&next=${encodeURIComponent("/auth/update-password")}`:null;
+ return NextResponse.json({ok:true,user_id:link.user.id,organization_name:organization.name,invite_url:url,role,client_access_level:accessLevel},{headers:{"Cache-Control":"no-store"}});
 }
