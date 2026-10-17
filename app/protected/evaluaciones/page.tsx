@@ -26,6 +26,9 @@ async function EvaluationModulesPageContent() {
   const auth = await createClient();
   const { data, error } = await auth.auth.getClaims();
   if (error || !data?.claims) redirect('/auth/login');
+  const user=await getCurrentAppUser();
+  if(!user)redirect("/auth/login");
+  if(user.role!=="super_admin")redirect(user.role==="client"?"/protected/catalogo":"/protected/mi-acceso");
   return <div className="space-y-8">
     <div className="flex flex-wrap items-end justify-between gap-4">
       <div><div className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">FactoRH · Administración</div>
