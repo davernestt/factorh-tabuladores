@@ -8,6 +8,8 @@ type ClientUser = {
   email: string;
   display_name: string | null;
   active: boolean;
+  role: string;
+  client_access_level?: string;
 };
 
 export default function CompanyAccessPanel({
@@ -22,13 +24,21 @@ export default function CompanyAccessPanel({
   users: ClientUser[];
 }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const internalCompany=organizationSlug==="factorh";
+  const labels:Record<string,string>={
+   super_admin:"Propietario / superadministrador",
+   commercial:"Comercial FactoRH",
+   recruiter:"Reclutamiento FactoRH",
+   ese_operator:"Operador de Estudios",
+   consultant:"Consultor FactoRH",
+   client:"Usuario cliente"
+  };
 
-  const portalUrl = useMemo(
-    () =>
-      typeof window === "undefined"
-        ? `/cliente/${organizationSlug}`
-        : `${window.location.origin}/cliente/${organizationSlug}`,
-    [organizationSlug],
+  const portalUrl = useMemo(()=>
+    typeof window==="undefined"
+      ? internalCompany?"/auth/login":`/cliente/${organizationSlug}`
+      : `${window.location.origin}${internalCompany?"/auth/login":"/cliente/"+organizationSlug}`,
+    [organizationSlug,internalCompany]
   );
 
   async function copy(value: string, key: string) {
@@ -40,20 +50,20 @@ export default function CompanyAccessPanel({
   return (
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="text-xs font-bold uppercase tracking-[.16em] text-orange-600">
-        Acceso del cliente
+        {internalCompany?"Acceso del equipo FactoRH":"Acceso del cliente"}
       </div>
       <h2 className="mt-2 text-2xl font-black text-neutral-900">
-        Portal permanente y usuarios
+        {internalCompany?"Equipo y perfiles autorizados":"Portal permanente y usuarios"}
       </h2>
       <p className="mt-2 text-sm leading-6 text-neutral-600">
-        Esta liga es permanente para la empresa. Cada persona entra con su propio correo y contraseña.
+        {internalCompany?"Tu equipo inicia sesión en el acceso general de FactoRH. Sólo el propietario crea usuarios internos y les asigna su perfil.":"Esta liga es permanente para la empresa. Cada persona entra con su propio correo y contraseña."}
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-orange-50 p-4"><p className="text-sm font-semibold text-neutral-700">Crea usuarios directamente dentro de esta empresa.</p><UserManager organizations={[{id:organizationId,name:organizationName,active:true}]}/></div>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-orange-50 p-4"><p className="text-sm font-semibold text-neutral-700">{internalCompany?"Crea integrantes y asigna funciones dentro de FactoRH.":"Crea usuarios directamente dentro de esta empresa."}</p><UserManager allowInternalRoles={internalCompany} organizations={[{id:organizationId,name:organizationName,active:true}]}/></div>
 
       <div className="mt-5 rounded-2xl bg-neutral-50 p-4">
         <div className="text-xs font-bold uppercase tracking-wide text-neutral-500">
-          Liga permanente
+          {internalCompany?"Acceso para integrantes":"Liga permanente"}
         </div>
         <div className="mt-2 break-all text-sm font-semibold text-neutral-800">
           {portalUrl}
@@ -85,7 +95,7 @@ export default function CompanyAccessPanel({
       <div className="mt-6 space-y-3">
         {users.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-neutral-300 p-5 text-sm text-neutral-500">
-            Todavía no hay usuarios. Utiliza «Crear usuario» arriba para invitarlos al portal de esta empresa.
+            Todavía no hay usuarios. Utiliza «Crear usuario» arriba y selecciona su perfil.
           </div>
         ) : (
           users.map((user) => (
@@ -99,12 +109,16 @@ export default function CompanyAccessPanel({
                     {user.display_name || "Usuario de empresa"}
                   </div>
                   <div className="mt-1 text-sm text-neutral-600">{user.email}</div>
+                  <div className="mt-1 text-xs font-semibold text-orange-700">
+                    {labels[user.role]||user.role}
+                    {user.role==="client"&&" · "+(user.client_access_level==="collaborator"?"Colaborador":"Administrador RH")}
+                  </div>
                   <div className="mt-1 text-xs text-neutral-500">
                     {user.active ? "Acceso activo" : "Acceso inactivo"}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <UserManager organizations={[{id:organizationId,name:organizationName,active:true}]} user={{user_id:user.user_id,email:user.email,display_name:user.display_name,active:user.active,role:"client",organization_id:organizationId}}/>
+                  <UserManager allowInternalRoles={internalCompany} organizations={[{id:organizationId,name:organizationName,active:true}]} user={{user_id:user.user_id,email:user.email,display_name:user.display_name,active:user.active,role:user.role,client_access_level:user.client_access_level,organization_id:organizationId}}/>
                   <button
                     type="button"
                     onClick={() => void copy(user.email, "email:" + user.user_id)}
@@ -117,7 +131,7 @@ export default function CompanyAccessPanel({
                       "/auth/forgot-password?email=" +
                       encodeURIComponent(user.email) +
                       "&return_to=" +
-                      encodeURIComponent("/cliente/" + organizationSlug)
+                      encodeURIComponent(internalCompany?"/auth/login":"/cliente/" + organizationSlug)
                     }
                     target="_blank"
                     rel="noreferrer"
