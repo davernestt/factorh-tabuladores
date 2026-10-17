@@ -10,7 +10,7 @@ export default async function CompaniesPage(){
  const db=createAdminClient();
  const [orgsR,usersR,subsR,creditR,expiryR]=await Promise.all([
   db.from("organizations").select("id,name,slug,active,lifecycle_stage,commercial_email").order("name"),
-  db.from("app_users").select("organization_id,user_id,active").eq("role","client"),
+  db.from("app_users").select("organization_id,user_id,active"),
   db.from("organization_module_subscriptions").select("organization_id,status,ends_on"),
   db.from("organization_psychometric_credits").select("organization_id,credits_total,credits_used,plan_type,active"),
   db.from("module_expiry_reminders").select("organization_id,days_remaining")
