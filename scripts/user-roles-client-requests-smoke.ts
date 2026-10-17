@@ -1,0 +1,31 @@
+import {strict as assert} from "node:assert";
+import {readFileSync} from "node:fs";
+const get=(p:string)=>readFileSync(p,"utf8");
+const create=get("app/api/admin/usuarios/route.ts");
+const update=get("app/api/admin/usuarios/[id]/route.ts");
+const form=get("app/protected/usuarios/user-manager.tsx");
+const company=get("app/protected/empresas/company-access-panel.tsx");
+const login=get("app/api/auth/login/route.ts");
+const request=get("app/api/cliente/solicitudes-usuarios/route.ts");
+const psych=get("app/api/admin/evaluaciones/route.ts");
+const sql=get("supabase/migrations/20261016_client_user_requests.sql");
+assert.match(create,/actor\.role!=="super_admin"/);
+assert.match(update,/actor\.role!=="super_admin"/);
+assert.match(create,/organization\.slug!=="factorh"/);
+assert.match(update,/org\.slug!=="factorh"/);
+assert.match(update,/target\.role==="super_admin"/);
+for(const role of ["commercial","recruiter","ese_operator","consultant"]){
+ assert.ok(create.includes(role),role+" rol servidor");
+ assert.ok(form.includes(role),role+" rol formulario");
+}
+assert.match(form,/client_access_level/);
+assert.match(company,/allowInternalRoles=\{internalCompany\}/);
+assert.match(company,/internalCompany\?"\/auth\/login"/);
+assert.match(login,/appUser\.role==="ese_operator"/);
+assert.match(psych,/clientAccessLevel!=="administrator"/);
+assert.match(request,/user\.role!=="client"/);
+assert.match(request,/requested_count/);
+assert.doesNotMatch(request,/auth\.admin\.generateLink|\.from\("app_users"\)\.insert/);
+assert.match(sql,/enable row level security/);
+assert.match(sql,/revoke all on public\.client_user_requests from anon,authenticated/);
+console.log("ROLES_USUARIOS_SEGURIDAD_OK: sólo superadmin asigna, personal restringido, cliente sólo solicita.");
