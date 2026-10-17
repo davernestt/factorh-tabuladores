@@ -17,7 +17,7 @@ export async function PATCH(request:NextRequest,{params}:Context){
  const db=createAdminClient();
  const {data,error}=await db.from("client_user_requests")
   .update({status:body.status,reviewed_by:actor.userId,reviewed_at:new Date().toISOString()})
-  .eq("id",body.request_id).eq("organization_id",id).eq("status","pending").select("id").maybeSingle();
+  .eq("id",body.request_id).eq("organization_id",id).in("status",["pending","reviewed"]).select("id").maybeSingle();
  if(error)return NextResponse.json({error:"Error actualizando la solicitud."},{status:500});
  if(!data)return NextResponse.json({error:"La solicitud ya fue atendida."},{status:409});
  return NextResponse.json({ok:true,notice:"El estado de la solicitud cambió. Esta acción no creó usuarios."});
