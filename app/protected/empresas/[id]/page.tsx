@@ -5,6 +5,8 @@ import {getCurrentAppUser} from "@/lib/app-auth";
 import CompanyManager from "../company-manager";
 import CompanyAccessPanel from "../company-access-panel";
 import CompanyUserRequests from "../company-user-requests";
+import CoordinatorMatrix from "../coordinator-matrix";
+import {operationModules} from "@/lib/staff-permissions";
 import {type CreditPlan} from "../company-credit-manager";
 import {type ModuleSubscription,type PlatformModule} from "../company-module-manager";
 import CompanyServiceOperations from "../company-service-operations";
@@ -47,6 +49,13 @@ export default async function CompanyDetailPage({params}:RouteProps){
  const org=orgR.data;
  if(!org)notFound();
  const users=usersR.data??[];
+ const internalIds=org.slug==="factorh"?users.filter(u=>u.role!=="client"&&u.role!=="super_admin").map(u=>u.user_id):[];
+ const [profilesR,grantsR]=await Promise.all([
+  internalIds.length?db.from("staff_access_profiles").select("user_id,activated,validated_at").in("user_id",internalIds):Promise.resolve({data:[],error:null}),
+  internalIds.length?db.from("staff_module_grants").select("user_id,module_key,can_view,can_operate,can_reports").in("user_id",internalIds):Promise.resolve({data:[],error:null})
+ ]);
+ if(profilesR.error||grantsR.error)return <p className="rounded-xl bg-red-50 p-5 text-red-700">No se pudo cargar la matriz de permisos. Verifica la migración operativa.</p>;
+ const coordinatorProfiles=profilesR.data??[];
  const credit=(creditR.data??null) as CreditPlan|null;
  const modules=(modulesR.data??[]) as PlatformModule[];
  const subscriptions=(subsR.data??[]) as ModuleSubscription[];
@@ -121,7 +130,18 @@ export default async function CompanyDetailPage({params}:RouteProps){
      </div>
     </section>
    </div>}
-   users={<div className="space-y-5"><CompanyAccessPanel organizationId={org.id} organizationName={org.name} organizationSlug={org.slug} users={users}/><CompanyUserRequests organizationId={org.id} requests={userRequestsR.data??[]}/></div>}
+   users={<div className="space-y-5"><CompanyAccessPanel organizationId={org.id} organizationName={org.name} organizationSlug={org.slug} users={users}/><CompanyUserRequests organizationId={org.id} requests={userRequestsR.data??[]}/>
+    {coordinatorProfiles.map(profile=>{
+      const user=users.find(u=>u.user_id===profile.user_id);
+      const activeGrants=(grantsR.data??[]).filter(g=>g.user_id===profile.user_id);
+      const matrix=operationModules.map(module_key=>{
+        const current=activeGrants.find(g=>g.module_key===module_key);
+        return {module_key,can_view:current?.can_view===true,can_operate:current?.can_operate===true,can_reports:current?.can_reports===true};
+      });
+      return <CoordinatorMatrix key={profile.user_id} userId={profile.user_id} name={user?.display_name??"Integrante"}
+       activated={profile.activated===true} validated={Boolean(profile.validated_at)} initial={matrix}/>;
+    })}
+   </div>}
    services={<div className="space-y-5">
     <CompanyServiceOperations organizationId={org.id} modules={modules} subscriptions={subscriptions} credit={credit} cycleCount={cyclesR.data?.length??0}/>
     <details className={box}>

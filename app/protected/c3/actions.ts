@@ -2,11 +2,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function createC3Campaign(formData: FormData) {
   const user = await getCurrentAppUser();
-  if (!user || user.role === "client") throw new Error("No autorizado.");
+  if (!user || !await hasStaffPermission(user,"climate","operate")) throw new Error("No autorizado para operar campañas.");
   const organizationId = String(formData.get("organization_id") || "");
   const name = String(formData.get("name") || "").trim().slice(0, 150);
   const planned = Number(formData.get("planned_population"));
@@ -34,7 +35,7 @@ export async function createC3Campaign(formData: FormData) {
 
 export async function changeC3CampaignStatus(formData: FormData) {
   const user = await getCurrentAppUser();
-  if (!user || user.role !== "super_admin") throw new Error("No autorizado.");
+  if (!user || !await hasStaffPermission(user,"climate","operate")) throw new Error("No autorizado para operar campañas.");
   const id = String(formData.get("id") || "");
   const next = String(formData.get("status") || "");
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ||

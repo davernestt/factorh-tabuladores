@@ -16,6 +16,7 @@ on:
       - 'feature/psicometria-*'
       - 'feature/centro-*'
       - 'feature/roles-*'
+      - 'feature/coordinadora-*'
       - 'feature/ese-formato-*'
       - 'feature/marca-*'
       - 'fix/logotipo-*'
@@ -88,5 +89,7 @@ jobs:
         run: npx --yes tsx scripts/company-form-contrast-smoke.ts
       - name: Validate user roles and client requests
         run: npx --yes tsx scripts/user-roles-client-requests-smoke.ts
+      - name: Validate staged coordinator access matrix
+        run: npx --yes tsx scripts/coordinator-permission-matrix-smoke.ts
       - name: Build app
         run: npm run build
