@@ -85,7 +85,15 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 
-  const items = isClient ? clientItems : adminItems;
+  const staffItems=appUser.role==="ese_operator"
+    ? [{href:"/protected/estudios/tareas",name:"Mis tareas de Estudios"}]
+    : [{href:"/protected/mi-acceso",name:"Mi acceso FactoRH"}];
+  const items=appUser.role==="super_admin"?adminItems
+    :isClient
+      ?appUser.clientAccessLevel==="collaborator"
+        ?[{href:"/protected/catalogo",name:"Catálogo autorizado"}]
+        :clientItems
+      :staffItems;
 
   return (
     <main className="min-h-screen bg-neutral-100">
