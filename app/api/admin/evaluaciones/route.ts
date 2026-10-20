@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import { relationshipForAssessmentType } from "@/lib/pdl-evaluation-role";
 
 type CreateBody = {
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
   if (
     !currentUser ||
-    !["super_admin", "client"].includes(currentUser.role)
+    !(["super_admin", "client"].includes(currentUser.role)||await hasStaffPermission(currentUser,"pdl","operate"))
   ) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
