@@ -1,5 +1,5 @@
 import FactoRHLogo from "@/components/factorh-logo";
-import { LoginForm } from "@/components/login-form";
+import ClientLoginForm from "@/components/client-login-form";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
