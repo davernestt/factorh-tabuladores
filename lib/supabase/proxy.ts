@@ -72,22 +72,39 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      if (pathname === "/protected") {
+      // The module pages and APIs perform subscription and organization checks.
+      // Proxy only restricts the routes clients can reach, without assuming
+      // that every client is entitled to every listed module.
+      const clientRoutes = [
+        "/protected/catalogo",
+        "/protected/solicitar-usuarios",
+        "/protected/estudios",
+        "/protected/psicometrias",
+        "/protected/360",
+        "/protected/nom035",
+      ];
+      const isClientRoute = clientRoutes.some(
+        (route) => pathname === route || pathname.startsWith(route + "/"),
+      );
+      if (pathname === "/protected" || !isClientRoute) {
         const url = request.nextUrl.clone();
-        url.pathname = "/protected/psicometrias";
-        return NextResponse.redirect(url);
-      }
-
-      if (!pathname.startsWith("/protected/psicometrias")) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/protected/psicometrias";
+        url.pathname = "/protected/catalogo";
         return NextResponse.redirect(url);
       }
     } else if (appUser.role !== "super_admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      url.searchParams.set("error", "unauthorized");
-      return NextResponse.redirect(url);
+      // Staff must not inherit administrator permissions merely by signing in.
+      const staffRoutes =
+        appUser.role === "ese_operator"
+          ? ["/protected/mi-acceso", "/protected/estudios/tareas"]
+          : ["/protected/mi-acceso"];
+      const isStaffRoute = staffRoutes.some(
+        (route) => pathname === route || pathname.startsWith(route + "/"),
+      );
+      if (pathname === "/protected" || !isStaffRoute) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/protected/mi-acceso";
+        return NextResponse.redirect(url);
+      }
     }
   }
 
