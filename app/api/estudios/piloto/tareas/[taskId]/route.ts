@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {sanitizeEsePayload,eseTaskSubmittable} from "@/lib/ese/master-schema";
 type Params={params:Promise<{taskId:string}>};
@@ -8,7 +9,7 @@ const statuses=["pendiente","en_proceso","en_revision","correcciones","aprobado"
 type Action="save"|"submit"|"request_changes"|"approve";
 export async function PATCH(req:NextRequest,{params}:Params){
  const user=await getCurrentAppUser();
- if(!user||!["super_admin","ese_operator"].includes(user.role))
+ if(!user||!(["super_admin","ese_operator"].includes(user.role)||await hasStaffPermission(user,"studies","operate")))
   return NextResponse.json({error:"No autorizado."},{status:403});
  if(req.headers.get("origin")!==req.nextUrl.origin)return NextResponse.json({error:"Origen no permitido."},{status:403});
  const {taskId}=await params;if(!uuid.test(taskId))return NextResponse.json({error:"Tarea inválida."},{status:400});
