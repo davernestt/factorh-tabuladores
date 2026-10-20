@@ -6,14 +6,18 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
+  // Only the token-based 360° questionnaire/API is anonymous.
+  // Management endpoints under /api/360/* must retain session enforcement.
+  const isPublic360Page = /^\\/360\\/[A-Za-z0-9_-]{40,60}\\/?$/.test(pathname);
+  const isPublic360Api = /^\\/api\\/360\\/[A-Za-z0-9_-]{40,60}\\/?$/.test(pathname);
   const isPublicAssessment =
     pathname.startsWith("/e/") ||
     pathname.startsWith("/p/") ||
-    pathname.startsWith("/360/") ||
+    isPublic360Page ||
     pathname.startsWith("/c3/") ||
     pathname.startsWith("/api/c3/submit") ||
     pathname.startsWith("/api/evaluacion/") ||
-    pathname.startsWith("/api/360/") ||
+    isPublic360Api ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/cliente/");
 
