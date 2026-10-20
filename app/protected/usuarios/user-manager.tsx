@@ -27,6 +27,7 @@ export default function UserManager({
   const [message, setMessage] = useState<string | null>(null);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [generatingAccess, setGeneratingAccess] = useState(false);
   const [form, setForm] = useState({
     display_name: user?.display_name ?? "",
     email: user?.email ?? "",
@@ -95,6 +96,41 @@ export default function UserManager({
     await navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
+  }
+
+  async function generateActivationLink() {
+    if (!user) return;
+
+    setGeneratingAccess(true);
+    setMessage(null);
+    setInviteUrl(null);
+
+    try {
+      const response = await fetch(
+        `/api/admin/usuarios/${user.user_id}/activation`,
+        { method: "POST" },
+      );
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload.error || "No fue posible generar la liga de activación.",
+        );
+      }
+
+      setInviteUrl(payload.activation_url);
+      setMessage(
+        "Nueva liga generada. Puedes enviársela al usuario para crear o restablecer su contraseña.",
+      );
+    } catch (cause) {
+      setMessage(
+        cause instanceof Error
+          ? cause.message
+          : "No fue posible generar la liga de activación.",
+      );
+    } finally {
+      setGeneratingAccess(false);
+    }
   }
 
   function close() {
@@ -208,24 +244,46 @@ export default function UserManager({
               </label>
 
               {editing && (
-                <label className="flex items-start gap-3 rounded-2xl bg-neutral-50 p-4">
-                  <input
-                    type="checkbox"
-                    checked={form.active}
-                    onChange={(e) =>
-                      setForm((current) => ({ ...current, active: e.target.checked }))
-                    }
-                    className="mt-1 h-4 w-4 accent-orange-500"
-                  />
-                  <span>
-                    <span className="block text-sm font-bold text-neutral-900">
-                      Usuario activo
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 rounded-2xl bg-neutral-50 p-4">
+                    <input
+                      type="checkbox"
+                      checked={form.active}
+                      onChange={(e) =>
+                        setForm((current) => ({ ...current, active: e.target.checked }))
+                      }
+                      className="mt-1 h-4 w-4 accent-orange-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-bold text-neutral-900">
+                        Usuario activo
+                      </span>
+                      <span className="mt-1 block text-xs text-neutral-500">
+                        Si lo desactivas ya no podrá entrar, pero se conserva su historial.
+                      </span>
                     </span>
-                    <span className="mt-1 block text-xs text-neutral-500">
-                      Si lo desactivas ya no podrá entrar, pero se conserva su historial.
-                    </span>
-                  </span>
-                </label>
+                  </label>
+
+                  <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                    <div className="text-sm font-black text-neutral-900">
+                      Activación / contraseña
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-neutral-600">
+                      Si el usuario cerró la invitación, la perdió o necesita una nueva contraseña,
+                      genera aquí una liga nueva. La contraseña actual nunca es visible para FactoRH.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void generateActivationLink()}
+                      disabled={generatingAccess || !form.active}
+                      className="mt-3 rounded-xl bg-[#4A4A4A] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                    >
+                      {generatingAccess
+                        ? "Generando..."
+                        : "Generar nueva liga de activación"}
+                    </button>
+                  </div>
+                </div>
               )}
 
               {message && (
