@@ -2,9 +2,10 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import DepartmentsManager from "./departments-manager";
 export default async function DepartmentsPage(){
- const user=await getCurrentAppUser();if(!user||!["super_admin","client"].includes(user.role))redirect("/protected/catalogo");
+ const user=await getCurrentAppUser();if(!user||!(["super_admin","client"].includes(user.role)||await hasStaffPermission(user,"feedback360","view")))redirect("/protected/mi-acceso");
  const db=createAdminClient();
  const organizations=user.role==="client"?
  await db.from("organizations").select("id,name").eq("id",user.organizationId!):
