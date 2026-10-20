@@ -2,13 +2,14 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 
 export default function TasksPage(){return <Suspense fallback={<div>Cargando tareas...</div>}><Content/></Suspense>}
 async function Content(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
- if(!["super_admin","ese_operator"].includes(user.role))redirect("/protected/estudios");
+ if(!["super_admin","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
  const db=createAdminClient();
  const {data:tasks,error}=await db.from("ese_work_tasks")
   .select("id,task_type,status,created_at,ese_cases!inner(case_name,is_demo,study_type)")
