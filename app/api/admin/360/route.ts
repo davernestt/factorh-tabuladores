@@ -62,5 +62,5 @@ export async function POST(request: NextRequest) {
     await db.from('feedback360_cycles').delete().eq('id',cycle.id);
     return fail(ratersError.message,500);
   }
-  return NextResponse.json({ ok:true, cycle_id:cycle.id, invitations:invitations.map(r=>({ role:r.role,name:r.name,email:r.email,url:build360Url(r.token) })) }, { status:201, headers:{'Cache-Control':'no-store'} });
+  return NextResponse.json({ ok:true, cycle_id:cycle.id, invitations:invitations.map(r=>({ role:r.role,name:r.name,email:r.email,url:build360Url(r.token,request.nextUrl.origin) })) }, { status:201, headers:{'Cache-Control':'no-store'} });
 }

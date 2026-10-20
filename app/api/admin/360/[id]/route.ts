@@ -40,5 +40,5 @@ export async function POST(request:NextRequest,ctx:Context){
   const {data,error}=await db.from('feedback360_raters').update({token_hash}).eq('id',body.rater_id).eq('cycle_id',id).eq('status','pending').select('id').maybeSingle();
   if(error)return NextResponse.json({error:'No fue posible reexpedir la liga.'},{status:500});
   if(!data)return NextResponse.json({error:'El evaluador no está pendiente.'},{status:409});
-  return NextResponse.json({ok:true,url:build360Url(token)},{headers:{'Cache-Control':'no-store'}});
+  return NextResponse.json({ok:true,url:build360Url(token,request.nextUrl.origin)},{headers:{'Cache-Control':'no-store'}});
 }

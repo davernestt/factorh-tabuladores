@@ -1,3 +1,4 @@
+import {isPublic360Path,isAllowedClientPath,isAllowedStaffPath} from "@/lib/feedback360-route-policy";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
@@ -6,14 +7,14 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
+  // Only valid token-shaped 360 pages and submission APIs are anonymous.
   const isPublicAssessment =
     pathname.startsWith("/e/") ||
     pathname.startsWith("/p/") ||
-    pathname.startsWith("/360/") ||
+    isPublic360Path(pathname) ||
     pathname.startsWith("/c3/") ||
     pathname.startsWith("/api/c3/submit") ||
     pathname.startsWith("/api/evaluacion/") ||
-    pathname.startsWith("/api/360/") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/cliente/");
 
@@ -72,22 +73,19 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      if (pathname === "/protected") {
+      // Page and API handlers must still enforce subscription and tenant boundaries.
+      if (pathname === "/protected" || !isAllowedClientPath(pathname)) {
         const url = request.nextUrl.clone();
-        url.pathname = "/protected/psicometrias";
-        return NextResponse.redirect(url);
-      }
-
-      if (!pathname.startsWith("/protected/psicometrias")) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/protected/psicometrias";
+        url.pathname = "/protected/catalogo";
         return NextResponse.redirect(url);
       }
     } else if (appUser.role !== "super_admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/login";
-      url.searchParams.set("error", "unauthorized");
-      return NextResponse.redirect(url);
+      // Staff must not inherit administrator permissions merely by signing in.
+      if (pathname === "/protected" || !isAllowedStaffPath(pathname, appUser.role)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/protected/mi-acceso";
+        return NextResponse.redirect(url);
+      }
     }
   }
 
