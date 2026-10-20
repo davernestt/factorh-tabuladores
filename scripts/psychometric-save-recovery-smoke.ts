@@ -21,5 +21,5 @@ assert.match(client,/Reintentar guardado/,"Mostrar reintento sin repetir pregunt
 assert.match(index,/Ver las pruebas y reportes ya concluidos/);
 assert.match(report,/Ver reporte guardado/);
 assert.match(shell,/name: "Psicometrías"/);
-assert.match(participant,/force-dynamic/);
+assert.match(participant,/await connection\(\)/);
 console.log("PSYCHOMETRIC_RECOVERY_OK: sync idempotente, reportes individuales, sin reiniciar candidatos ni créditos");
