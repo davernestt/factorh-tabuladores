@@ -1,3 +1,4 @@
+import {isPublic360Path,isAllowedClientPath,isAllowedStaffPath} from "@/lib/feedback360-route-policy";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
@@ -6,18 +7,14 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
-  // Only the token-based 360° questionnaire/API is anonymous.
-  // Management endpoints under /api/360/* must retain session enforcement.
-  const isPublic360Page = /^\/360\/[A-Za-z0-9_-]{40,60}\/?$/.test(pathname);
-  const isPublic360Api = /^\/api\/360\/[A-Za-z0-9_-]{40,60}\/?$/.test(pathname);
+  // Only valid token-shaped 360 pages and submission APIs are anonymous.
   const isPublicAssessment =
     pathname.startsWith("/e/") ||
     pathname.startsWith("/p/") ||
-    isPublic360Page ||
+    isPublic360Path(pathname) ||
     pathname.startsWith("/c3/") ||
     pathname.startsWith("/api/c3/submit") ||
     pathname.startsWith("/api/evaluacion/") ||
-    isPublic360Api ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/cliente/");
 
@@ -76,35 +73,15 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url);
       }
 
-      // The module pages and APIs perform subscription and organization checks.
-      // Proxy only restricts the routes clients can reach, without assuming
-      // that every client is entitled to every listed module.
-      const clientRoutes = [
-        "/protected/catalogo",
-        "/protected/solicitar-usuarios",
-        "/protected/estudios",
-        "/protected/psicometrias",
-        "/protected/360",
-        "/protected/nom035",
-      ];
-      const isClientRoute = clientRoutes.some(
-        (route) => pathname === route || pathname.startsWith(route + "/"),
-      );
-      if (pathname === "/protected" || !isClientRoute) {
+      // Page and API handlers must still enforce subscription and tenant boundaries.
+      if (pathname === "/protected" || !isAllowedClientPath(pathname)) {
         const url = request.nextUrl.clone();
         url.pathname = "/protected/catalogo";
         return NextResponse.redirect(url);
       }
     } else if (appUser.role !== "super_admin") {
       // Staff must not inherit administrator permissions merely by signing in.
-      const staffRoutes =
-        appUser.role === "ese_operator"
-          ? ["/protected/mi-acceso", "/protected/estudios/tareas"]
-          : ["/protected/mi-acceso"];
-      const isStaffRoute = staffRoutes.some(
-        (route) => pathname === route || pathname.startsWith(route + "/"),
-      );
-      if (pathname === "/protected" || !isStaffRoute) {
+      if (pathname === "/protected" || !isAllowedStaffPath(pathname, appUser.role)) {
         const url = request.nextUrl.clone();
         url.pathname = "/protected/mi-acceso";
         return NextResponse.redirect(url);
