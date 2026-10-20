@@ -17,6 +17,7 @@ on:
       - 'feature/centro-*'
       - 'feature/roles-*'
       - 'feature/coordinadora-*'
+      - 'feature/paola-*'
       - 'feature/ese-formato-*'
       - 'feature/marca-*'
       - 'fix/logotipo-*'
@@ -93,5 +94,7 @@ jobs:
         run: npx --yes tsx scripts/user-roles-client-requests-smoke.ts
       - name: Validate staged coordinator access matrix
         run: npx --yes tsx scripts/coordinator-permission-matrix-smoke.ts
+      - name: Validate operator permissions and security boundaries
+        run: npx --yes tsx scripts/qa-paola-operadora-access.ts
       - name: Build app
         run: npm run build
