@@ -24,6 +24,7 @@ on:
       - 'fix/leadership-*'
       - 'fix/pdl-*'
       - 'fix/empresa-*'
+      - 'fix/psychometric-*'
   workflow_dispatch:
 
 jobs:
@@ -96,5 +97,7 @@ jobs:
         run: npx --yes tsx scripts/coordinator-permission-matrix-smoke.ts
       - name: Validate operator permissions and security boundaries
         run: npx --yes tsx scripts/qa-paola-operadora-access.ts
+      - name: Verify psychometric answer recovery and reporting
+        run: npx --yes tsx scripts/psychometric-save-recovery-smoke.ts
       - name: Build app
         run: npm run build

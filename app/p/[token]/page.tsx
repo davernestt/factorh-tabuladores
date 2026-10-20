@@ -1,3 +1,4 @@
+import {connection} from "next/server";
 import FactoRHLogo from "@/components/factorh-logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
@@ -42,6 +43,7 @@ export default function ParticipantPortalPage(props: RouteContext) {
 }
 
 async function ParticipantPortalContent({ params }: RouteContext) {
+  await connection(); // Consultar los estados de la batería en cada apertura.
   const { token } = await params;
   const db = createAdminClient();
 

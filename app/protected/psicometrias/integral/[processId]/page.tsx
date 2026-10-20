@@ -152,6 +152,18 @@ async function IntegralReportContent({ params }: PageProps) {
             El reporte integral estará disponible cuando finalicen todas las psicometrías de este proceso.
             Actualmente hay {completedCount} de {psychometricAssignments.length} concluidas.
           </p>
+          <div className="mt-5 grid gap-3">
+            {psychometricAssignments.map(assignment=>{
+              const name=templateById.get(assignment.template_id)?.name??"Psicometría";
+              const ready=assignment.status==="completed";
+              return <div key={assignment.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3">
+                <div className="text-sm font-semibold text-neutral-800">{name}</div>
+                {ready?<Link href={`/protected/psicometrias/${assignment.id}`}
+                  className="text-sm font-black text-orange-700 underline">Ver reporte guardado →</Link>:
+                 <span className="text-xs font-bold text-amber-700">Pendiente, no reiniciar</span>}
+              </div>;
+            })}
+          </div>
           <div className="mt-5 h-3 overflow-hidden rounded-full bg-amber-100">
             <div
               className="h-full rounded-full bg-amber-500"
