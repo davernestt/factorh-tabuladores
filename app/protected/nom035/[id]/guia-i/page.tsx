@@ -3,6 +3,7 @@ import {Suspense} from "react";
 import {notFound,redirect} from "next/navigation";
 import {ShieldCheck,ArrowLeft} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {hasNom035Subscription,requireNom035Organization} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {isGuide1Uuid} from "@/lib/nom035/guide1-invitations";
@@ -16,7 +17,7 @@ export default function Guide1ByCenter(props:Props){
 }
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
- if(!user||!["super_admin","client"].includes(user.role))redirect("/auth/login");
+ if(!user||!(["super_admin","client"].includes(user.role)||await hasStaffPermission(user,"nom035","view")))redirect("/protected/mi-acceso");
  if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {id}=await params;
  if(!isGuide1Uuid(id))notFound();

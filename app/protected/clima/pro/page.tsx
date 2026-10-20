@@ -2,6 +2,7 @@ import Link from "next/link";
 import {Suspense} from "react";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {ArrowLeft,ArrowRight,ClipboardCheck,ChartNoAxesCombined,ShieldCheck,ListChecks} from "lucide-react";
 
@@ -11,7 +12,7 @@ export default function C3ProInstrument(){
 }
 async function C3ProContent(){
  const user=await getCurrentAppUser();
- if(!user||user.role!=="super_admin")redirect("/auth/login");
+ if(!await hasStaffPermission(user,"climate","view"))redirect("/protected/mi-acceso");
  const db=createAdminClient();
  const {data,error}=await db.from("c3_items")
    .select("code,pillar,dimension_name,prompt,response_type,position")

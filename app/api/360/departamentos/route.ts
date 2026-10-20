@@ -1,12 +1,13 @@
 import { NextRequest,NextResponse } from "next/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail=(error:string,status=400)=>NextResponse.json({error},{status});
 export async function GET(request:NextRequest){
  const user=await getCurrentAppUser();if(!user)return fail("No autorizado.",403);
  const organization_id=user.role==="client"?user.organizationId||"":request.nextUrl.searchParams.get("organization_id")||"";
- if(!uuid.test(organization_id)||!(user.role==="super_admin"||(user.role==="client"&&user.organizationId===organization_id)))return fail("Empresa no autorizada.",403);
+ if(!uuid.test(organization_id)||!((user.role==="super_admin"||await hasStaffPermission(user,"feedback360","view"))||(user.role==="client"&&user.organizationId===organization_id)))return fail("Empresa no autorizada.",403);
  const db=createAdminClient();
  const {data,error}=await db.from("organization_departments").select("id,organization_id,name,active")
   .eq("organization_id",organization_id).order("name");
@@ -22,7 +23,8 @@ export async function POST(request:NextRequest){
  const organization_id=user.role==="client"?user.organizationId||"":body.organization_id||"";
  const name=typeof body.name==="string"?body.name.trim().replace(/\s+/g," "):"";
  if(!uuid.test(organization_id)||!(user.role==="super_admin"||(user.role==="client"&&user.organizationId===organization_id)))return fail("Empresa no autorizada.",403);
- if(name.length<2||name.length>100)return fail("Escribe un departamento de 2 a 100 caracteres.");
+ if(user.role!=="client"&&!await hasStaffPermission(user,"feedback360","operate"))return fail("No tienes permisos para agregar departamentos.",403);
+  if(name.length<2||name.length>100)return fail("Escribe un departamento de 2 a 100 caracteres.");
  const db=createAdminClient();
  const {data:org}=await db.from("organizations").select("id").eq("id",organization_id).eq("active",true).maybeSingle();
  if(!org)return fail("Empresa no activa.",403);

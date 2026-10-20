@@ -1,10 +1,11 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authorized360User,can360Organization} from "@/lib/feedback360-access";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function POST(request:NextRequest){
  const user=await authorized360User();
- if(!user)return NextResponse.json({error:"No tienes acceso al 360°."},{status:403});
+ if(!user||user.role!=="client"&&!await hasStaffPermission(user,"feedback360","operate"))return NextResponse.json({error:"No tienes permiso para agregar evaluados."},{status:403});
  const origin=request.headers.get("origin");
  if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:"Origen no autorizado."},{status:403});
  if(Number(request.headers.get("content-length")||0)>4500)return NextResponse.json({error:"Solicitud demasiado extensa."},{status:413});

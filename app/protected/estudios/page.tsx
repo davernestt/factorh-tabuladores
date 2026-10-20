@@ -2,6 +2,7 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import RequestForm from "./request-form";
 const services=[
@@ -17,8 +18,8 @@ export default function EstudiosPage(){return <Suspense fallback={<p className="
 async function Content(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
- if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
- if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
+ if(!["super_admin","client","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
+ if(user.role==="ese_operator"&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/estudios/tareas");
  if(user.role==="client"&&user.clientAccessLevel==="collaborator")redirect("/protected/catalogo");
  const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client";
  const [casesR,requestsR,orgsR]=await Promise.all([

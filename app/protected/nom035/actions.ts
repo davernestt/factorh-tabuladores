@@ -3,6 +3,7 @@
 import {redirect} from "next/navigation";
 import {revalidatePath} from "next/cache";
 import {requireNom035User,requireNom035Organization} from "@/lib/nom035/access";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {nom035RequirementMap,nom035Tier,type Nom035RequirementKey,type Nom035Method} from "@/lib/nom035/rules";
 
@@ -75,6 +76,7 @@ export async function updateNom035Center(form:FormData){
 }
 export async function updateNom035Evidence(form:FormData){
  const user=await requireNom035User();
+ if(user.role!=="client"&&!await hasStaffPermission(user,"nom035","operate"))throw Error("No tienes permiso para registrar evidencias.");
  const centerId=field(form,"center_id");
  const requirement=field(form,"requirement_key") as Nom035RequirementKey;
  const status=field(form,"status");

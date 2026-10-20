@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { notFound,redirect } from "next/navigation";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CampaignStatusControls from "./campaign-status-controls";
 import InviteGenerator from "./invite-generator";
@@ -34,7 +35,7 @@ export default function C3CampaignDetail(props:{params:Promise<{id:string}>}) {
 }
 async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
   const user=await getCurrentAppUser();
-  if(!user||user.role!=="super_admin")redirect("/auth/login");
+  if(!await hasStaffPermission(user,"climate","view"))redirect("/protected/mi-acceso");
   const {id}=await params;
   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))notFound();
   const db=createAdminClient();
@@ -77,7 +78,7 @@ async function C3CampaignDetailContent({params}:{params:Promise<{id:string}>}) {
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-neutral-100"><div className="h-full bg-orange-500" style={{width:participation+"%"}} /></div>
       <p className="mt-3 text-sm text-neutral-600">Las preguntas se congelan al abrir la campaña. Los resultados se liberan solo al cerrarla y cumplir los criterios de cobertura. Puedes reabrir un cierre accidental mientras no se haya consultado ni descargado el informe final.</p>
       <p className="mt-2 text-xs text-orange-700">Después de emitir el primer reporte final, la campaña quedará cerrada definitivamente para proteger la confidencialidad. Un nuevo levantamiento requerirá otra campaña.</p>
-      <CampaignStatusControls campaignId={id} status={campaign.status} released={finalReleased}/>
+      {await hasStaffPermission(user,"climate","operate")&&<CampaignStatusControls campaignId={id} status={campaign.status} released={finalReleased}/>}
     </section>
     <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-4">

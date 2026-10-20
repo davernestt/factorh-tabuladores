@@ -2,6 +2,7 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {redirect,notFound} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import DeliveryManager from "../delivery-manager";
 import PilotCollaboration from "./pilot-collaboration";
@@ -10,14 +11,14 @@ type Params={params:Promise<{id:string}>};
 export default function StudyPage({params}:Params){return <Suspense fallback={<p className="rounded-xl bg-white p-6">Cargando expediente...</p>}><StudyContent params={params}/></Suspense>}
 async function StudyContent({params}:Params){
  const u=await getCurrentAppUser();if(!u)redirect("/auth/login");
- if(u.role!=="super_admin"&&u.role!=="client")redirect("/protected/estudios");
+ if(u.role!=="super_admin"&&u.role!=="client"&&!await hasStaffPermission(u,"studies","view"))redirect("/protected/mi-acceso");
  const {id}=await params;if(!/^[0-9a-f-]{36}$/i.test(id))notFound();
  const db=createAdminClient(),{data:c,error}=await db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,client_visible,delivery_status,delivery_released_at,is_demo").eq("id",id).maybeSingle();
  if(error||!c)notFound();
  if(u.role==="client"&&(c.organization_id!==u.organizationId||!c.client_visible||c.is_demo))notFound();
  const {data:docs,error:docsError}=await db.from("ese_delivery_files").select("id,kind,title,client_deliverable,created_at").eq("case_id",id).order("created_at");
  if(docsError)return <p className="rounded-xl bg-red-50 p-5 text-red-700">Error al consultar los documentos.</p>;
- const files=u.role==="super_admin"?docs||[]:(docs||[]).filter(f=>f.client_deliverable&&c.delivery_status==="released");
+ const files=u.role==="super_admin"||await hasStaffPermission(u,"studies","reports")?docs||[]:(docs||[]).filter(f=>f.client_deliverable&&c.delivery_status==="released");
  const {data:masterR,error:masterError}=u.role==="super_admin"&&c.is_demo?
    await db.from("ese_case_sections").select("data").eq("case_id",id).eq("section_key","master_review").maybeSingle():
    {data:null,error:null};

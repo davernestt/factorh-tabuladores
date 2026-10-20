@@ -2,6 +2,7 @@ import Link from "next/link";
 import {notFound,redirect} from "next/navigation";
 import {Suspense} from "react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import CaseRatingForm from "./case-rating-form";
 type Params={params:Promise<{id:string}>};
@@ -11,7 +12,7 @@ export default function GradeLeadershipCases(props:Params){
 async function GradeContent({params}:Params){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
- if(user.role!=="super_admin")redirect("/protected");
+ if(!await hasStaffPermission(user,"pdl","operate"))redirect("/protected/mi-acceso");
  const {id}=await params;
  const db=createAdminClient();
  const {data:assignment,error}=await db.from("assessment_assignments")

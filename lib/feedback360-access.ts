@@ -3,7 +3,7 @@ import {createAdminClient} from "@/lib/supabase/admin";
 
 export async function has360Access(user:CurrentAppUser|null):Promise<boolean>{
  if(!user)return false;
- if(user.role==="super_admin")return true;
+ if(user.role==="super_admin"||await (async()=>{const {hasStaffPermission}=await import("@/lib/staff-permissions");return hasStaffPermission(user,"feedback360","view");})())return true;
  if(user.role!=="client"||user.clientAccessLevel!=="administrator"||!user.organizationId)return false;
  const db=createAdminClient();
  const {data,error}=await db.from("organization_module_subscriptions")
@@ -18,10 +18,10 @@ export async function authorized360User():Promise<CurrentAppUser|null>{
  return await has360Access(user)?user:null;
 }
 export function can360Organization(user:CurrentAppUser,orgId:string):boolean{
- return user.role==="super_admin"||(user.role==="client"&&user.organizationId===orgId);
+ return user.role!=="client"||(user.organizationId===orgId);
 }
 export async function trial360Limit(user:CurrentAppUser):Promise<number|null>{
- if(user.role==="super_admin")return null;
+ if(user.role!=="client")return null;
  if(!user.organizationId)return 0;
  const db=createAdminClient();
  const {data}=await db.from("organization_module_subscriptions")

@@ -2,6 +2,7 @@ import FactoRHLogo from "@/components/factorh-logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import { buildLeadershipAnalysis } from "@/lib/leadership-analysis";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
@@ -37,6 +38,8 @@ async function LeadershipReportContent({ params }: PageProps) {
     redirect("/auth/login");
   }
 
+  const viewer=await getCurrentAppUser();
+  if(!await hasStaffPermission(viewer,"pdl","reports"))redirect("/protected/mi-acceso");
   const { id } = await params;
   const db = createAdminClient();
 

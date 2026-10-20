@@ -1,11 +1,12 @@
 import {NextRequest,NextResponse} from "next/server";
 import {authorized360User,can360Organization} from "@/lib/feedback360-access";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 type Context={params:Promise<{id:string}>};
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail=(error:string,status=400)=>NextResponse.json({error},{status});
 export async function PATCH(request:NextRequest,{params}:Context){
- const user=await authorized360User();if(!user)return fail("No autorizado.",403);
+ const user=await authorized360User();if(!user||user.role!=="client"&&!await hasStaffPermission(user,"feedback360","operate"))return fail("No autorizado.",403);
  const origin=request.headers.get("origin");if(origin&&origin!==request.nextUrl.origin)return fail("Origen no autorizado.",403);
  const {id}=await params;
  if(!uuid.test(id))return fail("Persona inválida.");
