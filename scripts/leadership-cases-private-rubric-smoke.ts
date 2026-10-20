@@ -13,7 +13,7 @@ assert.match(api,/if\(!isLeadershipCases\)/);
 assert.match(participant,/progressQuestions/);
 assert.match(participant,/isLeadershipCases/);
 assert.match(participant,/Las escalas de evaluación no forman parte de tu cuestionario/);
-assert.match(assessor,/user.role!=="super_admin"/);
+assert.match(assessor,/hasStaffPermission\(user,"pdl","operate"\)/,"Sólo superadministrador o evaluador FactoRH autorizado puede calificar.");
 assert.match(assessor,/assignment.status!=="completed"/);
 assert.match(assessor,/leadership_case_ratings/);
 assert.match(results,/Reporte pendiente de valoración profesional/);
