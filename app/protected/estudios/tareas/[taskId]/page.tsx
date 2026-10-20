@@ -2,6 +2,7 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {redirect,notFound} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import TaskEditor from "./task-editor";
 
@@ -13,14 +14,14 @@ export default function Page({params}:Props){
 async function Content({params}:Props){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
- if(!["super_admin","ese_operator"].includes(user.role))redirect("/protected/estudios");
+ if(!["super_admin","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
  const {taskId}=await params;
  if(!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(taskId))notFound();
  const db=createAdminClient();
  const {data:task}=await db.from("ese_work_tasks")
   .select("id,case_id,assignee_id,task_type,status,payload,review_notes")
   .eq("id",taskId).maybeSingle();
- if(!task||(user.role==="ese_operator"&&task.assignee_id!==user.userId))notFound();
+ if(!task||(user.role!=="super_admin"&&task.assignee_id!==user.userId))notFound();
  const {data:c}=await db.from("ese_cases")
   .select("id,is_demo,case_name,study_type,delivery_status").eq("id",task.case_id).maybeSingle();
  if(!c?.is_demo||c.delivery_status==="released")notFound();
