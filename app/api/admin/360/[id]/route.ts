@@ -1,11 +1,12 @@
 import { NextRequest,NextResponse } from 'next/server';
 import {authorized360User,can360Organization} from '@/lib/feedback360-access';
+import {hasStaffPermission} from '@/lib/staff-permissions';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { build360Url } from '@/lib/feedback360-url';
 type Context={params:Promise<{id:string}>};
 export async function PATCH(request:NextRequest,ctx:Context){
   const user=await authorized360User();
-  if(!user)return NextResponse.json({error:'No autorizado.'},{status:403});
+  if(!user||user.role!=='client'&&!await hasStaffPermission(user,'feedback360','operate'))return NextResponse.json({error:'No autorizado.'},{status:403});
   const origin=request.headers.get('origin');
   if(origin&&origin!==request.nextUrl.origin)return NextResponse.json({error:'Origen no autorizado.'},{status:403});
   const {id}=await ctx.params;
