@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'node:crypto';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {authorized360User,can360Organization,trial360Limit} from '@/lib/feedback360-access';
+import {hasStaffPermission} from '@/lib/staff-permissions';
 import type { FeedbackRole } from '@/lib/feedback360';
 import { build360Url } from '@/lib/feedback360-url';
 
@@ -14,6 +15,7 @@ const fail = (message: string, status = 400) => NextResponse.json({ error: messa
 export async function POST(request: NextRequest) {
   const user=await authorized360User();
   if(!user)return fail('Tu empresa no tiene acceso vigente al 360°.',403);
+  if(user.role!=='client'&&!await hasStaffPermission(user,'feedback360','operate'))return fail('Sin permiso para crear ciclos.',403);
   const origin=request.headers.get('origin');
   if(origin&&origin!==request.nextUrl.origin)return fail('Origen no permitido.',403);
   if(Number(request.headers.get('content-length')||0)>16000)return fail('Solicitud demasiado extensa.',413);
@@ -32,6 +34,15 @@ export async function POST(request: NextRequest) {
   if (raters.filter(r => r.role === 'self').length !== 1 || raters.filter(r => r.role === 'manager').length > 1) return fail('Debe haber una autoevaluación y como máximo un jefe.');
   const db = createAdminClient();
   const {data:org}=await db.from('organizations').select('id,active').eq('id',organization_id).maybeSingle();
+  if(user.role!=='super_admin'&&user.role!=='client'){
+    const {data:subscription}=await db.from('organization_module_subscriptions')
+      .select('status,starts_on,ends_on').eq('organization_id',organization_id).eq('module_key','feedback360').maybeSingle();
+    const now=new Date().toISOString().slice(0,10);
+    if(!subscription||!['active','trial'].includes(subscription.status)||
+      subscription.starts_on&&subscription.starts_on>now||
+      subscription.ends_on&&subscription.ends_on<now)
+      return fail('Sólo puedes crear ciclos de empresas con servicio 360° vigente.',403);
+  }
   if(!org?.active)return fail('Empresa no activa.',403);
   const limit=await trial360Limit(user);
   if(limit!==null){
