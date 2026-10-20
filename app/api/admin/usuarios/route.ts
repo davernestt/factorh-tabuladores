@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
   const { data: organization, error: organizationError } = await db
     .from("organizations")
-    .select("id,name,active")
+    .select("id,name,slug,active")
     .eq("id", organizationId)
     .eq("active", true)
     .maybeSingle();
@@ -148,8 +148,11 @@ export async function POST(request: NextRequest) {
   }
 
   const hashedToken = linkData.properties?.hashed_token;
+  const returnTo = "/cliente/" + organization.slug;
+  const next =
+    "/auth/update-password?return_to=" + encodeURIComponent(returnTo);
   const inviteUrl = hashedToken
-    ? `${origin}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=invite&next=${encodeURIComponent("/auth/update-password")}`
+    ? `${origin}/auth/confirm?token_hash=${encodeURIComponent(hashedToken)}&type=invite&next=${encodeURIComponent(next)}`
     : linkData.properties?.action_link ?? null;
 
   return NextResponse.json({
