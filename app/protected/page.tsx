@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -126,7 +127,7 @@ async function AdminDashboardContent({
 }) {
   const appUser = await getCurrentAppUser();
   if (!appUser) redirect("/auth/login");
-  if (appUser.role !== "super_admin") redirect(appUser.role==="client"?"/protected/catalogo":"/protected/mi-acceso");
+  if (appUser.role !== "super_admin" && !await hasStaffPermission(appUser,"pdl","view")) redirect(appUser.role==="client"?"/protected/catalogo":"/protected/mi-acceso");
 
   const params = await searchParams;
   const query = normalizeSearch(paramValue(params.q));
