@@ -67,7 +67,7 @@ export default function ClimaLanding(){
 
 async function ClimaLandingContent(){
   const user=await getCurrentAppUser();
-  if(!user||user.role!=="super_admin")redirect("/auth/login");
+  if(!await hasStaffPermission(user,"climate","view"))redirect("/protected/mi-acceso");
   return <div className="space-y-8">
     <Link href="/protected/evaluaciones" className="inline-flex items-center gap-2 text-sm font-bold text-orange-600 hover:text-orange-700">← Centro de evaluaciones</Link>
     <section className="overflow-hidden rounded-3xl border border-neutral-200 bg-white p-7 shadow-sm sm:p-9">
