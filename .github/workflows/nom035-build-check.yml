@@ -65,6 +65,8 @@ jobs:
             /tmp/factorh_ese_master_smoke.pdf
             /tmp/factorh_ese_master_smoke.docx
           retention-days: 2
+      - name: Validate partial 360 radar without false zero scores
+        run: npx --yes tsx scripts/360-radar-partial-smoke.ts
       - name: Validate 360 gap interpretation
         run: npx --yes tsx scripts/360-gap-interpretation-smoke.ts
       - name: Validate 360 confidential comments

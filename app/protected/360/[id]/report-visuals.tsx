@@ -1,4 +1,5 @@
 import { FEEDBACK_ROLES, type FeedbackRole, type DimensionScore } from '@/lib/feedback360';
+import {buildRadarRolePaths} from '@/lib/feedback360-radar';
 
 const ROLES:FeedbackRole[]=['self','manager','peer','report'];
 const ROLE_STYLES:Record<FeedbackRole,{stroke:string;dash?:string}>={
@@ -8,12 +9,29 @@ const ROLE_STYLES:Record<FeedbackRole,{stroke:string;dash?:string}>={
 export function Radar360({dimensions}:{dimensions:DimensionScore[]}){
   const size=560,c=size/2,r=205,n=dimensions.length;
   const point=(i:number,value:number)=>{const a=-Math.PI/2+i*2*Math.PI/n;const rr=r*(value/4);return [c+Math.cos(a)*rr,c+Math.sin(a)*rr]};
-  const polygon=(role:FeedbackRole)=>dimensions.map((d,i)=>{const [x,y]=point(i,d.scores[role]??0);return `${x},${y}`}).join(' ');
+  const plotted=ROLES.map(role=>({role,geometry:buildRadarRolePaths(dimensions,role)}))
+    .filter(item=>item.geometry.availableCount>0);
   return <div className="overflow-x-auto"><svg viewBox="0 0 560 560" className="mx-auto min-w-[520px] max-w-[650px]" role="img" aria-label="Radar de competencias 360">
     {[1,2,3,4].map(level=><polygon key={level} points={dimensions.map((_,i)=>point(i,level).join(',')).join(' ')} fill="none" stroke="#e5e5e5" strokeWidth="1"/>)}
     {dimensions.map((d,i)=>{const [x,y]=point(i,4);const [lx,ly]=point(i,4.55);return <g key={d.key}><line x1={c} y1={c} x2={x} y2={y} stroke="#eeeeee"/><text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" fontSize="10" fontWeight="700" fill="#525252">{d.name.length>18?d.name.slice(0,17)+'…':d.name}</text></g>})}
-    {ROLES.map(role=>dimensions.some(d=>d.scores[role]!=null)&&<polygon key={role} points={polygon(role)} fill={role==='self'?'rgba(249,115,22,.08)':'none'} stroke={ROLE_STYLES[role].stroke} strokeWidth={role==='self'?3:2} strokeDasharray={ROLE_STYLES[role].dash}/>)}
-  </svg><div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-neutral-600">{ROLES.map(role=><span key={role} className="flex items-center gap-2"><i className="inline-block h-0.5 w-6" style={{background:ROLE_STYLES[role].stroke}}/>{FEEDBACK_ROLES[role]}</span>)}</div></div>
+    {plotted.map(({role,geometry})=><g key={role}>
+      {geometry.paths.map((path,index)=><path key={index} d={path}
+        fill={geometry.complete&&role==='self'?'rgba(249,115,22,.08)':'none'}
+        stroke={ROLE_STYLES[role].stroke} strokeWidth={role==='self'?3:2}
+        strokeDasharray={ROLE_STYLES[role].dash}/>)}
+      {!geometry.complete&&geometry.dots.map((p,index)=><circle key={index}
+        cx={p.x} cy={p.y} r={3} fill={ROLE_STYLES[role].stroke}/>)}
+    </g>)}
+  </svg>
+  <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs font-semibold text-neutral-600">
+    {plotted.map(({role,geometry})=><span key={role} className="flex items-center gap-2">
+      <i className="inline-block h-0.5 w-6" style={{background:ROLE_STYLES[role].stroke}}/>
+      {FEEDBACK_ROLES[role]}{!geometry.complete?" · datos parciales":""}
+    </span>)}
+  </div>
+  {plotted.some(({geometry})=>!geometry.complete)&&<p className="mt-3 text-center text-xs text-neutral-500">
+    Los tramos sin información permanecen vacíos: una ausencia de respuestas no representa una calificación de cero.
+  </p>}</div>
 }
 
 export function GapBars({dimensions}:{dimensions:DimensionScore[]}){
