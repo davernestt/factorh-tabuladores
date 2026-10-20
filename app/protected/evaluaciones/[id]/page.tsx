@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -30,7 +31,7 @@ export default function EvaluationDetailPage({ params }: PageProps) {
 async function EvaluationDetailContent({ params }: PageProps) {
   const currentAppUser=await getCurrentAppUser();
   if(!currentAppUser)redirect("/auth/login");
-  if(currentAppUser.role!=="super_admin")redirect("/protected/catalogo");
+  if(!await hasStaffPermission(currentAppUser,"pdl","view"))redirect("/protected/mi-acceso");
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
