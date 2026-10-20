@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 type Params={params:Promise<{id:string}>};
 export async function GET(req:NextRequest,{params}:Params){
@@ -9,7 +10,7 @@ export async function GET(req:NextRequest,{params}:Params){
  const db=createAdminClient();
  const {data:c}=await db.from("ese_cases").select("organization_id,delivery_status,client_visible,is_demo").eq("id",id).maybeSingle();
  if(!c)return NextResponse.json({error:"No encontrado"},{status:404});
- const admin=user.role==="super_admin";
+ const admin=user.role==="super_admin"||await hasStaffPermission(user,"studies","reports");
  if(!admin&&(c.is_demo||user.role!=="client"||!user.organizationId||user.organizationId!==c.organization_id||c.delivery_status!=="released"||!c.client_visible))return NextResponse.json({error:"Archivo no disponible."},{status:403});
  const {data:file}=await db.from("ese_delivery_files").select("id,title,storage_path,client_deliverable").eq("case_id",id).eq("id",fileId).maybeSingle();
  if(!file||(!admin&&!file.client_deliverable))return NextResponse.json({error:"Archivo no disponible."},{status:404});
