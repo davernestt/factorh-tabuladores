@@ -1,10 +1,9 @@
 import {getCurrentAppUser,type CurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
-import {hasStaffPermission} from "@/lib/staff-permissions";
 
 export async function has360Access(user:CurrentAppUser|null):Promise<boolean>{
  if(!user)return false;
- if(user.role==="super_admin"||await hasStaffPermission(user,"feedback360","view"))return true;
+ if(user.role==="super_admin"||await (async()=>{const {hasStaffPermission}=await import("@/lib/staff-permissions");return hasStaffPermission(user,"feedback360","view");})())return true;
  if(user.role!=="client"||user.clientAccessLevel!=="administrator"||!user.organizationId)return false;
  const db=createAdminClient();
  const {data,error}=await db.from("organization_module_subscriptions")
