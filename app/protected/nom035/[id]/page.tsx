@@ -3,6 +3,7 @@ import {Suspense} from "react";
 import {notFound,redirect} from "next/navigation";
 import {Building2,CalendarDays,ClipboardList,ExternalLink,LockKeyhole,ShieldCheck} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {hasNom035Subscription} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
@@ -19,7 +20,7 @@ export default function Nom035CenterDetails(props:{params:Promise<{id:string}>})
 }
 async function Content({params}:{params:Promise<{id:string}>}){
  const user=await getCurrentAppUser();
- if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId))
+ if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId||await hasStaffPermission(user,"nom035","view")))
   redirect("/auth/login");
  if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const {id}=await params;
