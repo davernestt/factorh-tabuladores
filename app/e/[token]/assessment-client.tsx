@@ -243,12 +243,6 @@ export default function AssessmentClient({ token }: { token: string }) {
     question: Question,
     next: LocalResponse,
   ) {
-    const previous = responses[question.id] ?? {
-      numeric_value: null,
-      text_value: "",
-      is_not_observed: false,
-    };
-
     setResponses((current) => ({ ...current, [question.id]: next }));
     setPendingSaveIds((current) => {
       const nextIds = new Set(current);
@@ -320,10 +314,8 @@ export default function AssessmentClient({ token }: { token: string }) {
           : current,
       );
     } catch (error) {
-      setResponses((current) => ({
-        ...current,
-        [question.id]: previous,
-      }));
+      // Nunca descartar lo que la persona capturó si falla la red.
+      // Permitir que reintente sin volver a contestar la pregunta.
       setSavedQuestionIds((current) => {
         const nextIds = new Set(current);
         nextIds.delete(question.id);
@@ -335,7 +327,7 @@ export default function AssessmentClient({ token }: { token: string }) {
         return nextIds;
       });
       setMessage(
-        "Una respuesta no pudo guardarse. La dejamos sin seleccionar para que puedas responderla de nuevo.",
+        "Una respuesta todavía NO está guardada. La conservamos en pantalla: utiliza «Reintentar guardado» o «Enviar evaluación» para sincronizarla antes de salir.",
       );
     } finally {
       setPendingSaveIds((current) => {
@@ -352,43 +344,57 @@ export default function AssessmentClient({ token }: { token: string }) {
       return;
     }
 
-    if (answeredScored < progressQuestions.length) {
-      const firstPending = progressQuestions.find(
-        (question) => !savedQuestionIds.has(question.id),
-      );
-      setMessage(
-        `Aún faltan ${progressQuestions.length - answeredScored} respuestas guardadas. Te llevamos a la primera pendiente.`,
-      );
-      if (firstPending) {
-        requestAnimationFrame(() => {
-          document
-            .getElementById(`question-${firstPending.id}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
-        });
-      }
+    // Usar las opciones que la persona ve seleccionadas, aunque un guardado
+    // individual haya fallado. El servidor las valida y registra en lote.
+    const incomplete=progressQuestions.filter(question=>{
+      const value=responses[question.id];
+      if(!value)return true;
+      if(question.question_type==="text")return !value.text_value.trim();
+      return value.numeric_value===null&&!value.is_not_observed;
+    });
+    if(incomplete.length>0){
+      setMessage(`Faltan ${incomplete.length} respuestas obligatorias. Aún no se enviará la evaluación.`);
+      requestAnimationFrame(()=>document.getElementById(`question-${incomplete[0].id}`)
+        ?.scrollIntoView({behavior:"smooth",block:"center"}));
       return;
     }
 
     setFinishing(true);
-    setMessage(null);
-
+    setMessage("Verificando y guardando todas tus respuestas antes de finalizar...");
     try {
+      const allAnswers=data?.questions.flatMap(question=>{
+        const value=responses[question.id];
+        if(!value)return [];
+        if(question.question_type==="text"&&!value.text_value.trim())return [];
+        if(question.question_type!=="text"&&value.numeric_value===null&&!value.is_not_observed)return [];
+        return [{
+          question_id:question.id,numeric_value:value.numeric_value,
+          text_value:value.text_value,is_not_observed:value.is_not_observed
+        }];
+      })??[];
+      if(allAnswers.length<progressQuestions.length)
+        throw new Error("Faltan respuestas en el formulario. Revísalas antes de continuar.");
+      const syncResponse=await fetch(`/api/evaluacion/${token}`,{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"sync",answers:allAnswers})
+      });
+      const syncPayload=await syncResponse.json();
+      if(!syncResponse.ok)throw new Error(syncPayload.error||"No fue posible sincronizar las respuestas.");
+      setSavedQuestionIds(old=>new Set([...old,...(syncPayload.savedQuestionIds??[])]));
+      setFailedQuestionIds(new Set());
+
       const response = await fetch(`/api/evaluacion/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "complete" }),
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({action:"complete"})
       });
       const payload = await response.json();
-
-      if (!response.ok) {
-        throw new Error(payload.error || "No fue posible finalizar la evaluación.");
-      }
-
+      if(!response.ok)throw new Error(payload.error||"Tus respuestas están guardadas, pero falta confirmar el cierre.");
       await loadAssessment();
       setStarted(true);
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "No fue posible finalizar.",
+        (error instanceof Error?error.message:"No fue posible finalizar.")+
+        " Tus selecciones siguen en pantalla. No cierres esta pestaña; intenta enviar nuevamente."
       );
     } finally {
       setFinishing(false);
@@ -789,11 +795,14 @@ export default function AssessmentClient({ token }: { token: string }) {
                             {pendingSaveIds.has(question.id) ? (
                               <span className="text-neutral-400">Guardando...</span>
                             ) : failedQuestionIds.has(question.id) ? (
-                              <span className="font-semibold text-red-600">
-                                No se guardó. Selecciona una opción nuevamente.
-                              </span>
+                              <button type="button" onClick={()=>void saveAnswer(question,response)}
+                                className="font-semibold text-red-700 underline">
+                                No se guardó · Reintentar guardado
+                              </button>
+                            ) : savedQuestionIds.has(question.id) ? (
+                              <span className="font-semibold text-emerald-700">Guardado ✓</span>
                             ) : (
-                              <span className="text-neutral-400"> </span>
+                              <span className="text-neutral-400">Sin responder</span>
                             )}
                           </div>
                         </div>
@@ -843,11 +852,14 @@ export default function AssessmentClient({ token }: { token: string }) {
                           {pendingSaveIds.has(question.id) ? (
                             <span className="text-neutral-400">Guardando...</span>
                           ) : failedQuestionIds.has(question.id) ? (
-                            <span className="font-semibold text-red-600">
-                              No se guardó. Selecciona una respuesta nuevamente.
-                            </span>
+                            <button type="button" onClick={()=>void saveAnswer(question,response)}
+                              className="font-semibold text-red-700 underline">
+                              No se guardó · Reintentar guardado
+                            </button>
+                          ) : savedQuestionIds.has(question.id) ? (
+                            <span className="font-semibold text-emerald-700">Guardado ✓</span>
                           ) : (
-                            <span className="text-neutral-400"> </span>
+                            <span className="text-neutral-400">Sin responder</span>
                           )}
                         </div>
                       </div>
