@@ -3,6 +3,7 @@ import { getCurrentAppUser } from "@/lib/app-auth";
 import { hasNom035Subscription } from "@/lib/nom035/access";
 import { has360Access } from "@/lib/feedback360-access";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {getCoordinatorAccess,operationLabels} from "@/lib/staff-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -86,9 +87,22 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     ...(nom035Enabled ? [{ href: "/protected/nom035", name: "NOM-035" }] : []),
   ];
 
-  const staffItems=appUser.role==="ese_operator"
-    ? [{href:"/protected/estudios/tareas",name:"Mis tareas de Estudios"}]
-    : [{href:"/protected/mi-acceso",name:"Mi acceso FactoRH"}];
+  const staffAccess=!isClient&&appUser.role!=="super_admin"?await getCoordinatorAccess(appUser):null;
+  const staffPaths:Record<string,string>={
+    psychometrics:"/protected/psicometrias",
+    feedback360:"/protected/360",
+    pdl:"/protected/evaluaciones",
+    nom035:"/protected/nom035",
+    climate:"/protected/clima",
+    studies:"/protected/estudios",
+    candidates:"/protected/candidatos"
+  };
+  const staffItems=staffAccess?.activated
+    ? [{href:"/protected/mi-acceso",name:"Mi panel"},
+       ...staffAccess.grants.filter(g=>g.can_view).map(g=>({href:staffPaths[g.module_key],name:operationLabels[g.module_key]}))]
+    :appUser.role==="ese_operator"
+      ?[{href:"/protected/estudios/tareas",name:"Mis tareas de Estudios"}]
+      :[{href:"/protected/mi-acceso",name:"Mi acceso FactoRH"}];
   const items=appUser.role==="super_admin"?adminItems
     :isClient
       ?appUser.clientAccessLevel==="collaborator"
@@ -102,7 +116,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-7xl px-5 py-4">
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
             <Link
-              href={isClient ? "/protected/catalogo" : "/protected/evaluaciones"}
+              href={isClient ? "/protected/catalogo" : appUser.role==="super_admin"?"/protected/evaluaciones":"/protected/mi-acceso"}
               aria-label="FactoRH · Inicio"
               className="inline-flex min-w-0 items-center gap-4 rounded-xl px-2 py-1 transition-colors hover:bg-orange-50"
             >
@@ -111,7 +125,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
                 <span className="text-orange-600">RH</span>
               </span>
               <span className="hidden max-w-[240px] truncate border-l border-neutral-200 pl-3 text-xs font-medium text-neutral-500 sm:inline-block">
-                {isClient ? appUser.organizationName ?? "Portal de empresa" : "Administración"}
+                {isClient ? appUser.organizationName ?? "Portal de empresa" : appUser.role==="super_admin"?"Administración":"Equipo FactoRH"}
               </span>
             </Link>
 
