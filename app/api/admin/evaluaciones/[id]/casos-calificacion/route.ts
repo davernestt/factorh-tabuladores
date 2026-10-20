@@ -7,7 +7,7 @@ const idRegex=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail=(error:string,status=400)=>NextResponse.json({error},{status});
 export async function PATCH(request:NextRequest,{params}:Context){
  const user=await getCurrentAppUser();
- if(!await hasStaffPermission(user,"pdl","operate"))return fail("Sólo un evaluador autorizado de FactoRH puede calificar.",403);
+ if(!user||!await hasStaffPermission(user,"pdl","operate"))return fail("Sólo un evaluador autorizado de FactoRH puede calificar.",403);
  const origin=request.headers.get("origin");
  if(origin&&origin!==request.nextUrl.origin)return fail("Origen no autorizado.",403);
  const {id}=await params;
