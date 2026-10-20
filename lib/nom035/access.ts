@@ -1,9 +1,10 @@
 import {getCurrentAppUser,type CurrentAppUser} from "@/lib/app-auth";
 import {createAdminClient} from "@/lib/supabase/admin";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 
 /** Privileged evaluation access is checked on the server for every organization. */
 export async function hasNom035Subscription(user:CurrentAppUser):Promise<boolean>{
- if(user.role==="super_admin")return true;
+ if(user.role==="super_admin"||await hasStaffPermission(user,"nom035","view"))return true;
  if(user.role!=="client"||user.clientAccessLevel!=="administrator"||!user.organizationId)return false;
  const db=createAdminClient();
  const today=new Date().toISOString().slice(0,10);
@@ -23,8 +24,8 @@ export async function requireNom035User():Promise<CurrentAppUser>{
  return user;
 }
 export function canNom035Organization(user:CurrentAppUser,organizationId:string){
- return user.role==="super_admin"||
-   user.role==="client"&&user.organizationId===organizationId;
+ return user.role!=="client"||
+   user.organizationId===organizationId;
 }
 export function requireNom035Organization(user:CurrentAppUser,organizationId:string){
  if(!canNom035Organization(user,organizationId))
