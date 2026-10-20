@@ -8,8 +8,8 @@ export async function updateSession(request: NextRequest) {
 
   // Only the token-based 360° questionnaire/API is anonymous.
   // Management endpoints under /api/360/* must retain session enforcement.
-  const isPublic360Page = /^\\/360\\/[A-Za-z0-9_-]{40,60}\\/?$/.test(pathname);
-  const isPublic360Api = /^\\/api\\/360\\/[A-Za-z0-9_-]{40,60}\\/?$/.test(pathname);
+  const isPublic360Page = /^\/360\/[A-Za-z0-9_-]{40,60}\/?$/.test(pathname);
+  const isPublic360Api = /^\/api\/360\/[A-Za-z0-9_-]{40,60}\/?$/.test(pathname);
   const isPublicAssessment =
     pathname.startsWith("/e/") ||
     pathname.startsWith("/p/") ||
