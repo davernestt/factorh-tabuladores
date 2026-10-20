@@ -5,14 +5,12 @@ type RouteContext = {
   params: Promise<{ token: string }>;
 };
 
-type SaveBody = {
-  action?: string;
-  question_id?: string;
-  numeric_value?: number | string | null;
-  text_value?: string | null;
-  evidence_text?: string | null;
-  is_not_observed?: boolean;
+type AnswerInput={
+ question_id?:string;numeric_value?:number|string|null;text_value?:string|null;
+ evidence_text?:string|null;is_not_observed?:boolean;
 };
+type SaveBody=AnswerInput&{action?:string;answers?:AnswerInput[]};
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function errorResponse(message: string, status: number, extra?: Record<string, unknown>) {
   return NextResponse.json({ error: message, ...extra }, { status });
@@ -153,7 +151,13 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 export async function POST(request: NextRequest, context: RouteContext) {
   const { token } = await context.params;
-  const body = (await request.json()) as SaveBody;
+  if(!UUID.test(token))return errorResponse("Liga de evaluación inválida.",400);
+  const origin=request.headers.get("origin");
+  if(origin&&origin!==request.nextUrl.origin)return errorResponse("Origen no autorizado.",403);
+  if(Number(request.headers.get("content-length")||"0")>180000)
+    return errorResponse("La solicitud excede el tamaño permitido.",413);
+  let body:SaveBody;
+  try{body=await request.json() as SaveBody;}catch{return errorResponse("No pudimos leer las respuestas. Intenta nuevamente.",400);}
   const db = createAdminClient();
 
   const { data: assignment, error: assignmentError } = await db
@@ -168,6 +172,74 @@ export async function POST(request: NextRequest, context: RouteContext) {
     .select("assessment_type").eq("id",assignment.template_id).single();
   if(templateError||!assignmentTemplate)return errorResponse("No se pudo validar el instrumento.",500);
   const isLeadershipCases=assignmentTemplate.assessment_type==="leadership_cases";
+
+  // Enviar las respuestas de la evaluación en una sola operación permite
+  // recuperar selecciones realizadas cuando falló el guardado individual.
+  // No crea asignaciones, no consume créditos y nunca altera pruebas cerradas.
+  if(body.action==="sync"){
+    if(!["pending","in_progress"].includes(assignment.status))
+      return errorResponse("Esta evaluación ya terminó y sus respuestas están protegidas.",409);
+    const answers=body.answers;
+    if(!Array.isArray(answers)||answers.length<1||answers.length>200)
+      return errorResponse("Se requieren entre 1 y 200 respuestas para sincronizar.",400);
+    const ids=answers.map(a=>a?.question_id);
+    if(ids.some(id=>typeof id!=="string"||!UUID.test(id))||new Set(ids).size!==ids.length)
+      return errorResponse("Las preguntas enviadas no son válidas.",400);
+    const {data:questions,error:questionsError}=await db.from("assessment_questions")
+      .select("id,question_type,required,allow_evidence,allow_not_observed,min_value,max_value,options")
+      .eq("template_id",assignment.template_id).in("id",ids as string[]);
+    if(questionsError)return errorResponse("No se pudo verificar la lista de preguntas.",500);
+    const byId=new Map((questions??[]).map(q=>[q.id,q]));
+    if(byId.size!==ids.length)return errorResponse("Algunas preguntas no pertenecen a esta evaluación.",400);
+    const records=[];
+    for(const answer of answers){
+      const question=byId.get(answer.question_id!);
+      if(!question)return errorResponse("Pregunta no reconocida.",400);
+      if(isLeadershipCases&&question.question_type!=="text")
+        return errorResponse("Las rúbricas profesionales no pueden contestarse desde esta liga.",403);
+      if(answer.is_not_observed===true&&!question.allow_not_observed)
+        return errorResponse("Esta pregunta no admite 'No observado'.",400);
+      const notObserved=answer.is_not_observed===true;
+      const textValue=typeof answer.text_value==="string"?answer.text_value.trim():"";
+      if(textValue.length>12000)return errorResponse("Una respuesta de texto es demasiado extensa.",413);
+      const evidenceValue=typeof answer.evidence_text==="string"?answer.evidence_text.trim():"";
+      if(evidenceValue.length>12000)return errorResponse("Una evidencia es demasiado extensa.",413);
+      let numeric:number|null=null;
+      if(question.question_type==="choice"&&!notObserved){
+        numeric=Number(answer.numeric_value);
+        const optionCount=Array.isArray(question.options)?question.options.length:0;
+        if(!Number.isInteger(numeric)||numeric<1||numeric>optionCount)
+          return errorResponse("Una opción seleccionada no es válida.",400);
+      }else if(question.question_type==="scale"&&!notObserved){
+        numeric=Number(answer.numeric_value);
+        if(answer.numeric_value===null||answer.numeric_value===undefined||!Number.isFinite(numeric)||
+           question.min_value!==null&&numeric<Number(question.min_value)||
+           question.max_value!==null&&numeric>Number(question.max_value))
+          return errorResponse("Una puntuación está fuera del rango permitido.",400);
+      }else if(question.question_type==="text"){
+        if(question.required&&!textValue)return errorResponse("Falta una respuesta de texto obligatoria.",400);
+        if(!textValue)continue; // No borrar respuestas opcionales ya guardadas.
+      }else if(!notObserved)return errorResponse("Tipo de respuesta no reconocido.",400);
+      records.push({
+        assignment_id:assignment.id,question_id:question.id,
+        numeric_value:numeric,text_value:question.question_type==="text"?textValue:null,
+        evidence_text:question.allow_evidence?evidenceValue||null:null,
+        is_not_observed:notObserved,answered_at:new Date().toISOString()
+      });
+    }
+    if(!records.length)return errorResponse("No hay respuestas válidas para guardar.",400);
+    const {error:saveError}=await db.from("assessment_responses").upsert(records,{
+      onConflict:"assignment_id,question_id"
+    });
+    if(saveError)return errorResponse("No pudimos confirmar el guardado. Tus respuestas siguen en pantalla; vuelve a intentar.",503);
+    if(assignment.status==="pending"||!assignment.started_at){
+      const {error:startError}=await db.from("assessment_assignments").update({
+        status:"in_progress",started_at:assignment.started_at??new Date().toISOString()
+      }).eq("id",assignment.id).in("status",["pending","in_progress"]);
+      if(startError)return errorResponse("Se guardaron las respuestas, pero no se actualizó el estado. Intenta continuar.",503);
+    }
+    return NextResponse.json({ok:true,savedQuestionIds:records.map(r=>r.question_id),count:records.length});
+  }
 
   if (body.action === "save") {
     if (!["pending", "in_progress"].includes(assignment.status)) {
