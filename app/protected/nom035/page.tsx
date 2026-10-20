@@ -3,6 +3,7 @@ import Link from "next/link";
 import {redirect} from "next/navigation";
 import {Building2,ClipboardList,FileCheck2,ShieldCheck,ExternalLink} from "lucide-react";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {hasNom035Subscription} from "@/lib/nom035/access";
 import {createAdminClient} from "@/lib/supabase/admin";
 import {
@@ -19,7 +20,7 @@ export default function Nom035Page(){
 }
 async function Nom035Dashboard(){
  const user=await getCurrentAppUser();
- if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId))
+ if(!user||!(user.role==="super_admin"||user.role==="client"&&user.organizationId||await hasStaffPermission(user,"nom035","view")))
   redirect("/auth/login");
  if(!await hasNom035Subscription(user))redirect("/protected/psicometrias");
  const db=createAdminClient();
