@@ -670,8 +670,13 @@ async function PsychometricsContent({ searchParams }: PageProps) {
                                 ) : (
                                   <div className="flex flex-col items-start gap-2 md:items-end">
                                     <div className="rounded-xl bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-700">
-                                      Integral disponible al concluir {processGroup.total - processGroup.completed}
+                                      {processGroup.completed} reportes individuales disponibles · {processGroup.total-processGroup.completed} pendientes para el integral
                                     </div>
+                                    {processGroup.completed>0&&<Link
+                                      href={`/protected/psicometrias/integral/${processGroup.processId}`}
+                                      className="text-sm font-bold text-orange-700 underline">
+                                      Ver las pruebas y reportes ya concluidos →
+                                    </Link>}
                                     {processGroup.publicToken && group.person && group.organization && (
                                       <CopyAssessmentLink
                                         path={`/p/${processGroup.publicToken}`}
