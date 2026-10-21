@@ -52,3 +52,13 @@ export function readAssessmentDraft(
     return null;
   }
 }
+
+/** Solo las respuestas que el servidor todavía no confirmó entran al borrador. */
+export function selectUnconfirmedAssessmentResponses(
+  responses: Record<string, AssessmentDraftResponse>,
+  confirmedQuestionIds: ReadonlySet<string>,
+): Record<string, AssessmentDraftResponse> {
+  return Object.fromEntries(
+    Object.entries(responses).filter(([questionId]) => !confirmedQuestionIds.has(questionId)),
+  );
+}
