@@ -101,5 +101,7 @@ jobs:
         run: npx --yes tsx scripts/psychometric-save-recovery-smoke.ts
       - name: Verify browser draft recovery and expiration
         run: npx --yes tsx scripts/assessment-draft-smoke.ts
+      - name: Verify psychometric permissions and report export structure
+        run: npx --yes tsx scripts/psychometric-access-export-smoke.ts
       - name: Build app
         run: npm run build
