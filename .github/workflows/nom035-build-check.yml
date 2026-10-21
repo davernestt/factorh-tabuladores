@@ -99,5 +99,7 @@ jobs:
         run: npx --yes tsx scripts/qa-paola-operadora-access.ts
       - name: Verify psychometric answer recovery and reporting
         run: npx --yes tsx scripts/psychometric-save-recovery-smoke.ts
+      - name: Verify browser draft recovery and expiration
+        run: npx --yes tsx scripts/assessment-draft-smoke.ts
       - name: Build app
         run: npm run build
