@@ -31,7 +31,6 @@ export default function EvaluationDetailPage({ params }: PageProps) {
 async function EvaluationDetailContent({ params }: PageProps) {
   const currentAppUser=await getCurrentAppUser();
   if(!currentAppUser)redirect("/auth/login");
-  if(!await hasStaffPermission(currentAppUser,"pdl","view"))redirect("/protected/mi-acceso");
   const authClient = await createClient();
   const { data: authData, error: authError } = await authClient.auth.getClaims();
 
@@ -56,6 +55,24 @@ async function EvaluationDetailContent({ params }: PageProps) {
 
   if (!assignment) {
     notFound();
+  }
+
+  // Autorizar antes de acceder a respuestas, personas y reportes con el cliente administrador.
+  const [scopeProcess, scopeTemplate] = await Promise.all([
+    db.from("assessment_processes").select("organization_id,client_visible")
+      .eq("id", assignment.process_id).maybeSingle(),
+    db.from("assessment_templates").select("assessment_type")
+      .eq("id", assignment.template_id).maybeSingle(),
+  ]);
+  if (scopeProcess.error || scopeTemplate.error || !scopeProcess.data || !scopeTemplate.data) notFound();
+  const moduleKey = scopeTemplate.data.assessment_type.startsWith("psychometric_")
+    ? "psychometrics" : "pdl";
+  if (currentAppUser.role === "client") {
+    if (moduleKey !== "psychometrics" ||
+      scopeProcess.data.organization_id !== currentAppUser.organizationId ||
+      scopeProcess.data.client_visible !== true) notFound();
+  } else if (!await hasStaffPermission(currentAppUser, moduleKey, "view")) {
+    redirect("/protected/mi-acceso");
   }
 
   const [
