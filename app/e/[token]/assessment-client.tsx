@@ -435,7 +435,11 @@ export default function AssessmentClient({ token }: { token: string }) {
       setData(current => current ? {
         ...current, assignment: { ...current.assignment, status: "in_progress" }
       } : current);
-      setMessage(`Guardado confirmado en el servidor: ${confirmedIds.size} respuesta(s).`);
+      const requiredConfirmed = progressQuestions.filter(question => confirmedIds.has(question.id)).length;
+      const remaining = Math.max(0, progressQuestions.length - requiredConfirmed);
+      setMessage(remaining > 0
+        ? `Avance confirmado en el servidor: ${requiredConfirmed} de ${progressQuestions.length}. Faltan ${remaining} preguntas por confirmar.`
+        : `Todas las ${progressQuestions.length} respuestas obligatorias quedaron guardadas en el servidor.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No pudimos confirmar el guardado. Tus respuestas siguen en el navegador.");
     } finally {
