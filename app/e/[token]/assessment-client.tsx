@@ -4,6 +4,7 @@ import FactoRHLogo from "@/components/factorh-logo";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { readAssessmentDraft, serializeAssessmentDraft } from "@/lib/assessment-draft";
 
 type Assignment = {
   id: string;
@@ -169,8 +170,39 @@ export default function AssessmentClient({ token }: { token: string }) {
           is_not_observed: stored.is_not_observed,
         };
       }
+      const saved = new Set(assessment.responses.map((item) => item.question_id));
+      const recovered = new Set<string>();
+      const draftKey = `factorh-assessment-draft:${token}`;
+      try {
+        if (assessment.assignment.status === "completed") {
+          window.localStorage.removeItem(draftKey);
+        } else {
+          const raw = window.localStorage.getItem(draftKey);
+          const draft = readAssessmentDraft(raw);
+          if (raw && !draft) window.localStorage.removeItem(draftKey);
+          const allowed = new Set(assessment.questions.map((question) => question.id));
+          for (const [questionId, answer] of Object.entries(draft ?? {})) {
+            if (!allowed.has(questionId)) continue;
+            const existing = initial[questionId];
+            if (!existing ||
+              existing.numeric_value !== answer.numeric_value ||
+              existing.text_value !== answer.text_value ||
+              existing.is_not_observed !== answer.is_not_observed) {
+              initial[questionId] = answer;
+              recovered.add(questionId);
+              saved.delete(questionId); // La copia local requiere confirmación del servidor.
+            }
+          }
+        }
+      } catch {
+        // El navegador puede bloquear almacenamiento; el servidor sigue siendo la fuente oficial.
+      }
       setResponses(initial);
-      setSavedQuestionIds(new Set(assessment.responses.map((item) => item.question_id)));
+      setSavedQuestionIds(saved);
+      setFailedQuestionIds(recovered);
+      if (recovered.size) {
+        setMessage(`Recuperamos ${recovered.size} respuesta(s) de este navegador. Revisa y envía para confirmarlas en el servidor.`);
+      }
       setStarted(false);
     } catch (error) {
       setMessage(
@@ -184,6 +216,19 @@ export default function AssessmentClient({ token }: { token: string }) {
   useEffect(() => {
     void loadAssessment();
   }, [token]);
+
+  // Solo guardar un borrador temporal en este dispositivo. No sustituye la confirmación de Supabase.
+  useEffect(() => {
+    if (loading || !data || data.assignment.status === "completed") return;
+    try {
+      window.localStorage.setItem(
+        `factorh-assessment-draft:${token}`,
+        serializeAssessmentDraft(responses),
+      );
+    } catch {
+      // Cuota llena o almacenamiento deshabilitado: la evaluación sigue operativa en línea.
+    }
+  }, [responses, loading, data, token]);
 
   const scoredQuestions = useMemo(
     () =>
@@ -529,6 +574,9 @@ export default function AssessmentClient({ token }: { token: string }) {
                 <h2 className="text-xl font-bold text-neutral-900">
                   Antes de comenzar
                 </h2>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Si falla la conexión, este navegador intentará conservar tus respuestas durante 24 horas para recuperarlas. Evita usar dispositivos compartidos y confirma el envío antes de salir.
+                </p>
                 <p className="mt-2 text-neutral-600">
                   {isLeadershipCases
                     ? "Lee con atención cada situación y responde con tus propias palabras qué harías, por qué y cómo darías seguimiento. Tus respuestas serán revisadas posteriormente por un evaluador de FactoRH. No debes calificarte a ti mismo."

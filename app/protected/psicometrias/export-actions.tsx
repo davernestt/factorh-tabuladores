@@ -1512,7 +1512,7 @@ function buildWordHtml(
     "<div class='page-break'></div><div class='eyebrow'>CIERRE EJECUTIVO</div><h1 class='dark'>Conclusión para toma de decisión</h1><p>" + esc(data.closing || "El resultado debe integrarse con entrevista, experiencia, evidencia de desempeño y requisitos reales del puesto.") + "</p></body></html>";
 }
 
-function buildMhtml(html: string, images: Array<{ name: string; base64: string }>) {
+export function buildMhtml(html: string, images: Array<{ name: string; base64: string }>) {
   const boundary = "----=_NextPart_FactoRH_Psychometrics";
   const parts = ["MIME-Version: 1.0", "Content-Type: multipart/related; boundary=\"" + boundary + "\"", "", "--" + boundary,
     "Content-Type: text/html; charset=\"utf-8\"", "Content-Transfer-Encoding: 8bit", "Content-Location: report.html", "", html];
@@ -1638,7 +1638,7 @@ function dataUrlBytes(url: string) {
   const raw = atob(url.split(",")[1] || ""); const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i); return out;
 }
-function buildImagePdf(images: Uint8Array[]) {
+export function buildImagePdf(images: Uint8Array[]) {
   const enc = new TextEncoder(); const objects: Uint8Array[] = []; const pageIds: number[] = []; const imageIds: number[] = []; const contentIds: number[] = [];
   let next = 3; images.forEach(function () { pageIds.push(next++); imageIds.push(next++); contentIds.push(next++); });
   objects[1] = enc.encode("<< /Type /Catalog /Pages 2 0 R >>");
