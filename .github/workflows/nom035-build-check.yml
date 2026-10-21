@@ -103,5 +103,7 @@ jobs:
         run: npx --yes tsx scripts/assessment-draft-smoke.ts
       - name: Verify psychometric permissions and report export structure
         run: npx --yes tsx scripts/psychometric-access-export-smoke.ts
+      - name: Verify psychometric PDF and Word file builders
+        run: npx --yes tsx scripts/psychometric-export-files-smoke.ts
       - name: Build app
         run: npm run build
