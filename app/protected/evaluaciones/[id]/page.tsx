@@ -158,11 +158,16 @@ async function EvaluationDetailContent({ params }: PageProps) {
   );
 
   const responses = responsesResult.data ?? [];
+  // Las pruebas objetivas (Atención y Precisión / Razonamiento) usan "choice".
+  // Mostrar el total real de reactivos, incluso antes de recibir respuestas.
   const scaleTotal = (questionsResult.data ?? []).filter(
-    (question) => question.question_type === "scale",
+    (question) => question.question_type === "scale" ||
+      (!isLeadershipCases && question.question_type === "choice"),
   ).length;
-  const scaleAnswered = isLeadershipCases?gradesCount:responses.filter(
-    (response) => questionTypeById.get(response.question_id) === "scale",
+  const scaleAnswered = isLeadershipCases ? gradesCount : responses.filter(
+    (response) => ["scale", "choice"].includes(
+      questionTypeById.get(response.question_id) ?? "",
+    ),
   ).length;
   const textAnswered = responses.filter(
     (response) =>
