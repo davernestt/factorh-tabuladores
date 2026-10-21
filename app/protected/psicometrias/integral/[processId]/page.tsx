@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import { hasStaffPermission } from "@/lib/staff-permissions";
 import {
   analyzeIntegralPsychometrics,
   type IntegralInstrument,
@@ -70,23 +71,26 @@ export default function IntegralPsychometricReportPage(props: PageProps) {
 async function IntegralReportContent({ params }: PageProps) {
   const currentUser = await getCurrentAppUser();
   if (!currentUser) redirect("/auth/login");
+  if (currentUser.role !== "client" &&
+      !await hasStaffPermission(currentUser, "psychometrics", "reports")) {
+    redirect("/protected/mi-acceso");
+  }
 
   const { processId } = await params;
   const db = createAdminClient();
 
   const processR = await db
     .from("assessment_processes")
-    .select("id,name,person_id,organization_id,created_at,evaluation_purpose,target_job_title,target_job_profile_id")
+    .select("id,name,person_id,organization_id,client_visible,created_at,evaluation_purpose,target_job_title,target_job_profile_id")
     .eq("id", processId)
     .maybeSingle();
 
   if (processR.error) return <ErrorCard message={processR.error.message} />;
   if (!processR.data) notFound();
 
-  if (
-    currentUser.role === "client" &&
-    processR.data.organization_id !== currentUser.organizationId
-  ) {
+  if (currentUser.role === "client" &&
+    (processR.data.organization_id !== currentUser.organizationId ||
+      processR.data.client_visible !== true)) {
     notFound();
   }
 
