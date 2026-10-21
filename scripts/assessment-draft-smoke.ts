@@ -5,6 +5,7 @@ import {
   readAssessmentDraft,
   serializeAssessmentDraft,
   selectUnconfirmedAssessmentResponses,
+  verifyPersistedAssessmentAnswers,
 } from "../lib/assessment-draft";
 
 const questionId = "11111111-1111-4111-8111-111111111111";
@@ -42,6 +43,27 @@ const filtered = selectUnconfirmedAssessmentResponses(
 );
 assert.deepEqual(filtered, { [q2]: answer2 }, "Nunca respaldar respuestas confirmadas.");
 assert.deepEqual(readAssessmentDraft(serializeAssessmentDraft(filtered, now), now), filtered);
+
+const selections = [
+  { question_id: questionId, numeric_value: 2, text_value: "", is_not_observed: false },
+  { question_id: q2, numeric_value: 5, text_value: "", is_not_observed: false },
+];
+assert.deepEqual(
+  verifyPersistedAssessmentAnswers(selections, [
+    { question_id: questionId, numeric_value: "2.00", text_value: null, is_not_observed: false },
+    { question_id: q2, numeric_value: "4.00", text_value: null, is_not_observed: false },
+  ]),
+  [questionId],
+  "No confirmar preguntas cuyo valor difiere del guardado realmente en Supabase",
+);
+assert.deepEqual(verifyPersistedAssessmentAnswers(selections, []), [], "No confirmar respuestas ausentes");
+assert.deepEqual(
+  verifyPersistedAssessmentAnswers(selections, [
+    { question_id: questionId, numeric_value: "2.00", text_value: null, is_not_observed: false },
+    { question_id: q2, numeric_value: "5.00", text_value: null, is_not_observed: false },
+  ]),
+  [questionId, q2],
+);
 
 const client = readFileSync("app/e/[token]/assessment-client.tsx", "utf8");
 assert.match(client, /readAssessmentDraft\(raw\)/);
