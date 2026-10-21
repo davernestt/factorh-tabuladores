@@ -4,6 +4,8 @@ import {
   ASSESSMENT_DRAFT_MAX_AGE_MS,
   readAssessmentDraft,
   serializeAssessmentDraft,
+  selectUnconfirmedAssessmentResponses,
+  verifyPersistedAssessmentAnswers,
 } from "../lib/assessment-draft";
 
 const questionId = "11111111-1111-4111-8111-111111111111";
@@ -33,9 +35,42 @@ assert.equal(readAssessmentDraft(JSON.stringify({
 assert.equal(readAssessmentDraft(serialized, now - 70000), null, "Rechazar reloj futuro");
 assert.equal(readAssessmentDraft(null), null);
 
+const q2 = "22222222-2222-4222-8222-222222222222";
+const answer2 = { numeric_value: 5, text_value: "", is_not_observed: false };
+const filtered = selectUnconfirmedAssessmentResponses(
+  { ...responses, [q2]: answer2 },
+  new Set([questionId]),
+);
+assert.deepEqual(filtered, { [q2]: answer2 }, "Nunca respaldar respuestas confirmadas.");
+assert.deepEqual(readAssessmentDraft(serializeAssessmentDraft(filtered, now), now), filtered);
+
+const selections = [
+  { question_id: questionId, numeric_value: 2, text_value: "", is_not_observed: false },
+  { question_id: q2, numeric_value: 5, text_value: "", is_not_observed: false },
+];
+assert.deepEqual(
+  verifyPersistedAssessmentAnswers(selections, [
+    { question_id: questionId, numeric_value: "2.00", text_value: null, is_not_observed: false },
+    { question_id: q2, numeric_value: "4.00", text_value: null, is_not_observed: false },
+  ]),
+  [questionId],
+  "No confirmar preguntas cuyo valor difiere del guardado realmente en Supabase",
+);
+assert.deepEqual(verifyPersistedAssessmentAnswers(selections, []), [], "No confirmar respuestas ausentes");
+assert.deepEqual(
+  verifyPersistedAssessmentAnswers(selections, [
+    { question_id: questionId, numeric_value: "2.00", text_value: null, is_not_observed: false },
+    { question_id: q2, numeric_value: "5.00", text_value: null, is_not_observed: false },
+  ]),
+  [questionId, q2],
+);
+
 const client = readFileSync("app/e/[token]/assessment-client.tsx", "utf8");
 assert.match(client, /readAssessmentDraft\(raw\)/);
-assert.match(client, /serializeAssessmentDraft\(responses\)/);
+assert.match(client, /serializeAssessmentDraft\(unsaved\)/);
+assert.match(client, /selectUnconfirmedAssessmentResponses\(responses, savedQuestionIds\)/);
+assert.match(client, /window\.localStorage\.removeItem\(key\)/);
+assert.doesNotMatch(client, /serializeAssessmentDraft\(responses\)/);
 assert.match(client, /saved\.delete\(questionId\)/, "Las respuestas locales no deben figurar como guardadas en el servidor");
 assert.match(client, /window\.localStorage\.removeItem\(draftKey\)/, "Borrar borradores tras el cierre");
 assert.match(client, /data\.assignment\.status === "completed"/);

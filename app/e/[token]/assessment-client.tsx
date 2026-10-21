@@ -4,7 +4,7 @@ import FactoRHLogo from "@/components/factorh-logo";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { readAssessmentDraft, serializeAssessmentDraft } from "@/lib/assessment-draft";
+import { readAssessmentDraft, serializeAssessmentDraft, selectUnconfirmedAssessmentResponses, verifyPersistedAssessmentAnswers } from "@/lib/assessment-draft";
 
 type Assignment = {
   id: string;
@@ -142,6 +142,7 @@ export default function AssessmentClient({ token }: { token: string }) {
   const [failedQuestionIds, setFailedQuestionIds] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set());
 
   async function loadAssessment() {
@@ -217,18 +218,22 @@ export default function AssessmentClient({ token }: { token: string }) {
     void loadAssessment();
   }, [token]);
 
-  // Solo guardar un borrador temporal en este dispositivo. No sustituye la confirmación de Supabase.
+  // Guardar únicamente respuestas NO confirmadas por Supabase.
+  // Una copia antigua nunca debe sobrescribir datos ya confirmados desde otro dispositivo.
   useEffect(() => {
     if (loading || !data || data.assignment.status === "completed") return;
     try {
-      window.localStorage.setItem(
-        `factorh-assessment-draft:${token}`,
-        serializeAssessmentDraft(responses),
-      );
+      const unsaved = selectUnconfirmedAssessmentResponses(responses, savedQuestionIds);
+      const key = `factorh-assessment-draft:${token}`;
+      if (Object.keys(unsaved).length) {
+        window.localStorage.setItem(key, serializeAssessmentDraft(unsaved));
+      } else {
+        window.localStorage.removeItem(key);
+      }
     } catch {
       // Cuota llena o almacenamiento deshabilitado: la evaluación sigue operativa en línea.
     }
-  }, [responses, loading, data, token]);
+  }, [responses, savedQuestionIds, loading, data, token]);
 
   const scoredQuestions = useMemo(
     () =>
@@ -289,6 +294,12 @@ export default function AssessmentClient({ token }: { token: string }) {
     next: LocalResponse,
   ) {
     setResponses((current) => ({ ...current, [question.id]: next }));
+    // Una edición nueva ya no representa la respuesta confirmada por el servidor.
+    setSavedQuestionIds((current) => {
+      const ids = new Set(current);
+      ids.delete(question.id);
+      return ids;
+    });
     setPendingSaveIds((current) => {
       const nextIds = new Set(current);
       nextIds.add(question.id);
@@ -323,7 +334,14 @@ export default function AssessmentClient({ token }: { token: string }) {
           if (!response.ok) {
             throw new Error(payload.error || lastError);
           }
-
+          const persisted = payload.confirmedAnswer as StoredResponse | undefined;
+          const verified = verifyPersistedAssessmentAnswers(
+            [{ question_id: question.id, ...next }],
+            persisted ? [persisted] : [],
+          );
+          if (!verified.includes(question.id)) {
+            throw new Error("No pudimos verificar esta respuesta en el servidor. Usa «Reintentar guardado».");
+          }
           saved = true;
         } catch (error) {
           lastError =
@@ -380,6 +398,77 @@ export default function AssessmentClient({ token }: { token: string }) {
         nextIds.delete(question.id);
         return nextIds;
       });
+    }
+  }
+
+  async function syncSelectedAnswers() {
+    if (finishing || syncing || pendingSaveIds.size > 0 || !data) {
+      setMessage("Espera a que terminen los guardados en curso para sincronizar.");
+      return;
+    }
+    const selected = data.questions.flatMap((question) => {
+      const answer = responses[question.id];
+      if (!answer) return [];
+      if (question.question_type === "text" && !answer.text_value.trim()) return [];
+      if (question.question_type !== "text" && answer.numeric_value === null && !answer.is_not_observed) return [];
+      return [{
+        question_id: question.id,
+        numeric_value: answer.numeric_value,
+        text_value: answer.text_value,
+        is_not_observed: answer.is_not_observed,
+      }];
+    });
+    if (!selected.length) {
+      setMessage("Selecciona al menos una respuesta antes de guardar el avance.");
+      return;
+    }
+    setSyncing(true);
+    setMessage("Comprobando y guardando tus respuestas en el servidor...");
+    try {
+      const response = await fetch(`/api/evaluacion/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync", answers: selected }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "No pudimos confirmar el guardado.");
+      // No confiar únicamente en la respuesta del POST: verificar cada valor leyendo Supabase.
+      const readback = await fetch(`/api/evaluacion/${token}`, { cache: "no-store" });
+      if (!readback.ok) throw new Error("Se enviaron respuestas, pero falta comprobarlas. No cierres la página.");
+      const readbackData = await readback.json() as AssessmentData;
+      const serverAccepted = new Set<string>(payload.savedQuestionIds ?? []);
+      const verified = new Set(
+        verifyPersistedAssessmentAnswers(selected, readbackData.responses)
+          .filter(id => serverAccepted.has(id)),
+      );
+      const selectedIds = new Set(selected.map(answer => answer.question_id));
+      const unmatched = [...selectedIds].filter(id => !verified.has(id));
+      setSavedQuestionIds(current => {
+        const next = new Set(current);
+        selectedIds.forEach(id => next.delete(id));
+        verified.forEach(id => next.add(id));
+        return next;
+      });
+      setFailedQuestionIds(current => {
+        const next = new Set(current);
+        verified.forEach(id => next.delete(id));
+        unmatched.forEach(id => next.add(id));
+        return next;
+      });
+      setData(current => current ? {
+        ...current, assignment: { ...current.assignment, status: "in_progress" }
+      } : current);
+      const requiredConfirmed = progressQuestions.filter(question => verified.has(question.id)).length;
+      const remaining = Math.max(0, progressQuestions.length - requiredConfirmed);
+      setMessage(unmatched.length > 0
+        ? `Atención: ${unmatched.length} respuesta(s) no coincidieron con lo almacenado. Tus selecciones siguen aquí. Usa «Reintentar guardado» antes de salir.`
+        : remaining > 0
+          ? `Avance verificado en el servidor: ${requiredConfirmed} de ${progressQuestions.length}. Faltan ${remaining} preguntas por responder.`
+          : `Todas las ${progressQuestions.length} respuestas obligatorias fueron verificadas en el servidor.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No pudimos confirmar el guardado. Tus respuestas siguen en el navegador.");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -818,6 +907,8 @@ export default function AssessmentClient({ token }: { token: string }) {
                                 <button
                                   key={option}
                                   type="button"
+                                  data-assessment-question-id={question.id}
+                                  data-assessment-option-value={value}
                                   onClick={() =>
                                     void saveAnswer(question, {
                                       numeric_value: value,
@@ -990,14 +1081,21 @@ export default function AssessmentClient({ token }: { token: string }) {
                   : `Debes responder y guardar los ${scoredQuestions.length} reactivos calificables.`}
               </p>
             </div>
-            <button
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" disabled={finishing || syncing || pendingSaveIds.size > 0}
+                onClick={() => void syncSelectedAnswers()}
+                className="rounded-xl border border-neutral-400 bg-white px-5 py-3 text-sm font-bold text-neutral-800 transition hover:bg-neutral-100 disabled:opacity-40">
+                {syncing ? "Guardando avance..." : "Guardar avance ahora"}
+              </button>
+              <button
               type="button"
-              disabled={finishing || pendingSaveIds.size > 0}
+              disabled={finishing || syncing || pendingSaveIds.size > 0}
               onClick={() => void completeAssessment()}
               className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white transition enabled:hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {finishing ? "Finalizando..." : "Enviar evaluación"}
-            </button>
+              </button>
+            </div>
           </div>
         </section>
       </div>

@@ -25,4 +25,19 @@ assert.match(participant,/await connection\(\)/);
 const detail = read("app/protected/evaluaciones/[id]/page.tsx");
 assert.match(detail, /question\.question_type === "choice"/, "El avance debe contar preguntas de opción múltiple.");
 assert.match(detail, /\["scale", "choice"\]\.includes/, "Contar las respuestas de opción múltiple.");
+assert.match(client, /async function syncSelectedAnswers\(\)/, "Debe existir acción explícita de sincronización.");
+assert.match(client, /Guardar avance ahora/, "Candidato debe poder sincronizar el avance manualmente.");
+assert.match(client, /action: "sync", answers: selected/, "Sincronización debe enviar las selecciones actuales.");
+assert.match(client, /payload.savedQuestionIds/, "Solo marcar como guardadas las respuestas confirmadas por el servidor.");
+assert.match(client, /Avance verificado en el servidor/, "Mostrar solamente avance realmente verificado.");
+assert.match(client, /verifyPersistedAssessmentAnswers\(selected, readbackData.responses\)/, "Verificar por lectura posterior que coincidan pregunta y valor.");
+assert.match(client, /unmatched.length > 0/, "Avisar cuando existan selecciones sin persistencia.");
+assert.match(api, /confirmedAnswer: savedRow/, "Servidor debe devolver la fila guardada.");
+assert.match(api, /select\("question_id,numeric_value,text_value,is_not_observed"\)\.single\(\)/,
+  "La operación individual debe leer la fila devuelta por Supabase.");
+assert.match(client, /persisted = payload.confirmedAnswer/,
+  "El candidato debe verificar la respuesta del servidor, no sólo un HTTP 200.");
+assert.match(client, /verifyPersistedAssessmentAnswers\(/,
+  "Validar pregunta, valor y bandera antes de marcar Guardado.");
+assert.match(client, /Faltan.*preguntas por responder/, "Advertir explícitamente cuando queden preguntas pendientes.");
 console.log("PSYCHOMETRIC_RECOVERY_OK: sync idempotente, reportes individuales, sin reiniciar candidatos ni créditos");
