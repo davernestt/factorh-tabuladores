@@ -45,10 +45,10 @@ assert.deepEqual(readAssessmentDraft(serializeAssessmentDraft(filtered, now), no
 
 const client = readFileSync("app/e/[token]/assessment-client.tsx", "utf8");
 assert.match(client, /readAssessmentDraft\(raw\)/);
-assert.match(client, /serializeAssessmentDraft\\(unsaved\\)/);
-assert.match(client, /selectUnconfirmedAssessmentResponses\\(responses, savedQuestionIds\\)/);
-assert.match(client, /window\\.localStorage\\.removeItem\\(key\\)/);
-assert.doesNotMatch(client, /serializeAssessmentDraft\\(responses\\)/);
+assert.match(client, /serializeAssessmentDraft\(unsaved\)/);
+assert.match(client, /selectUnconfirmedAssessmentResponses\(responses, savedQuestionIds\)/);
+assert.match(client, /window\.localStorage\.removeItem\(key\)/);
+assert.doesNotMatch(client, /serializeAssessmentDraft\(responses\)/);
 assert.match(client, /saved\.delete\(questionId\)/, "Las respuestas locales no deben figurar como guardadas en el servidor");
 assert.match(client, /window\.localStorage\.removeItem\(draftKey\)/, "Borrar borradores tras el cierre");
 assert.match(client, /data\.assignment\.status === "completed"/);
