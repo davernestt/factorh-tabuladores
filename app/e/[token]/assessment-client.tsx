@@ -4,7 +4,7 @@ import FactoRHLogo from "@/components/factorh-logo";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { readAssessmentDraft, serializeAssessmentDraft, selectUnconfirmedAssessmentResponses } from "@/lib/assessment-draft";
+import { readAssessmentDraft, serializeAssessmentDraft, selectUnconfirmedAssessmentResponses, verifyPersistedAssessmentAnswers } from "@/lib/assessment-draft";
 
 type Assignment = {
   id: string;
@@ -425,21 +425,39 @@ export default function AssessmentClient({ token }: { token: string }) {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "No pudimos confirmar el guardado.");
-      const confirmedIds = new Set<string>(payload.savedQuestionIds ?? []);
-      setSavedQuestionIds(current => new Set([...current, ...confirmedIds]));
+      // No confiar únicamente en la respuesta del POST: verificar cada valor leyendo Supabase.
+      const readback = await fetch(`/api/evaluacion/${token}`, { cache: "no-store" });
+      if (!readback.ok) throw new Error("Se enviaron respuestas, pero falta comprobarlas. No cierres la página.");
+      const readbackData = await readback.json() as AssessmentData;
+      const serverAccepted = new Set<string>(payload.savedQuestionIds ?? []);
+      const verified = new Set(
+        verifyPersistedAssessmentAnswers(selected, readbackData.responses)
+          .filter(id => serverAccepted.has(id)),
+      );
+      const selectedIds = new Set(selected.map(answer => answer.question_id));
+      const unmatched = [...selectedIds].filter(id => !verified.has(id));
+      setSavedQuestionIds(current => {
+        const next = new Set(current);
+        selectedIds.forEach(id => next.delete(id));
+        verified.forEach(id => next.add(id));
+        return next;
+      });
       setFailedQuestionIds(current => {
         const next = new Set(current);
-        confirmedIds.forEach(id => next.delete(id));
+        verified.forEach(id => next.delete(id));
+        unmatched.forEach(id => next.add(id));
         return next;
       });
       setData(current => current ? {
         ...current, assignment: { ...current.assignment, status: "in_progress" }
       } : current);
-      const requiredConfirmed = progressQuestions.filter(question => confirmedIds.has(question.id)).length;
+      const requiredConfirmed = progressQuestions.filter(question => verified.has(question.id)).length;
       const remaining = Math.max(0, progressQuestions.length - requiredConfirmed);
-      setMessage(remaining > 0
-        ? `Avance confirmado en el servidor: ${requiredConfirmed} de ${progressQuestions.length}. Faltan ${remaining} preguntas por confirmar.`
-        : `Todas las ${progressQuestions.length} respuestas obligatorias quedaron guardadas en el servidor.`);
+      setMessage(unmatched.length > 0
+        ? `Atención: ${unmatched.length} respuesta(s) no coincidieron con lo almacenado. Tus selecciones siguen aquí. Usa «Reintentar guardado» antes de salir.`
+        : remaining > 0
+          ? `Avance verificado en el servidor: ${requiredConfirmed} de ${progressQuestions.length}. Faltan ${remaining} preguntas por responder.`
+          : `Todas las ${progressQuestions.length} respuestas obligatorias fueron verificadas en el servidor.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "No pudimos confirmar el guardado. Tus respuestas siguen en el navegador.");
     } finally {
