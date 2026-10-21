@@ -217,18 +217,24 @@ export default function AssessmentClient({ token }: { token: string }) {
     void loadAssessment();
   }, [token]);
 
-  // Solo guardar un borrador temporal en este dispositivo. No sustituye la confirmación de Supabase.
+  // Guardar únicamente respuestas NO confirmadas por Supabase.
+  // Una copia antigua nunca debe sobrescribir datos ya confirmados desde otro dispositivo.
   useEffect(() => {
     if (loading || !data || data.assignment.status === "completed") return;
     try {
-      window.localStorage.setItem(
-        `factorh-assessment-draft:${token}`,
-        serializeAssessmentDraft(responses),
+      const unsaved = Object.fromEntries(
+        Object.entries(responses).filter(([id]) => !savedQuestionIds.has(id)),
       );
+      const key = `factorh-assessment-draft:${token}`;
+      if (Object.keys(unsaved).length) {
+        window.localStorage.setItem(key, serializeAssessmentDraft(unsaved));
+      } else {
+        window.localStorage.removeItem(key);
+      }
     } catch {
       // Cuota llena o almacenamiento deshabilitado: la evaluación sigue operativa en línea.
     }
-  }, [responses, loading, data, token]);
+  }, [responses, savedQuestionIds, loading, data, token]);
 
   const scoredQuestions = useMemo(
     () =>
@@ -289,6 +295,12 @@ export default function AssessmentClient({ token }: { token: string }) {
     next: LocalResponse,
   ) {
     setResponses((current) => ({ ...current, [question.id]: next }));
+    // Una edición nueva ya no representa la respuesta confirmada por el servidor.
+    setSavedQuestionIds((current) => {
+      const ids = new Set(current);
+      ids.delete(question.id);
+      return ids;
+    });
     setPendingSaveIds((current) => {
       const nextIds = new Set(current);
       nextIds.add(question.id);
