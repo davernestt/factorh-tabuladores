@@ -330,7 +330,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: true, cleared: true });
     }
 
-    const { error: saveError } = await db.from("assessment_responses").upsert(
+    const { data: savedRow, error: saveError } = await db.from("assessment_responses").upsert(
       {
         assignment_id: assignment.id,
         question_id: question.id,
@@ -344,9 +344,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
         answered_at: new Date().toISOString(),
       },
       { onConflict: "assignment_id,question_id" },
-    );
+    ).select("question_id,numeric_value,text_value,is_not_observed").single();
 
-    if (saveError) return errorResponse(saveError.message, 500);
+    if (saveError || !savedRow)
+      return errorResponse("La respuesta todavía no fue confirmada por el servidor. Intenta de nuevo.", 503);
+    const expectedNumeric = ["scale", "choice"].includes(question.question_type) && !isNotObserved
+      ? numericValue : null;
+    const numericMatched = expectedNumeric === null
+      ? savedRow.numeric_value === null
+      : savedRow.numeric_value !== null && Number(savedRow.numeric_value) === expectedNumeric;
+    if (savedRow.question_id !== question.id || !numericMatched ||
+        (savedRow.text_value ?? "").trim() !== (question.question_type === "text" ? textValue : "") ||
+        savedRow.is_not_observed !== isNotObserved)
+      return errorResponse("La respuesta guardada no coincide con la selección. Intenta de nuevo.", 503);
 
     if (assignment.status === "pending" || !assignment.started_at) {
       const { error: startError } = await db
@@ -360,7 +370,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       if (startError) return errorResponse(startError.message, 500);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, confirmedAnswer: savedRow });
   }
 
   if (body.action === "complete") {
