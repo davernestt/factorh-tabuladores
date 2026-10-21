@@ -6,6 +6,7 @@ const client=read("app/e/[token]/assessment-client.tsx");
 const index=read("app/protected/psicometrias/page.tsx");
 const report=read("app/protected/psicometrias/integral/[processId]/page.tsx");
 const shell=read("app/protected/layout.tsx");
+const center=read("app/protected/evaluaciones/page.tsx");
 const participant=read("app/p/[token]/page.tsx");
 assert.match(api,/body.action==="sync"/,"El servidor debe admitir sincronizar respuestas.");
 assert.match(api,/new Set\(ids\).size!==ids.length/,"Rechazar preguntas duplicadas.");
@@ -20,6 +21,8 @@ assert.doesNotMatch(client,/\[question.id\]: previous/,"Nunca descartar seleccio
 assert.match(client,/Reintentar guardado/,"Mostrar reintento sin repetir preguntas.");
 assert.match(index,/Ver las pruebas y reportes ya concluidos/);
 assert.match(report,/Ver reporte guardado/);
-assert.match(shell,/name: "Psicometrías"/);
+assert.match(center,/name: 'Psicometrías'/,"Psicometrías debe estar en el Centro de Evaluaciones.");
+assert.match(center,/href: '\/protected\/psicometrias'/,"El Centro debe enlazar al módulo.");
+assert.doesNotMatch(shell, /href: "\/protected\/psicometrias\?view=personas", name: "Psicometrías"/, "No duplicar psicometrías en el menú superior.");
 assert.match(participant,/await connection\(\)/);
 console.log("PSYCHOMETRIC_RECOVERY_OK: sync idempotente, reportes individuales, sin reiniciar candidatos ni créditos");
