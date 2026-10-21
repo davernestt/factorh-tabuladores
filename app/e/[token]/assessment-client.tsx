@@ -142,6 +142,7 @@ export default function AssessmentClient({ token }: { token: string }) {
   const [failedQuestionIds, setFailedQuestionIds] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [savedQuestionIds, setSavedQuestionIds] = useState<Set<string>>(new Set());
 
   async function loadAssessment() {
@@ -390,6 +391,55 @@ export default function AssessmentClient({ token }: { token: string }) {
         nextIds.delete(question.id);
         return nextIds;
       });
+    }
+  }
+
+  async function syncSelectedAnswers() {
+    if (finishing || syncing || pendingSaveIds.size > 0 || !data) {
+      setMessage("Espera a que terminen los guardados en curso para sincronizar.");
+      return;
+    }
+    const selected = data.questions.flatMap((question) => {
+      const answer = responses[question.id];
+      if (!answer) return [];
+      if (question.question_type === "text" && !answer.text_value.trim()) return [];
+      if (question.question_type !== "text" && answer.numeric_value === null && !answer.is_not_observed) return [];
+      return [{
+        question_id: question.id,
+        numeric_value: answer.numeric_value,
+        text_value: answer.text_value,
+        is_not_observed: answer.is_not_observed,
+      }];
+    });
+    if (!selected.length) {
+      setMessage("Selecciona al menos una respuesta antes de guardar el avance.");
+      return;
+    }
+    setSyncing(true);
+    setMessage("Comprobando y guardando tus respuestas en el servidor...");
+    try {
+      const response = await fetch(`/api/evaluacion/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync", answers: selected }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "No pudimos confirmar el guardado.");
+      const confirmedIds = new Set<string>(payload.savedQuestionIds ?? []);
+      setSavedQuestionIds(current => new Set([...current, ...confirmedIds]));
+      setFailedQuestionIds(current => {
+        const next = new Set(current);
+        confirmedIds.forEach(id => next.delete(id));
+        return next;
+      });
+      setData(current => current ? {
+        ...current, assignment: { ...current.assignment, status: "in_progress" }
+      } : current);
+      setMessage(`Guardado confirmado en el servidor: ${confirmedIds.size} respuesta(s).`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No pudimos confirmar el guardado. Tus respuestas siguen en el navegador.");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -1000,14 +1050,21 @@ export default function AssessmentClient({ token }: { token: string }) {
                   : `Debes responder y guardar los ${scoredQuestions.length} reactivos calificables.`}
               </p>
             </div>
-            <button
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" disabled={finishing || syncing || pendingSaveIds.size > 0}
+                onClick={() => void syncSelectedAnswers()}
+                className="rounded-xl border border-neutral-400 bg-white px-5 py-3 text-sm font-bold text-neutral-800 transition hover:bg-neutral-100 disabled:opacity-40">
+                {syncing ? "Guardando avance..." : "Guardar avance ahora"}
+              </button>
+              <button
               type="button"
-              disabled={finishing || pendingSaveIds.size > 0}
+              disabled={finishing || syncing || pendingSaveIds.size > 0}
               onClick={() => void completeAssessment()}
               className="rounded-xl bg-orange-500 px-6 py-3 font-bold text-white transition enabled:hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {finishing ? "Finalizando..." : "Enviar evaluación"}
-            </button>
+              </button>
+            </div>
           </div>
         </section>
       </div>
