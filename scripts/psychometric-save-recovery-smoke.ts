@@ -29,6 +29,8 @@ assert.match(client, /async function syncSelectedAnswers\(\)/, "Debe existir acc
 assert.match(client, /Guardar avance ahora/, "Candidato debe poder sincronizar el avance manualmente.");
 assert.match(client, /action: "sync", answers: selected/, "Sincronización debe enviar las selecciones actuales.");
 assert.match(client, /payload.savedQuestionIds/, "Solo marcar como guardadas las respuestas confirmadas por el servidor.");
-assert.match(client, /Avance confirmado en el servidor/, "Mostrar solamente el avance realmente confirmado.");
-assert.match(client, /Faltan.*preguntas por confirmar/, "Advertir explícitamente cuando queden respuestas pendientes.");
+assert.match(client, /Avance verificado en el servidor/, "Mostrar solamente avance realmente verificado.");
+assert.match(client, /verifyPersistedAssessmentAnswers\(selected, readbackData.responses\)/, "Verificar por lectura posterior que coincidan pregunta y valor.");
+assert.match(client, /unmatched.length > 0/, "Avisar cuando existan selecciones sin persistencia.");
+assert.match(client, /Faltan.*preguntas por responder/, "Advertir explícitamente cuando queden preguntas pendientes.");
 console.log("PSYCHOMETRIC_RECOVERY_OK: sync idempotente, reportes individuales, sin reiniciar candidatos ni créditos");
