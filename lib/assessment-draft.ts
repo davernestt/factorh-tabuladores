@@ -62,3 +62,21 @@ export function selectUnconfirmedAssessmentResponses(
     Object.entries(responses).filter(([questionId]) => !confirmedQuestionIds.has(questionId)),
   );
 }
+
+/** Confirma los valores que el servidor realmente devuelve después de un guardado. */
+export function verifyPersistedAssessmentAnswers(
+  expected: Array<{question_id: string; numeric_value: number | null; text_value: string; is_not_observed: boolean}>,
+  persisted: Array<{question_id: string; numeric_value: number | string | null; text_value: string | null; is_not_observed: boolean}>,
+): string[] {
+  const storedById = new Map(persisted.map(response => [response.question_id, response]));
+  return expected.filter(answer => {
+    const saved = storedById.get(answer.question_id);
+    if (!saved) return false;
+    const numericMatches = answer.numeric_value === null
+      ? saved.numeric_value === null
+      : saved.numeric_value !== null && Number(saved.numeric_value) === answer.numeric_value;
+    return numericMatches &&
+      (saved.text_value ?? "").trim() === answer.text_value.trim() &&
+      saved.is_not_observed === answer.is_not_observed;
+  }).map(answer => answer.question_id);
+}
