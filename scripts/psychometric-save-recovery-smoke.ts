@@ -22,4 +22,7 @@ assert.match(index,/Ver las pruebas y reportes ya concluidos/);
 assert.match(report,/Ver reporte guardado/);
 assert.match(shell,/name: "Psicometrías"/);
 assert.match(participant,/await connection\(\)/);
+const detail = read("app/protected/evaluaciones/[id]/page.tsx");
+assert.match(detail, /question\.question_type === "choice"/, "El avance debe contar preguntas de opción múltiple.");
+assert.match(detail, /\["scale", "choice"\]\.includes/, "Contar las respuestas de opción múltiple.");
 console.log("PSYCHOMETRIC_RECOVERY_OK: sync idempotente, reportes individuales, sin reiniciar candidatos ni créditos");
