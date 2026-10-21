@@ -907,6 +907,8 @@ export default function AssessmentClient({ token }: { token: string }) {
                                 <button
                                   key={option}
                                   type="button"
+                                  data-assessment-question-id={question.id}
+                                  data-assessment-option-value={value}
                                   onClick={() =>
                                     void saveAnswer(question, {
                                       numeric_value: value,
