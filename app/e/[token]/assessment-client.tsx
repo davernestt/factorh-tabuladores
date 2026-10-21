@@ -4,7 +4,7 @@ import FactoRHLogo from "@/components/factorh-logo";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { readAssessmentDraft, serializeAssessmentDraft } from "@/lib/assessment-draft";
+import { readAssessmentDraft, serializeAssessmentDraft, selectUnconfirmedAssessmentResponses } from "@/lib/assessment-draft";
 
 type Assignment = {
   id: string;
@@ -222,9 +222,7 @@ export default function AssessmentClient({ token }: { token: string }) {
   useEffect(() => {
     if (loading || !data || data.assignment.status === "completed") return;
     try {
-      const unsaved = Object.fromEntries(
-        Object.entries(responses).filter(([id]) => !savedQuestionIds.has(id)),
-      );
+      const unsaved = selectUnconfirmedAssessmentResponses(responses, savedQuestionIds);
       const key = `factorh-assessment-draft:${token}`;
       if (Object.keys(unsaved).length) {
         window.localStorage.setItem(key, serializeAssessmentDraft(unsaved));
