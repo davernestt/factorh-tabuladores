@@ -334,7 +334,14 @@ export default function AssessmentClient({ token }: { token: string }) {
           if (!response.ok) {
             throw new Error(payload.error || lastError);
           }
-
+          const persisted = payload.confirmedAnswer as StoredResponse | undefined;
+          const verified = verifyPersistedAssessmentAnswers(
+            [{ question_id: question.id, ...next }],
+            persisted ? [persisted] : [],
+          );
+          if (!verified.includes(question.id)) {
+            throw new Error("No pudimos verificar esta respuesta en el servidor. Usa «Reintentar guardado».");
+          }
           saved = true;
         } catch (error) {
           lastError =
