@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import { hasStaffPermission } from "@/lib/staff-permissions";
 import { getPsychometricCatalogItem } from "@/lib/psychometric-catalog";
 import CopyAssessmentLink from "../copy-assessment-link";
 
@@ -94,6 +95,13 @@ export default function PsychometricsPage({ searchParams }: PageProps) {
 async function PsychometricsContent({ searchParams }: PageProps) {
   const currentUser = await getCurrentAppUser();
   if (!currentUser) redirect("/auth/login");
+  if (currentUser.role === "client" && !currentUser.organizationId) {
+    redirect("/protected/mi-acceso");
+  }
+  if (currentUser.role !== "client" &&
+      !await hasStaffPermission(currentUser, "psychometrics", "view")) {
+    redirect("/protected/mi-acceso");
+  }
 
   const isOwner = currentUser.role === "super_admin";
   const scopedOrganizationId =
@@ -163,10 +171,22 @@ async function PsychometricsContent({ searchParams }: PageProps) {
 
   const templateIds = templates.map((item) => item.id);
 
+  // Aplicar aislamiento antes de consultar respuestas y nombres de candidatos.
+  const visibleProcesses = scopedOrganizationId
+    ? await db.from("assessment_processes").select("id")
+        .eq("organization_id", scopedOrganizationId).eq("client_visible", true)
+    : { data: null, error: null };
+  if (visibleProcesses.error) return <ErrorCard message="No se pudo validar el acceso a los procesos." />;
+  const visibleProcessIds = (visibleProcesses.data ?? []).map((process) => process.id);
+
   const [assignmentsR, questionsR] = await Promise.all([
-    templateIds.length
-      ? db
-          .from("assessment_assignments")
+    templateIds.length && (!scopedOrganizationId || visibleProcessIds.length)
+      ? scopedOrganizationId
+        ? db.from("assessment_assignments")
+          .select("id,status,created_at,started_at,completed_at,process_id,template_id")
+          .in("template_id", templateIds).in("process_id", visibleProcessIds)
+          .order("created_at", { ascending: false })
+        : db.from("assessment_assignments")
           .select("id,status,created_at,started_at,completed_at,process_id,template_id")
           .in("template_id", templateIds)
           .order("created_at", { ascending: false })
@@ -192,7 +212,7 @@ async function PsychometricsContent({ searchParams }: PageProps) {
     processIds.length
       ? db
           .from("assessment_processes")
-          .select("id,person_id,organization_id,name,public_token,department_id")
+          .select("id,person_id,organization_id,name,public_token,department_id,client_visible")
           .in("id", processIds)
       : Promise.resolve({ data: [], error: null }),
     assignmentIds.length
