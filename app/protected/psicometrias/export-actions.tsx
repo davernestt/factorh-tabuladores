@@ -282,6 +282,11 @@ export function buildPages(
     ? compactListBoxHeight(ctx, cautions, colW, 13, 19)
     : 0;
   const summaryBoxH = Math.max(fh, ch, 165);
+  if (y + summaryBoxH > pageBottom) {
+    commitPage();
+    beginPage("Hallazgos del perfil · continuación");
+    y = 170;
+  }
 
   if (findings.length) {
     drawCompactListBox(
