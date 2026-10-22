@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buildPsychometricDocx } from "@/lib/psychometric-docx";
 
 export type PsychometricExportDimension = {
   name: string;
@@ -102,27 +103,13 @@ export default function PsychometricExportActions({ fileName, data, integral = f
     try {
       await document.fonts?.ready;
       const brandLogo = await loadBrandLogo();
-      const brandBase64 = imageToPngBase64(brandLogo);
       const chartImages = data.instruments.map(function (instrument, index) {
         return {
           name: "chart-" + String(index + 1) + ".png",
           base64: buildChart(instrument, 920, 600).toDataURL("image/png").split(",")[1] || "",
         };
       });
-      const images = [
-        { name: "brand-logo.png", base64: brandBase64 },
-        ...chartImages,
-      ];
-      const html = buildWordHtml(
-        data,
-        chartImages.map(function (item) { return item.name; }),
-        integral,
-        "brand-logo.png",
-      );
-      const blob = new Blob(["\ufeff", buildMhtml(html, images)], {
-        type: "application/msword;charset=utf-8",
-      });
-      triggerDownload(blob, sanitize(fileName) + ".doc");
+      triggerDownload(buildPsychometricDocx(data, chartImages, integral), sanitize(fileName) + ".docx");
     } catch (cause) {
       console.error(cause);
       setError("No fue posible generar el archivo de Word.");
