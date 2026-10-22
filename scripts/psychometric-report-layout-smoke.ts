@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { buildPsychometricDocx } from "../lib/psychometric-docx";
 import type { PsychometricExportData } from "../app/protected/psicometrias/export-actions";
 
@@ -33,6 +33,7 @@ async function main() {
   const blob=buildPsychometricDocx(data,[{name:"chart-1.png",base64:image}],true);
   assert.equal(blob.type,"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   const bytes=Buffer.from(await blob.arrayBuffer());
+  writeFileSync("/tmp/factorh_psychometric_qa.docx", bytes);
   assert.equal(bytes.readUInt32LE(0),0x04034b50,"ZIP local header");
   assert.ok(bytes.includes(Buffer.from("word/document.xml")),"Documento Word nativo");
   assert.ok(bytes.includes(Buffer.from("word/media/chart-1.png")),"Imagen de gráfico integrada");
