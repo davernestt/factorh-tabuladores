@@ -770,13 +770,14 @@ function drawOnboardingColumn(
   wrap(ctx, stage.focus, x + 16, y + 55, width - 32, 19, 3);
 
   let ay = y + 118;
-  stage.actions.slice(0, 4).forEach(function (action) {
+  stage.actions.forEach(function (action) {
     ctx.fillStyle = "#f97316";
     ctx.font = "800 10px Arial";
     ctx.fillText("•", x + 16, ay);
     ctx.fillStyle = "#404040";
     ctx.font = "11px Arial";
-    ay = wrap(ctx, action, x + 31, ay, width - 47, 16, 3) + 7;
+    ay = wrap(ctx, action, x + 31, ay, width - 47, 17,
+      Math.max(1, countLines(ctx, action, width - 47, "11px Arial"))) + 10;
   });
 }
 
@@ -942,7 +943,7 @@ function guidanceBoxHeight(
   width: number,
 ) {
   const lines = countLines(ctx, text, width - 40, "14px Arial");
-  return Math.max(118, 76 + Math.min(lines, 6) * 21);
+  return Math.max(125, 83 + lines * 21);
 }
 
 function drawGuidanceBox(
@@ -960,7 +961,8 @@ function drawGuidanceBox(
   ctx.fillText(label, x + 20, y + 27);
   ctx.fillStyle = "#404040";
   ctx.font = "14px Arial";
-  wrap(ctx, text, x + 20, y + 56, width - 40, 21, 6);
+  wrap(ctx, text, x + 20, y + 56, width - 40, 21,
+    Math.max(1, countLines(ctx, text, width - 40, "14px Arial")));
 }
 
 function onboardingBoxHeight(
@@ -971,10 +973,10 @@ function onboardingBoxHeight(
   const actionWidth = width - 70;
   const actionLines = stage.actions.reduce(
     (sum, item) =>
-      sum + Math.min(3, countLines(ctx, item, actionWidth, "13px Arial")),
+      sum + countLines(ctx, item, actionWidth, "11px Arial"),
     0,
   );
-  return Math.max(190, 116 + actionLines * 19 + stage.actions.length * 7);
+  return Math.max(220, 134 + actionLines * 17 + stage.actions.length * 10);
 }
 
 function drawOnboardingBox(
