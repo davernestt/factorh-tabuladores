@@ -618,6 +618,25 @@ function buildPages(
   return out;
 }
 
+function dimensionTileNarrative(item: PsychometricExportDimension) {
+  return [
+    item.narrative,
+    item.potential ? "Puede aportar: " + item.potential : null,
+    item.watchout ? "Conviene observar: " + item.watchout : null,
+  ].filter(Boolean).join(" ");
+}
+
+function dimensionTileHeight(
+  ctx: CanvasRenderingContext2D,
+  item: PsychometricExportDimension,
+  width: number,
+) {
+  const text = dimensionTileNarrative(item);
+  const firstBaseline = item.band ? 106 : 86;
+  const lines = text ? countLines(ctx, text, width - 32, "14px Arial") : 0;
+  return Math.max(135, firstBaseline + lines * 20 + 22);
+}
+
 function drawDimensionTile(
   ctx: CanvasRenderingContext2D,
   item: PsychometricExportDimension,
@@ -654,21 +673,12 @@ function drawDimensionTile(
     ctx.fillText(item.band.toUpperCase(), x + 16, y + 77);
   }
 
-  const text = showNarrative
-    ? item.narrative || item.potential || item.watchout
-    : item.narrative;
+  const text = showNarrative ? dimensionTileNarrative(item) : (item.narrative ?? "");
   if (text) {
-    ctx.fillStyle = "#666666";
-    ctx.font = showNarrative ? "12px Arial" : "11px Arial";
-    wrap(
-      ctx,
-      text,
-      x + 16,
-      y + (item.band ? 97 : 82),
-      width - 32,
-      showNarrative ? 17 : 16,
-      showNarrative ? 3 : 2,
-    );
+    ctx.fillStyle = "#525252";
+    ctx.font = "14px Arial";
+    wrap(ctx, text, x + 16, y + (item.band ? 106 : 86), width - 32,
+      20, Math.max(1, countLines(ctx, text, width - 32, "14px Arial")));
   }
 }
 
@@ -759,11 +769,10 @@ function compactListBoxHeight(
 ) {
   const textWidth = width - 62;
   const totalLines = items.reduce(
-    (sum, item) =>
-      sum + Math.min(3, countLines(ctx, item, textWidth, fontSize + "px Arial")),
+    (sum, item) => sum + countLines(ctx, item, textWidth, fontSize + "px Arial"),
     0,
   );
-  return Math.max(112, 68 + totalLines * lineHeight + items.length * 8);
+  return Math.max(112, 76 + totalLines * lineHeight + items.length * 12);
 }
 
 function drawCompactListBox(
@@ -792,8 +801,8 @@ function drawCompactListBox(
     ctx.fill();
     ctx.fillStyle = "#404040";
     ctx.font = fontSize + "px Arial";
-    ry =
-      wrap(ctx, item, x + 42, ry, width - 62, lineHeight, 3) + 8;
+    ry = wrap(ctx, item, x + 42, ry, width - 62, lineHeight,
+      Math.max(1, countLines(ctx, item, width - 62, fontSize + "px Arial"))) + 12;
   });
   return height;
 }
