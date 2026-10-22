@@ -259,14 +259,17 @@ export function buildPages(
   y += 42;
 
   const lead = data.executiveSummary.slice(0, 3);
-  box(ctx, M, y, CW, 245, "#fafafa", "#e5e5e5");
+  const leadH = Math.max(245, 59 + lead.reduce((sum, paragraph) =>
+    sum + countLines(ctx, paragraph, CW - 48, "15px Arial") * 23 + 12, 0));
+  box(ctx, M, y, CW, leadH, "#fafafa", "#e5e5e5");
   ctx.fillStyle = "#404040";
   ctx.font = "15px Arial";
   let ly = y + 36;
   lead.forEach(function (paragraph) {
-    ly = wrap(ctx, paragraph, M + 24, ly, CW - 48, 23, 5) + 12;
+    ly = wrap(ctx, paragraph, M + 24, ly, CW - 48, 23,
+      countLines(ctx, paragraph, CW - 48, "15px Arial")) + 12;
   });
-  y += 268;
+  y += leadH + 24;
 
   const findings = data.keyFindings?.slice(0, 5) ?? [];
   const cautions = data.cautions?.slice(0, 5) ?? [];
