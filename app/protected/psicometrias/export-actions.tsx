@@ -322,7 +322,11 @@ export function buildPages(
     ["OBJETIVO", data.objectiveText || "Comprender el patrón de resultados para apoyar entrevista y toma de decisiones."],
     ["LECTURA PARA EL JEFE", data.managerGuidance?.supervision || "Interpretar el perfil frente a las exigencias reales del puesto y el contexto del equipo."],
   ];
-  const quickH = 150;
+  const quickH = Math.max(150, ...quickItems.map(item =>
+    84 + countLines(ctx, item[1], colW - 36, "13px Arial") * 19));
+  if (y + quickH > pageBottom) {
+    commitPage(); beginPage("Objetivo y lectura para el jefe · continuación"); y = 170;
+  }
   quickItems.forEach(function (item, index) {
     const x = index === 0 ? M : M + colW + gap;
     box(ctx, x, y, colW, quickH, "#ffffff", "#e5e5e5");
@@ -331,7 +335,8 @@ export function buildPages(
     ctx.fillText(item[0], x + 18, y + 28);
     ctx.fillStyle = "#404040";
     ctx.font = "13px Arial";
-    wrap(ctx, item[1], x + 18, y + 58, colW - 36, 19, 4);
+    wrap(ctx, item[1], x + 18, y + 58, colW - 36, 19,
+      countLines(ctx, item[1], colW - 36, "13px Arial"));
   });
   commitPage();
 
