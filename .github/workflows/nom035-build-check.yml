@@ -119,5 +119,11 @@ jobs:
               assert 'Dimensión 1' in doc
           print('PSYCHOMETRIC_DOCX_XML_OK: paquete legible, XML válido e imágenes embebidas')
           PY
+      - name: Save fictional report for QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: factorh-psychometric-docx-qa
+          path: /tmp/factorh_psychometric_qa.docx
+          retention-days: 1
       - name: Build app
         run: npm run build
