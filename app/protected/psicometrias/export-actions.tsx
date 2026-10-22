@@ -483,182 +483,106 @@ function buildPages(
     }
   }
 
-  // 6. Una página principal por prueba. El detalle deja de ser un listado enorme.
+
+  // 6. Página por instrumento con bloques de altura medida y paginación automática.
+  // No colocar texto fuera de la caja, ni comprimirlo a costa de la legibilidad.
   data.instruments.forEach(function (instrument, instrumentIndex) {
     beginPage(instrument.name);
-
-    let iy = 160;
+    let iy = 165;
     ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText(
-      "PRUEBA " + String(instrumentIndex + 1) + " DE " + String(data.instruments.length),
-      M,
-      iy,
-    );
-    iy += 30;
-
+    ctx.font = "700 12px Arial";
+    ctx.fillText("PRUEBA " + (instrumentIndex + 1) + " DE " + data.instruments.length, M, iy);
+    iy += 34;
     ctx.fillStyle = "#171717";
-    ctx.font = "800 29px Arial";
-    iy = wrap(ctx, instrument.name, M, iy, CW, 33, 2) + 5;
-
+    ctx.font = "800 31px Arial";
+    iy = wrap(ctx, instrument.name, M, iy, CW, 39, 8) + 8;
     if (instrument.subtitle) {
       ctx.fillStyle = "#737373";
-      ctx.font = "14px Arial";
-      iy = wrap(ctx, instrument.subtitle, M, iy, CW, 20, 2) + 10;
+      ctx.font = "16px Arial";
+      iy = wrap(ctx, instrument.subtitle, M, iy, CW, 24, 20) + 12;
     }
 
-    const topY = Math.max(270, iy + 6);
+    const topY = Math.max(270, iy + 5);
     const leftW = 585;
     const rightX = M + leftW + 26;
     const rightW = CW - leftW - 26;
+    const summaries = (instrument.summary ?? []).filter(Boolean);
+    const overallLines = instrument.overallDisplay
+      ? countLines(ctx, instrument.overallDisplay, rightW - 40, "800 27px Arial") : 0;
+    const narrativeLines = summaries.reduce((total, paragraph) =>
+      total + countLines(ctx, paragraph, rightW - 40, "15px Arial"), 0);
+    const topH = Math.max(445, 126 + overallLines * 32 + (overallLines ? 26 : 0) +
+      narrativeLines * 22 + summaries.length * 12);
 
-    box(ctx, M, topY, leftW, 435, "#ffffff", "#e5e5e5");
-    ctx.drawImage(buildChart(instrument, 540, 360), M + 22, topY + 38, 540, 360);
-
-    box(ctx, rightX, topY, rightW, 435, "#fafafa", "#e5e5e5");
+    // Cada nuevo elemento tiene una posición basada en su altura real.
+    box(ctx, M, topY, leftW, topH, "#ffffff", "#e5e5e5");
+    ctx.drawImage(buildChart(instrument, 540, 360), M + 22, topY + 42, 540, 360);
+    box(ctx, rightX, topY, rightW, topH, "#fafafa", "#e5e5e5");
     ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText("LECTURA EJECUTIVA", rightX + 20, topY + 30);
-
-    let ry = topY + 64;
+    ctx.font = "700 12px Arial";
+    ctx.fillText("LECTURA EJECUTIVA", rightX + 20, topY + 34);
+    let ry = topY + 73;
     if (instrument.overallDisplay) {
       ctx.fillStyle = "#171717";
       ctx.font = "800 27px Arial";
-      ry = wrap(ctx, instrument.overallDisplay, rightX + 20, ry, rightW - 40, 30, 2) + 10;
+      ry = wrap(ctx, instrument.overallDisplay, rightX + 20, ry, rightW - 40, 32,
+        Math.max(1, overallLines)) + 8;
       ctx.fillStyle = "#737373";
-      ctx.font = "700 10px Arial";
-      ctx.fillText((instrument.overallLabel || "RESULTADO GLOBAL").toUpperCase(), rightX + 20, ry);
-      ry += 28;
+      ctx.font = "700 11px Arial";
+      ry = wrap(ctx, (instrument.overallLabel || "RESULTADO GLOBAL").toUpperCase(),
+        rightX + 20, ry, rightW - 40, 17, 6) + 12;
     }
-
     ctx.fillStyle = "#404040";
-    ctx.font = "13px Arial";
-    (instrument.summary ?? []).slice(0, 3).forEach(function (paragraph) {
-      ry = wrap(ctx, paragraph, rightX + 20, ry, rightW - 40, 19, 4) + 10;
+    ctx.font = "15px Arial";
+    summaries.forEach(function (paragraph) {
+      ry = wrap(ctx, paragraph, rightX + 20, ry, rightW - 40, 22,
+        Math.max(1, countLines(ctx, paragraph, rightW - 40, "15px Arial"))) + 13;
     });
 
-    const dimStart = topY + 465;
-    ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText("RESULTADOS POR DIMENSIÓN", M, dimStart);
-
-    const maxOnFirstPage = 6;
-    const firstDims = instrument.dimensions.slice(0, maxOnFirstPage);
-    const gridTop = dimStart + 26;
-    const gridGap = 14;
-    const gridW = (CW - gridGap) / 2;
-    const rowH = 112;
-
-    firstDims.forEach(function (item, index) {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      drawDimensionTile(
-        ctx,
-        item,
-        M + col * (gridW + gridGap),
-        gridTop + row * (rowH + 10),
-        gridW,
-        rowH,
-      );
-    });
-
-    const usedRows = Math.ceil(firstDims.length / 2);
-    let insightY = gridTop + usedRows * (rowH + 10) + 6;
-    const highlights = instrument.highlights?.slice(0, 3) ?? [];
-    const watchouts = instrument.watchouts?.slice(0, 3) ?? [];
-
-    if ((highlights.length || watchouts.length) && insightY < pageBottom - 125) {
-      const miniH = 118;
-      if (highlights.length) {
-        drawInlineInsight(
-          ctx,
-          M,
-          insightY,
-          gridW,
-          miniH,
-          "Elementos destacados",
-          highlights,
-          "#ecfdf5",
-          "#065f46",
-        );
-      }
-      if (watchouts.length) {
-        drawInlineInsight(
-          ctx,
-          M + gridW + gridGap,
-          insightY,
-          gridW,
-          miniH,
-          "Puntos para profundizar",
-          watchouts,
-          "#fff7ed",
-          "#92400e",
-        );
-      }
-    }
-
-    commitPage();
-
-    const remaining = instrument.dimensions.slice(maxOnFirstPage);
-    if (remaining.length) {
-      beginPage(instrument.name + " · dimensiones adicionales");
-      let dy = 165;
-      ctx.fillStyle = "#f97316";
-      ctx.font = "700 10px Arial";
-      ctx.fillText("DETALLE COMPLEMENTARIO", M, dy);
-      dy += 30;
-      ctx.fillStyle = "#171717";
-      ctx.font = "800 27px Arial";
-      ctx.fillText("Dimensiones adicionales", M, dy);
-      dy += 42;
-
-      const detailGap = 14;
-      const detailW = (CW - detailGap) / 2;
-      const detailH = 135;
-      remaining.forEach(function (item, index) {
-        const col = index % 2;
-        const row = Math.floor(index / 2);
-        drawDimensionTile(
-          ctx,
-          item,
-          M + col * (detailW + detailGap),
-          dy + row * (detailH + 12),
-          detailW,
-          detailH,
-          true,
-        );
-      });
-
-      const rows = Math.ceil(remaining.length / 2);
-      let extraY = dy + rows * (detailH + 12) + 8;
-      if (highlights.length || watchouts.length) {
-        if (highlights.length) {
-          extraY += drawWideInsight(
-            ctx,
-            M,
-            extraY,
-            CW,
-            "Qué puede aportar",
-            highlights,
-            "#ecfdf5",
-            "#065f46",
-          ) + 12;
-        }
-        if (watchouts.length && extraY < pageBottom - 130) {
-          drawWideInsight(
-            ctx,
-            M,
-            extraY,
-            CW,
-            "Qué conviene validar",
-            watchouts,
-            "#fff7ed",
-            "#92400e",
-          );
-        }
-      }
+    let dy = topY + topH + 48;
+    const gridGap = 16, gridW = (CW - gridGap) / 2;
+    const dimensions = instrument.dimensions;
+    const continuePage = () => {
       commitPage();
+      beginPage(instrument.name + " · continuación");
+      dy = 190;
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 12px Arial";
+      ctx.fillText("RESULTADOS POR DIMENSIÓN · CONTINUACIÓN", M, 155);
+    };
+
+    if (dy + 55 > pageBottom) continuePage();
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 12px Arial";
+    ctx.fillText("RESULTADOS POR DIMENSIÓN", M, dy);
+    dy += 29;
+
+    for (let index = 0; index < dimensions.length; index += 2) {
+      const left = dimensions[index], right = dimensions[index + 1];
+      const height = Math.max(
+        dimensionTileHeight(ctx, left, gridW),
+        right ? dimensionTileHeight(ctx, right, gridW) : 0,
+      );
+      if (dy + height + 16 > pageBottom) continuePage();
+      drawDimensionTile(ctx, left, M, dy, gridW, height, true);
+      if (right) drawDimensionTile(ctx, right, M + gridW + gridGap, dy, gridW, height, true);
+      dy += height + 16;
     }
+    const insights = [
+      {title:"Elementos destacados",values:instrument.highlights ?? [],
+        bg:"#ecfdf5",fg:"#065f46"},
+      {title:"Puntos para profundizar",values:instrument.watchouts ?? [],
+        bg:"#fff7ed",fg:"#92400e"},
+    ];
+    for (const item of insights) {
+      if (!item.values.length) continue;
+      const height = compactListBoxHeight(ctx, item.values, CW, 15, 24);
+      if (dy + height + 16 > pageBottom) continuePage();
+      drawCompactListBox(ctx, M, dy, CW, item.title, item.values,
+        item.bg, item.fg, 15, 24);
+      dy += height + 16;
+    }
+    commitPage();
   });
 
   // 7. Entrevista + cierre
