@@ -135,7 +135,7 @@ export default function PsychometricExportActions({ fileName, data, integral = f
   );
 }
 
-function buildPages(
+export function buildPages(
   data: PsychometricExportData,
   integral: boolean,
   brandLogo: HTMLImageElement,
@@ -1477,7 +1477,7 @@ function buildMhtml(html: string, images: Array<{ name: string; base64: string }
   return parts.join("\r\n");
 }
 
-async function loadBrandLogo() {
+export async function loadBrandLogo() {
   return await new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
