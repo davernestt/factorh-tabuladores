@@ -102,7 +102,6 @@ export default function PsychometricExportActions({ fileName, data, integral = f
     setError(null);
     try {
       await document.fonts?.ready;
-      const brandLogo = await loadBrandLogo();
       const chartImages = data.instruments.map(function (instrument, index) {
         return {
           name: "chart-" + String(index + 1) + ".png",
