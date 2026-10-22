@@ -422,36 +422,56 @@ function buildPages(
     if (data.managerGuidance) {
       const topGap = 16;
       const half = (CW - topGap) / 2;
-      const topH = 175;
+      const topH = Math.max(
+        guidanceBoxHeight(ctx, data.managerGuidance.supervision, half),
+        guidanceBoxHeight(ctx, data.managerGuidance.pressure, half),
+      );
+      if (my + topH > pageBottom) {
+        commitPage(); beginPage("Lectura para el jefe · continuación"); my = 175;
+      }
       drawGuidanceBox(ctx, M, my, half, topH, "SUPERVISIÓN RECOMENDADA", data.managerGuidance.supervision);
       drawGuidanceBox(ctx, M + half + topGap, my, half, topH, "BAJO PRESIÓN", data.managerGuidance.pressure);
-      my += topH + 14;
+      my += topH + 20;
 
-      const teamH = 145;
+      const teamH = guidanceBoxHeight(ctx, data.managerGuidance.team, CW);
+      if (my + teamH > pageBottom) {
+        commitPage(); beginPage("Integración del equipo · continuación"); my = 175;
+      }
       drawGuidanceBox(ctx, M, my, CW, teamH, "INTEGRACIÓN CON EL EQUIPO", data.managerGuidance.team);
-      my += teamH + 14;
+      my += teamH + 20;
 
       if (data.managerGuidance.motivators.length) {
-        box(ctx, M, my, CW, 100, "#fff7ed", "#fed7aa");
+        const motivation = data.managerGuidance.motivators.join(" · ");
+        const motivationLines = countLines(ctx, motivation, CW - 36, "14px Arial");
+        const h = Math.max(105, 65 + motivationLines * 21);
+        if (my + h > pageBottom) {
+          commitPage(); beginPage("Motivadores · continuación"); my = 175;
+        }
+        box(ctx, M, my, CW, h, "#fff7ed", "#fed7aa");
         ctx.fillStyle = "#9a3412";
-        ctx.font = "700 10px Arial";
-        ctx.fillText("MOTIVADORES CLAVE", M + 18, my + 26);
+        ctx.font = "700 12px Arial";
+        ctx.fillText("MOTIVADORES CLAVE", M + 18, my + 28);
         ctx.fillStyle = "#404040";
         ctx.font = "14px Arial";
-        wrap(ctx, data.managerGuidance.motivators.join(" · "), M + 18, my + 54, CW - 36, 20, 3);
-        my += 114;
+        wrap(ctx, motivation, M + 18, my + 56, CW - 36, 21, Math.max(1, motivationLines));
+        my += h + 20;
       }
     }
 
-    if (data.onboardingPlan && data.onboardingPlan.length && my < 980) {
-      ctx.fillStyle = "#f97316";
-      ctx.font = "700 11px Arial";
-      ctx.fillText("PRIMEROS 90 DÍAS", M, my);
-      my += 28;
+    if (data.onboardingPlan && data.onboardingPlan.length) {
       const stageGap = 14;
       const stageW = (CW - stageGap * 2) / 3;
-      data.onboardingPlan.slice(0, 3).forEach(function (stage, index) {
-        drawOnboardingColumn(ctx, stage, M + index * (stageW + stageGap), my, stageW, 300);
+      const stages = data.onboardingPlan.slice(0, 3);
+      const stageH = Math.max(...stages.map(stage => onboardingBoxHeight(ctx, stage, stageW)));
+      if (my + 35 + stageH > pageBottom) {
+        commitPage(); beginPage("Primeros 90 días · continuación"); my = 175;
+      }
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 12px Arial";
+      ctx.fillText("PRIMEROS 90 DÍAS", M, my);
+      my += 36;
+      stages.forEach(function (stage, index) {
+        drawOnboardingColumn(ctx, stage, M + index * (stageW + stageGap), my, stageW, stageH);
       });
     }
     commitPage();
