@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buildPsychometricDocx } from "@/lib/psychometric-docx";
 
 export type PsychometricExportDimension = {
   name: string;
@@ -101,28 +102,13 @@ export default function PsychometricExportActions({ fileName, data, integral = f
     setError(null);
     try {
       await document.fonts?.ready;
-      const brandLogo = await loadBrandLogo();
-      const brandBase64 = imageToPngBase64(brandLogo);
       const chartImages = data.instruments.map(function (instrument, index) {
         return {
           name: "chart-" + String(index + 1) + ".png",
           base64: buildChart(instrument, 920, 600).toDataURL("image/png").split(",")[1] || "",
         };
       });
-      const images = [
-        { name: "brand-logo.png", base64: brandBase64 },
-        ...chartImages,
-      ];
-      const html = buildWordHtml(
-        data,
-        chartImages.map(function (item) { return item.name; }),
-        integral,
-        "brand-logo.png",
-      );
-      const blob = new Blob(["\ufeff", buildMhtml(html, images)], {
-        type: "application/msword;charset=utf-8",
-      });
-      triggerDownload(blob, sanitize(fileName) + ".doc");
+      triggerDownload(buildPsychometricDocx(data, chartImages, integral), sanitize(fileName) + ".docx");
     } catch (cause) {
       console.error(cause);
       setError("No fue posible generar el archivo de Word.");
@@ -148,7 +134,7 @@ export default function PsychometricExportActions({ fileName, data, integral = f
   );
 }
 
-function buildPages(
+export function buildPages(
   data: PsychometricExportData,
   integral: boolean,
   brandLogo: HTMLImageElement,
@@ -272,14 +258,17 @@ function buildPages(
   y += 42;
 
   const lead = data.executiveSummary.slice(0, 3);
-  box(ctx, M, y, CW, 245, "#fafafa", "#e5e5e5");
+  const leadH = Math.max(245, 59 + lead.reduce((sum, paragraph) =>
+    sum + countLines(ctx, paragraph, CW - 48, "15px Arial") * 23 + 12, 0));
+  box(ctx, M, y, CW, leadH, "#fafafa", "#e5e5e5");
   ctx.fillStyle = "#404040";
   ctx.font = "15px Arial";
   let ly = y + 36;
   lead.forEach(function (paragraph) {
-    ly = wrap(ctx, paragraph, M + 24, ly, CW - 48, 23, 5) + 12;
+    ly = wrap(ctx, paragraph, M + 24, ly, CW - 48, 23,
+      countLines(ctx, paragraph, CW - 48, "15px Arial")) + 12;
   });
-  y += 268;
+  y += leadH + 24;
 
   const findings = data.keyFindings?.slice(0, 5) ?? [];
   const cautions = data.cautions?.slice(0, 5) ?? [];
@@ -292,6 +281,11 @@ function buildPages(
     ? compactListBoxHeight(ctx, cautions, colW, 13, 19)
     : 0;
   const summaryBoxH = Math.max(fh, ch, 165);
+  if (y + summaryBoxH > pageBottom) {
+    commitPage();
+    beginPage("Hallazgos del perfil · continuación");
+    y = 170;
+  }
 
   if (findings.length) {
     drawCompactListBox(
@@ -327,7 +321,11 @@ function buildPages(
     ["OBJETIVO", data.objectiveText || "Comprender el patrón de resultados para apoyar entrevista y toma de decisiones."],
     ["LECTURA PARA EL JEFE", data.managerGuidance?.supervision || "Interpretar el perfil frente a las exigencias reales del puesto y el contexto del equipo."],
   ];
-  const quickH = 150;
+  const quickH = Math.max(150, ...quickItems.map(item =>
+    84 + countLines(ctx, item[1], colW - 36, "13px Arial") * 19));
+  if (y + quickH > pageBottom) {
+    commitPage(); beginPage("Objetivo y lectura para el jefe · continuación"); y = 170;
+  }
   quickItems.forEach(function (item, index) {
     const x = index === 0 ? M : M + colW + gap;
     box(ctx, x, y, colW, quickH, "#ffffff", "#e5e5e5");
@@ -336,7 +334,8 @@ function buildPages(
     ctx.fillText(item[0], x + 18, y + 28);
     ctx.fillStyle = "#404040";
     ctx.font = "13px Arial";
-    wrap(ctx, item[1], x + 18, y + 58, colW - 36, 19, 4);
+    wrap(ctx, item[1], x + 18, y + 58, colW - 36, 19,
+      countLines(ctx, item[1], colW - 36, "13px Arial"));
   });
   commitPage();
 
@@ -367,7 +366,7 @@ function buildPages(
 
       for (let index = 0; index < data.battery.length; index += 1) {
         const item = data.battery[index];
-        const rowH = Math.max(64, batteryRowHeight(ctx, item, CW) - 8);
+        const rowH = batteryRowHeight(ctx, item, CW);
         if (oy + rowH > pageBottom) {
           commitPage();
           beginPage("Batería aplicada · continuación");
@@ -407,14 +406,14 @@ function buildPages(
 
     for (let index = 0; index < data.jobComparison.length; index += 1) {
       const item = data.jobComparison[index];
-      const rowH = 105;
+      const rowH = jobComparisonRowHeight(ctx, item);
       if (jy + rowH > pageBottom) {
         commitPage();
         beginPage("Alineación con el perfil objetivo · continuación");
         jy = 165;
       }
-      drawJobComparisonRow(ctx, item, jy);
-      jy += rowH + 8;
+      drawJobComparisonRow(ctx, item, jy, rowH);
+      jy += rowH + 12;
     }
     commitPage();
   }
@@ -435,36 +434,56 @@ function buildPages(
     if (data.managerGuidance) {
       const topGap = 16;
       const half = (CW - topGap) / 2;
-      const topH = 175;
+      const topH = Math.max(
+        guidanceBoxHeight(ctx, data.managerGuidance.supervision, half),
+        guidanceBoxHeight(ctx, data.managerGuidance.pressure, half),
+      );
+      if (my + topH > pageBottom) {
+        commitPage(); beginPage("Lectura para el jefe · continuación"); my = 175;
+      }
       drawGuidanceBox(ctx, M, my, half, topH, "SUPERVISIÓN RECOMENDADA", data.managerGuidance.supervision);
       drawGuidanceBox(ctx, M + half + topGap, my, half, topH, "BAJO PRESIÓN", data.managerGuidance.pressure);
-      my += topH + 14;
+      my += topH + 20;
 
-      const teamH = 145;
+      const teamH = guidanceBoxHeight(ctx, data.managerGuidance.team, CW);
+      if (my + teamH > pageBottom) {
+        commitPage(); beginPage("Integración del equipo · continuación"); my = 175;
+      }
       drawGuidanceBox(ctx, M, my, CW, teamH, "INTEGRACIÓN CON EL EQUIPO", data.managerGuidance.team);
-      my += teamH + 14;
+      my += teamH + 20;
 
       if (data.managerGuidance.motivators.length) {
-        box(ctx, M, my, CW, 100, "#fff7ed", "#fed7aa");
+        const motivation = data.managerGuidance.motivators.join(" · ");
+        const motivationLines = countLines(ctx, motivation, CW - 36, "14px Arial");
+        const h = Math.max(105, 65 + motivationLines * 21);
+        if (my + h > pageBottom) {
+          commitPage(); beginPage("Motivadores · continuación"); my = 175;
+        }
+        box(ctx, M, my, CW, h, "#fff7ed", "#fed7aa");
         ctx.fillStyle = "#9a3412";
-        ctx.font = "700 10px Arial";
-        ctx.fillText("MOTIVADORES CLAVE", M + 18, my + 26);
+        ctx.font = "700 12px Arial";
+        ctx.fillText("MOTIVADORES CLAVE", M + 18, my + 28);
         ctx.fillStyle = "#404040";
         ctx.font = "14px Arial";
-        wrap(ctx, data.managerGuidance.motivators.join(" · "), M + 18, my + 54, CW - 36, 20, 3);
-        my += 114;
+        wrap(ctx, motivation, M + 18, my + 56, CW - 36, 21, Math.max(1, motivationLines));
+        my += h + 20;
       }
     }
 
-    if (data.onboardingPlan && data.onboardingPlan.length && my < 980) {
-      ctx.fillStyle = "#f97316";
-      ctx.font = "700 11px Arial";
-      ctx.fillText("PRIMEROS 90 DÍAS", M, my);
-      my += 28;
+    if (data.onboardingPlan && data.onboardingPlan.length) {
       const stageGap = 14;
       const stageW = (CW - stageGap * 2) / 3;
-      data.onboardingPlan.slice(0, 3).forEach(function (stage, index) {
-        drawOnboardingColumn(ctx, stage, M + index * (stageW + stageGap), my, stageW, 300);
+      const stages = data.onboardingPlan.slice(0, 3);
+      const stageH = Math.max(...stages.map(stage => onboardingBoxHeight(ctx, stage, stageW)));
+      if (my + 35 + stageH > pageBottom) {
+        commitPage(); beginPage("Primeros 90 días · continuación"); my = 175;
+      }
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 12px Arial";
+      ctx.fillText("PRIMEROS 90 DÍAS", M, my);
+      my += 36;
+      stages.forEach(function (stage, index) {
+        drawOnboardingColumn(ctx, stage, M + index * (stageW + stageGap), my, stageW, stageH);
       });
     }
     commitPage();
@@ -496,182 +515,106 @@ function buildPages(
     }
   }
 
-  // 6. Una página principal por prueba. El detalle deja de ser un listado enorme.
+
+  // 6. Página por instrumento con bloques de altura medida y paginación automática.
+  // No colocar texto fuera de la caja, ni comprimirlo a costa de la legibilidad.
   data.instruments.forEach(function (instrument, instrumentIndex) {
     beginPage(instrument.name);
-
-    let iy = 160;
+    let iy = 165;
     ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText(
-      "PRUEBA " + String(instrumentIndex + 1) + " DE " + String(data.instruments.length),
-      M,
-      iy,
-    );
-    iy += 30;
-
+    ctx.font = "700 12px Arial";
+    ctx.fillText("PRUEBA " + (instrumentIndex + 1) + " DE " + data.instruments.length, M, iy);
+    iy += 34;
     ctx.fillStyle = "#171717";
-    ctx.font = "800 29px Arial";
-    iy = wrap(ctx, instrument.name, M, iy, CW, 33, 2) + 5;
-
+    ctx.font = "800 31px Arial";
+    iy = wrap(ctx, instrument.name, M, iy, CW, 39, 8) + 8;
     if (instrument.subtitle) {
       ctx.fillStyle = "#737373";
-      ctx.font = "14px Arial";
-      iy = wrap(ctx, instrument.subtitle, M, iy, CW, 20, 2) + 10;
+      ctx.font = "16px Arial";
+      iy = wrap(ctx, instrument.subtitle, M, iy, CW, 24, 20) + 12;
     }
 
-    const topY = Math.max(270, iy + 6);
+    const topY = Math.max(270, iy + 5);
     const leftW = 585;
     const rightX = M + leftW + 26;
     const rightW = CW - leftW - 26;
+    const summaries = (instrument.summary ?? []).filter(Boolean);
+    const overallLines = instrument.overallDisplay
+      ? countLines(ctx, instrument.overallDisplay, rightW - 40, "800 27px Arial") : 0;
+    const narrativeLines = summaries.reduce((total, paragraph) =>
+      total + countLines(ctx, paragraph, rightW - 40, "15px Arial"), 0);
+    const topH = Math.max(445, 126 + overallLines * 32 + (overallLines ? 26 : 0) +
+      narrativeLines * 22 + summaries.length * 12);
 
-    box(ctx, M, topY, leftW, 435, "#ffffff", "#e5e5e5");
-    ctx.drawImage(buildChart(instrument, 540, 360), M + 22, topY + 38, 540, 360);
-
-    box(ctx, rightX, topY, rightW, 435, "#fafafa", "#e5e5e5");
+    // Cada nuevo elemento tiene una posición basada en su altura real.
+    box(ctx, M, topY, leftW, topH, "#ffffff", "#e5e5e5");
+    ctx.drawImage(buildChart(instrument, 540, 360), M + 22, topY + 42, 540, 360);
+    box(ctx, rightX, topY, rightW, topH, "#fafafa", "#e5e5e5");
     ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText("LECTURA EJECUTIVA", rightX + 20, topY + 30);
-
-    let ry = topY + 64;
+    ctx.font = "700 12px Arial";
+    ctx.fillText("LECTURA EJECUTIVA", rightX + 20, topY + 34);
+    let ry = topY + 73;
     if (instrument.overallDisplay) {
       ctx.fillStyle = "#171717";
       ctx.font = "800 27px Arial";
-      ry = wrap(ctx, instrument.overallDisplay, rightX + 20, ry, rightW - 40, 30, 2) + 10;
+      ry = wrap(ctx, instrument.overallDisplay, rightX + 20, ry, rightW - 40, 32,
+        Math.max(1, overallLines)) + 8;
       ctx.fillStyle = "#737373";
-      ctx.font = "700 10px Arial";
-      ctx.fillText((instrument.overallLabel || "RESULTADO GLOBAL").toUpperCase(), rightX + 20, ry);
-      ry += 28;
+      ctx.font = "700 11px Arial";
+      ry = wrap(ctx, (instrument.overallLabel || "RESULTADO GLOBAL").toUpperCase(),
+        rightX + 20, ry, rightW - 40, 17, 6) + 12;
     }
-
     ctx.fillStyle = "#404040";
-    ctx.font = "13px Arial";
-    (instrument.summary ?? []).slice(0, 3).forEach(function (paragraph) {
-      ry = wrap(ctx, paragraph, rightX + 20, ry, rightW - 40, 19, 4) + 10;
+    ctx.font = "15px Arial";
+    summaries.forEach(function (paragraph) {
+      ry = wrap(ctx, paragraph, rightX + 20, ry, rightW - 40, 22,
+        Math.max(1, countLines(ctx, paragraph, rightW - 40, "15px Arial"))) + 13;
     });
 
-    const dimStart = topY + 465;
-    ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText("RESULTADOS POR DIMENSIÓN", M, dimStart);
-
-    const maxOnFirstPage = 6;
-    const firstDims = instrument.dimensions.slice(0, maxOnFirstPage);
-    const gridTop = dimStart + 26;
-    const gridGap = 14;
-    const gridW = (CW - gridGap) / 2;
-    const rowH = 112;
-
-    firstDims.forEach(function (item, index) {
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      drawDimensionTile(
-        ctx,
-        item,
-        M + col * (gridW + gridGap),
-        gridTop + row * (rowH + 10),
-        gridW,
-        rowH,
-      );
-    });
-
-    const usedRows = Math.ceil(firstDims.length / 2);
-    let insightY = gridTop + usedRows * (rowH + 10) + 6;
-    const highlights = instrument.highlights?.slice(0, 3) ?? [];
-    const watchouts = instrument.watchouts?.slice(0, 3) ?? [];
-
-    if ((highlights.length || watchouts.length) && insightY < pageBottom - 125) {
-      const miniH = 118;
-      if (highlights.length) {
-        drawInlineInsight(
-          ctx,
-          M,
-          insightY,
-          gridW,
-          miniH,
-          "Elementos destacados",
-          highlights,
-          "#ecfdf5",
-          "#065f46",
-        );
-      }
-      if (watchouts.length) {
-        drawInlineInsight(
-          ctx,
-          M + gridW + gridGap,
-          insightY,
-          gridW,
-          miniH,
-          "Puntos para profundizar",
-          watchouts,
-          "#fff7ed",
-          "#92400e",
-        );
-      }
-    }
-
-    commitPage();
-
-    const remaining = instrument.dimensions.slice(maxOnFirstPage);
-    if (remaining.length) {
-      beginPage(instrument.name + " · dimensiones adicionales");
-      let dy = 165;
-      ctx.fillStyle = "#f97316";
-      ctx.font = "700 10px Arial";
-      ctx.fillText("DETALLE COMPLEMENTARIO", M, dy);
-      dy += 30;
-      ctx.fillStyle = "#171717";
-      ctx.font = "800 27px Arial";
-      ctx.fillText("Dimensiones adicionales", M, dy);
-      dy += 42;
-
-      const detailGap = 14;
-      const detailW = (CW - detailGap) / 2;
-      const detailH = 135;
-      remaining.forEach(function (item, index) {
-        const col = index % 2;
-        const row = Math.floor(index / 2);
-        drawDimensionTile(
-          ctx,
-          item,
-          M + col * (detailW + detailGap),
-          dy + row * (detailH + 12),
-          detailW,
-          detailH,
-          true,
-        );
-      });
-
-      const rows = Math.ceil(remaining.length / 2);
-      let extraY = dy + rows * (detailH + 12) + 8;
-      if (highlights.length || watchouts.length) {
-        if (highlights.length) {
-          extraY += drawWideInsight(
-            ctx,
-            M,
-            extraY,
-            CW,
-            "Qué puede aportar",
-            highlights,
-            "#ecfdf5",
-            "#065f46",
-          ) + 12;
-        }
-        if (watchouts.length && extraY < pageBottom - 130) {
-          drawWideInsight(
-            ctx,
-            M,
-            extraY,
-            CW,
-            "Qué conviene validar",
-            watchouts,
-            "#fff7ed",
-            "#92400e",
-          );
-        }
-      }
+    let dy = topY + topH + 48;
+    const gridGap = 16, gridW = (CW - gridGap) / 2;
+    const dimensions = instrument.dimensions;
+    const continuePage = () => {
       commitPage();
+      beginPage(instrument.name + " · continuación");
+      dy = 190;
+      ctx.fillStyle = "#f97316";
+      ctx.font = "700 12px Arial";
+      ctx.fillText("RESULTADOS POR DIMENSIÓN · CONTINUACIÓN", M, 155);
+    };
+
+    if (dy + 55 > pageBottom) continuePage();
+    ctx.fillStyle = "#f97316";
+    ctx.font = "700 12px Arial";
+    ctx.fillText("RESULTADOS POR DIMENSIÓN", M, dy);
+    dy += 29;
+
+    for (let index = 0; index < dimensions.length; index += 2) {
+      const left = dimensions[index], right = dimensions[index + 1];
+      const height = Math.max(
+        dimensionTileHeight(ctx, left, gridW),
+        right ? dimensionTileHeight(ctx, right, gridW) : 0,
+      );
+      if (dy + height + 16 > pageBottom) continuePage();
+      drawDimensionTile(ctx, left, M, dy, gridW, height, true);
+      if (right) drawDimensionTile(ctx, right, M + gridW + gridGap, dy, gridW, height, true);
+      dy += height + 16;
     }
+    const insights = [
+      {title:"Elementos destacados",values:instrument.highlights ?? [],
+        bg:"#ecfdf5",fg:"#065f46"},
+      {title:"Puntos para profundizar",values:instrument.watchouts ?? [],
+        bg:"#fff7ed",fg:"#92400e"},
+    ];
+    for (const item of insights) {
+      if (!item.values.length) continue;
+      const height = compactListBoxHeight(ctx, item.values, CW, 15, 24);
+      if (dy + height + 16 > pageBottom) continuePage();
+      drawCompactListBox(ctx, M, dy, CW, item.title, item.values,
+        item.bg, item.fg, 15, 24);
+      dy += height + 16;
+    }
+    commitPage();
   });
 
   // 7. Entrevista + cierre
@@ -705,6 +648,25 @@ function buildPages(
   commitPage();
 
   return out;
+}
+
+function dimensionTileNarrative(item: PsychometricExportDimension) {
+  return [
+    item.narrative,
+    item.potential ? "Puede aportar: " + item.potential : null,
+    item.watchout ? "Conviene observar: " + item.watchout : null,
+  ].filter(Boolean).join(" ");
+}
+
+function dimensionTileHeight(
+  ctx: CanvasRenderingContext2D,
+  item: PsychometricExportDimension,
+  width: number,
+) {
+  const text = dimensionTileNarrative(item);
+  const firstBaseline = item.band ? 106 : 86;
+  const lines = text ? countLines(ctx, text, width - 32, "14px Arial") : 0;
+  return Math.max(135, firstBaseline + lines * 20 + 22);
 }
 
 function drawDimensionTile(
@@ -743,21 +705,12 @@ function drawDimensionTile(
     ctx.fillText(item.band.toUpperCase(), x + 16, y + 77);
   }
 
-  const text = showNarrative
-    ? item.narrative || item.potential || item.watchout
-    : item.narrative;
+  const text = showNarrative ? dimensionTileNarrative(item) : (item.narrative ?? "");
   if (text) {
-    ctx.fillStyle = "#666666";
-    ctx.font = showNarrative ? "12px Arial" : "11px Arial";
-    wrap(
-      ctx,
-      text,
-      x + 16,
-      y + (item.band ? 97 : 82),
-      width - 32,
-      showNarrative ? 17 : 16,
-      showNarrative ? 3 : 2,
-    );
+    ctx.fillStyle = "#525252";
+    ctx.font = "14px Arial";
+    wrap(ctx, text, x + 16, y + (item.band ? 106 : 86), width - 32,
+      20, Math.max(1, countLines(ctx, text, width - 32, "14px Arial")));
   }
 }
 
@@ -829,13 +782,14 @@ function drawOnboardingColumn(
   wrap(ctx, stage.focus, x + 16, y + 55, width - 32, 19, 3);
 
   let ay = y + 118;
-  stage.actions.slice(0, 4).forEach(function (action) {
+  stage.actions.forEach(function (action) {
     ctx.fillStyle = "#f97316";
     ctx.font = "800 10px Arial";
     ctx.fillText("•", x + 16, ay);
     ctx.fillStyle = "#404040";
     ctx.font = "11px Arial";
-    ay = wrap(ctx, action, x + 31, ay, width - 47, 16, 3) + 7;
+    ay = wrap(ctx, action, x + 31, ay, width - 47, 17,
+      Math.max(1, countLines(ctx, action, width - 47, "11px Arial"))) + 10;
   });
 }
 
@@ -848,11 +802,10 @@ function compactListBoxHeight(
 ) {
   const textWidth = width - 62;
   const totalLines = items.reduce(
-    (sum, item) =>
-      sum + Math.min(3, countLines(ctx, item, textWidth, fontSize + "px Arial")),
+    (sum, item) => sum + countLines(ctx, item, textWidth, fontSize + "px Arial"),
     0,
   );
-  return Math.max(112, 68 + totalLines * lineHeight + items.length * 8);
+  return Math.max(112, 76 + totalLines * lineHeight + items.length * 12);
 }
 
 function drawCompactListBox(
@@ -881,8 +834,8 @@ function drawCompactListBox(
     ctx.fill();
     ctx.fillStyle = "#404040";
     ctx.font = fontSize + "px Arial";
-    ry =
-      wrap(ctx, item, x + 42, ry, width - 62, lineHeight, 3) + 8;
+    ry = wrap(ctx, item, x + 42, ry, width - 62, lineHeight,
+      Math.max(1, countLines(ctx, item, width - 62, fontSize + "px Arial"))) + 12;
   });
   return height;
 }
@@ -936,6 +889,15 @@ function drawBatteryRow(
   );
 }
 
+function jobComparisonRowHeight(
+  ctx: CanvasRenderingContext2D,
+  item: {status:string; importance:string},
+) {
+  return Math.max(134,
+    87 + countLines(ctx, item.status, CW - 460, "700 12px Arial") * 20,
+    87 + countLines(ctx, item.importance, 370, "700 10px Arial") * 20);
+}
+
 function drawJobComparisonRow(
   ctx: CanvasRenderingContext2D,
   item: {
@@ -947,8 +909,9 @@ function drawJobComparisonRow(
     importance: string;
   },
   y: number,
+  height: number,
 ) {
-  box(ctx, M, y, CW, 116, "#ffffff", "#e5e5e5");
+  box(ctx, M, y, CW, height, "#ffffff", "#e5e5e5");
 
   ctx.fillStyle = "#171717";
   ctx.font = "800 15px Arial";
@@ -956,7 +919,8 @@ function drawJobComparisonRow(
 
   ctx.fillStyle = "#737373";
   ctx.font = "700 10px Arial";
-  ctx.fillText(item.importance.toUpperCase(), M + 18, y + 55);
+  wrap(ctx, item.importance.toUpperCase(), M + 18, y + 55, 370, 20,
+    Math.max(1, countLines(ctx, item.importance, 370, "700 10px Arial")));
 
   ctx.fillStyle = "#171717";
   ctx.font = "800 14px Arial";
@@ -981,7 +945,8 @@ function drawJobComparisonRow(
         ? "#737373"
         : "#92400e";
   ctx.font = "700 12px Arial";
-  wrap(ctx, item.status, M + 430, y + 62, CW - 450, 18, 2);
+  wrap(ctx, item.status, M + 430, y + 76, CW - 460, 20,
+    Math.max(1, countLines(ctx, item.status, CW - 460, "700 12px Arial")));
 }
 
 function guidanceBoxHeight(
@@ -990,7 +955,7 @@ function guidanceBoxHeight(
   width: number,
 ) {
   const lines = countLines(ctx, text, width - 40, "14px Arial");
-  return Math.max(118, 76 + Math.min(lines, 6) * 21);
+  return Math.max(125, 83 + lines * 21);
 }
 
 function drawGuidanceBox(
@@ -1008,7 +973,8 @@ function drawGuidanceBox(
   ctx.fillText(label, x + 20, y + 27);
   ctx.fillStyle = "#404040";
   ctx.font = "14px Arial";
-  wrap(ctx, text, x + 20, y + 56, width - 40, 21, 6);
+  wrap(ctx, text, x + 20, y + 56, width - 40, 21,
+    Math.max(1, countLines(ctx, text, width - 40, "14px Arial")));
 }
 
 function onboardingBoxHeight(
@@ -1019,10 +985,10 @@ function onboardingBoxHeight(
   const actionWidth = width - 70;
   const actionLines = stage.actions.reduce(
     (sum, item) =>
-      sum + Math.min(3, countLines(ctx, item, actionWidth, "13px Arial")),
+      sum + countLines(ctx, item, actionWidth, "11px Arial"),
     0,
   );
-  return Math.max(190, 116 + actionLines * 19 + stage.actions.length * 7);
+  return Math.max(220, 134 + actionLines * 17 + stage.actions.length * 10);
 }
 
 function drawOnboardingBox(
@@ -1523,7 +1489,7 @@ function buildMhtml(html: string, images: Array<{ name: string; base64: string }
   return parts.join("\r\n");
 }
 
-async function loadBrandLogo() {
+export async function loadBrandLogo() {
   return await new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
