@@ -101,5 +101,23 @@ jobs:
         run: npx --yes tsx scripts/psychometric-save-recovery-smoke.ts
       - name: Verify stable native Word and adaptive PDF reports
         run: npx --yes tsx scripts/psychometric-report-layout-smoke.ts
+      - name: Verify real DOCX ZIP and XML integrity
+        run: |
+          unzip -t /tmp/factorh_psychometric_qa.docx
+          python - <<'PY'
+          import zipfile, xml.etree.ElementTree as ET
+          p='/tmp/factorh_psychometric_qa.docx'
+          with zipfile.ZipFile(p) as z:
+              names=set(z.namelist())
+              for required in ('[Content_Types].xml','_rels/.rels','word/document.xml','word/_rels/document.xml.rels','word/media/chart-1.png'):
+                  assert required in names, required
+              for name in names:
+                  if name.endswith('.xml') or name.endswith('.rels'):
+                      ET.fromstring(z.read(name))
+              doc=z.read('word/document.xml').decode('utf-8')
+              assert 'wp:inline' in doc
+              assert 'Dimensión 1' in doc
+          print('PSYCHOMETRIC_DOCX_XML_OK: paquete legible, XML válido e imágenes embebidas')
+          PY
       - name: Build app
         run: npm run build
