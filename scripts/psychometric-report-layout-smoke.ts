@@ -29,7 +29,7 @@ const data: PsychometricExportData = {
 };
 async function main() {
   // PNG 1x1 válido y no vinculado a una persona real.
-  const image = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/mWkAAAAASUVORK5CYII=";
+  const image = "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAKUlEQVR4nGP8//8/AzbAhFWUgYGBhYGB4VeJOJooW89LnDpIl2Ak2VUAf7YJCw1pW3AAAAAASUVORK5CYII=";
   const blob=buildPsychometricDocx(data,[{name:"chart-1.png",base64:image}],true);
   assert.equal(blob.type,"application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   const bytes=Buffer.from(await blob.arrayBuffer());
