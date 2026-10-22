@@ -354,7 +354,7 @@ function buildPages(
 
       for (let index = 0; index < data.battery.length; index += 1) {
         const item = data.battery[index];
-        const rowH = Math.max(64, batteryRowHeight(ctx, item, CW) - 8);
+        const rowH = batteryRowHeight(ctx, item, CW);
         if (oy + rowH > pageBottom) {
           commitPage();
           beginPage("Batería aplicada · continuación");
@@ -394,14 +394,14 @@ function buildPages(
 
     for (let index = 0; index < data.jobComparison.length; index += 1) {
       const item = data.jobComparison[index];
-      const rowH = 105;
+      const rowH = jobComparisonRowHeight(ctx, item);
       if (jy + rowH > pageBottom) {
         commitPage();
         beginPage("Alineación con el perfil objetivo · continuación");
         jy = 165;
       }
-      drawJobComparisonRow(ctx, item, jy);
-      jy += rowH + 8;
+      drawJobComparisonRow(ctx, item, jy, rowH);
+      jy += rowH + 12;
     }
     commitPage();
   }
@@ -856,6 +856,15 @@ function drawBatteryRow(
   );
 }
 
+function jobComparisonRowHeight(
+  ctx: CanvasRenderingContext2D,
+  item: {status:string; importance:string},
+) {
+  return Math.max(134,
+    87 + countLines(ctx, item.status, CW - 460, "700 12px Arial") * 20,
+    87 + countLines(ctx, item.importance, 370, "700 10px Arial") * 20);
+}
+
 function drawJobComparisonRow(
   ctx: CanvasRenderingContext2D,
   item: {
@@ -867,8 +876,9 @@ function drawJobComparisonRow(
     importance: string;
   },
   y: number,
+  height: number,
 ) {
-  box(ctx, M, y, CW, 116, "#ffffff", "#e5e5e5");
+  box(ctx, M, y, CW, height, "#ffffff", "#e5e5e5");
 
   ctx.fillStyle = "#171717";
   ctx.font = "800 15px Arial";
@@ -876,7 +886,8 @@ function drawJobComparisonRow(
 
   ctx.fillStyle = "#737373";
   ctx.font = "700 10px Arial";
-  ctx.fillText(item.importance.toUpperCase(), M + 18, y + 55);
+  wrap(ctx, item.importance.toUpperCase(), M + 18, y + 55, 370, 20,
+    Math.max(1, countLines(ctx, item.importance, 370, "700 10px Arial")));
 
   ctx.fillStyle = "#171717";
   ctx.font = "800 14px Arial";
@@ -901,7 +912,8 @@ function drawJobComparisonRow(
         ? "#737373"
         : "#92400e";
   ctx.font = "700 12px Arial";
-  wrap(ctx, item.status, M + 430, y + 62, CW - 450, 18, 2);
+  wrap(ctx, item.status, M + 430, y + 76, CW - 460, 20,
+    Math.max(1, countLines(ctx, item.status, CW - 460, "700 12px Arial")));
 }
 
 function guidanceBoxHeight(
