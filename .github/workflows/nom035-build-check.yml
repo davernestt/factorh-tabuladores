@@ -101,6 +101,8 @@ jobs:
         run: npx --yes tsx scripts/psychometric-save-recovery-smoke.ts
       - name: Verify stable native Word and adaptive PDF reports
         run: npx --yes tsx scripts/psychometric-report-layout-smoke.ts
+      - name: Render full executive summary and reject overlaps or clipped text
+        run: npx --yes tsx scripts/psychometric-readable-pdf-smoke.ts
       - name: Verify real DOCX ZIP and XML integrity
         run: |
           unzip -t /tmp/factorh_psychometric_qa.docx
