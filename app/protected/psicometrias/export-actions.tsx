@@ -245,98 +245,89 @@ export function buildPages(
   );
   commitPage();
 
-  // 2. Snapshot ejecutivo: una página con más densidad y mejor jerarquía.
+
+  // 2. RESUMEN EJECUTIVO LEGIBLE: una columna, tipografía estable y salto real de página.
+  // No reducir letra ni cortar bullets para forzar los recuadros a caber.
   beginPage(integral ? "Resumen ejecutivo integral" : "Resumen ejecutivo");
-  let y = 165;
+  let summaryY = 171;
+  const bodyFont = "22px Arial";
+  const lineHeight = 34;
+
   ctx.fillStyle = "#f97316";
-  ctx.font = "700 11px Arial";
-  ctx.fillText("LECTURA EJECUTIVA", M, y);
-  y += 34;
+  ctx.font = "700 17px Arial";
+  ctx.fillText("LECTURA EJECUTIVA", M, summaryY);
+  summaryY += 60;
   ctx.fillStyle = "#171717";
-  ctx.font = "800 34px Arial";
-  ctx.fillText("Lo más importante del perfil", M, y);
-  y += 42;
+  ctx.font = "800 39px Arial";
+  ctx.fillText("Lo más importante del perfil", M, summaryY);
+  summaryY += 48;
 
-  const lead = data.executiveSummary.slice(0, 3);
-  const leadH = Math.max(245, 59 + lead.reduce((sum, paragraph) =>
-    sum + countLines(ctx, paragraph, CW - 48, "15px Arial") * 23 + 12, 0));
-  box(ctx, M, y, CW, leadH, "#fafafa", "#e5e5e5");
-  ctx.fillStyle = "#404040";
-  ctx.font = "15px Arial";
-  let ly = y + 36;
-  lead.forEach(function (paragraph) {
-    ly = wrap(ctx, paragraph, M + 24, ly, CW - 48, 23,
-      countLines(ctx, paragraph, CW - 48, "15px Arial")) + 12;
-  });
-  y += leadH + 24;
-
-  const findings = data.keyFindings?.slice(0, 5) ?? [];
-  const cautions = data.cautions?.slice(0, 5) ?? [];
-  const gap = 18;
-  const colW = (CW - gap) / 2;
-  const fh = findings.length
-    ? compactListBoxHeight(ctx, findings, colW, 13, 19)
-    : 0;
-  const ch = cautions.length
-    ? compactListBoxHeight(ctx, cautions, colW, 13, 19)
-    : 0;
-  const summaryBoxH = Math.max(fh, ch, 165);
-  if (y + summaryBoxH > pageBottom) {
+  function nextSummaryPage() {
     commitPage();
-    beginPage("Hallazgos del perfil · continuación");
-    y = 170;
+    beginPage("Resumen ejecutivo · continuación");
+    summaryY = 184;
   }
 
-  if (findings.length) {
-    drawCompactListBox(
-      ctx,
-      M,
-      y,
-      colW,
-      "Fortalezas / señales favorables",
-      findings,
-      "#ecfdf5",
-      "#065f46",
-      13,
-      19,
-    );
-  }
-  if (cautions.length) {
-    drawCompactListBox(
-      ctx,
-      M + colW + gap,
-      y,
-      colW,
-      "Aspectos para validar",
-      cautions,
-      "#fff7ed",
-      "#92400e",
-      13,
-      19,
-    );
-  }
-  y += summaryBoxH + 22;
+  function readableSection(label: string, paragraphs: string[], background: string,
+    titleColor: string, asBullets = false) {
+    const entries = paragraphs.map(item => item.trim()).filter(Boolean);
+    if (!entries.length) return;
 
-  const quickItems = [
-    ["OBJETIVO", data.objectiveText || "Comprender el patrón de resultados para apoyar entrevista y toma de decisiones."],
-    ["LECTURA PARA EL JEFE", data.managerGuidance?.supervision || "Interpretar el perfil frente a las exigencias reales del puesto y el contexto del equipo."],
-  ];
-  const quickH = Math.max(150, ...quickItems.map(item =>
-    84 + countLines(ctx, item[1], colW - 36, "13px Arial") * 19));
-  if (y + quickH > pageBottom) {
-    commitPage(); beginPage("Objetivo y lectura para el jefe · continuación"); y = 170;
+    const lines: Array<{value:string;bullet:boolean}> = [];
+    ctx.font = bodyFont;
+    entries.forEach(function (entry, index) {
+      if (index > 0) lines.push({value:"",bullet:false});
+      const chunks = wrapTextFully(ctx, entry, CW - 120);
+      chunks.forEach(function (value, lineIndex) {
+        lines.push({value,bullet:asBullets && lineIndex === 0});
+      });
+    });
+
+    let index = 0;
+    let part = 0;
+    while (index < lines.length) {
+      const room = pageBottom - summaryY - 22;
+      const count = Math.floor((room - 92) / lineHeight);
+      if (count < 2) { nextSummaryPage(); continue; }
+      const chunk = lines.slice(index, index + count);
+      const height = 92 + chunk.length * lineHeight;
+      box(ctx, M, summaryY, CW, height, background, "#e5e5e5");
+      ctx.fillStyle = titleColor;
+      ctx.font = "800 23px Arial";
+      ctx.fillText(label + (part ? " · CONTINUACIÓN" : ""), M + 28, summaryY + 39);
+      ctx.fillStyle = "#333333";
+      ctx.font = bodyFont;
+      chunk.forEach(function (line, at) {
+        const baseline = summaryY + 85 + at * lineHeight;
+        if (line.bullet) {
+          ctx.fillStyle = titleColor;
+          ctx.beginPath();
+          ctx.arc(M + 40, baseline - 6, 5, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+        ctx.fillStyle = "#333333";
+        ctx.fillText(line.value, M + 64, baseline);
+      });
+      summaryY += height + 23;
+      index += chunk.length;
+      part += 1;
+      if (index < lines.length) nextSummaryPage();
+    }
   }
-  quickItems.forEach(function (item, index) {
-    const x = index === 0 ? M : M + colW + gap;
-    box(ctx, x, y, colW, quickH, "#ffffff", "#e5e5e5");
-    ctx.fillStyle = "#f97316";
-    ctx.font = "700 10px Arial";
-    ctx.fillText(item[0], x + 18, y + 28);
-    ctx.fillStyle = "#404040";
-    ctx.font = "13px Arial";
-    wrap(ctx, item[1], x + 18, y + 58, colW - 36, 19,
-      countLines(ctx, item[1], colW - 36, "13px Arial"));
-  });
+
+  readableSection("PANORAMA GENERAL", data.executiveSummary, "#f9fafb", "#a3410b");
+  readableSection("FORTALEZAS Y SEÑALES FAVORABLES", data.keyFindings ?? [],
+    "#ecfdf5", "#065f46", true);
+  readableSection("ASPECTOS PARA VALIDAR", data.cautions ?? [],
+    "#fff7ed", "#9a3412", true);
+  readableSection("OBJETIVO", [
+    data.objectiveText ||
+      "Comprender el patrón de resultados para apoyar entrevista y toma de decisiones.",
+  ], "#f9fafb", "#a3410b");
+  readableSection("LECTURA PARA EL JEFE", [
+    data.managerGuidance?.supervision ||
+      "Interpretar el perfil frente a las exigencias reales del puesto y el contexto del equipo.",
+  ], "#f9fafb", "#a3410b");
   commitPage();
 
   // 3. Objetivo y batería
@@ -1151,6 +1142,30 @@ function drawCompactClosing(
   ctx.fillStyle = "#404040";
   ctx.font = "15px Arial";
   wrap(ctx, text, M + 24, y + 113, CW - 48, 22, 7);
+}
+
+/** Envoltura completa: ninguna palabra o explicación desaparece aunque sea extensa. */
+function wrapTextFully(ctx: CanvasRenderingContext2D, text: string, width: number): string[] {
+  const output: string[] = [];
+  let current = "";
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  for (const original of words) {
+    let word = original;
+    if (current && ctx.measureText(current + " " + word).width <= width) {
+      current += " " + word;
+      continue;
+    }
+    if (current) { output.push(current); current = ""; }
+    while (word.length && ctx.measureText(word).width > width) {
+      let cut = word.length - 1;
+      while (cut > 1 && ctx.measureText(word.slice(0, cut)).width > width) cut--;
+      output.push(word.slice(0, Math.max(1, cut)));
+      word = word.slice(Math.max(1, cut));
+    }
+    current = word;
+  }
+  if (current) output.push(current);
+  return output.length ? output : [""];
 }
 
 function countLines(
