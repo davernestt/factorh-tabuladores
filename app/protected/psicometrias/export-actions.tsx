@@ -186,13 +186,13 @@ export function buildPages(
 
   box(ctx, 852, 88, 316, 282, "#555555", "#666666");
   ctx.fillStyle = "#fb923c";
-  ctx.font = "700 11px Arial";
+  ctx.font = "700 16px Arial";
   ctx.fillText("PERSONA EVALUADA", 880, 128);
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 24px Arial";
   wrap(ctx, data.personName, 880, 168, 258, 29, 3);
   ctx.fillStyle = "#d4d4d4";
-  ctx.font = "15px Arial";
+  ctx.font = "18px Arial";
   wrap(
     ctx,
     [data.jobTitle, data.area].filter(Boolean).join(" · ") ||
@@ -205,7 +205,7 @@ export function buildPages(
   );
   ctx.fillText(data.organizationName, 880, 315);
   ctx.fillStyle = "#a3a3a3";
-  ctx.font = "13px Arial";
+  ctx.font = "16px Arial";
   ctx.fillText(data.reportDate, 880, 347);
 
   metric(ctx, M, 592, 330, "Pruebas incluidas", String(data.instruments.length));
@@ -1578,8 +1578,11 @@ function footer(ctx: CanvasRenderingContext2D, page: number) {
   ctx.textAlign = "right"; ctx.fillText("Página " + String(page), W - M, H - 44); ctx.textAlign = "left";
 }
 function metric(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, label: string, value: string) {
-  box(ctx, x, y, width, 130, "#ffffff", "#e5e5e5"); ctx.fillStyle = "#a3a3a3"; ctx.font = "700 11px Arial"; ctx.fillText(label.toUpperCase(), x + 20, y + 34);
-  ctx.fillStyle = "#171717"; ctx.font = "800 20px Arial"; wrap(ctx, value, x + 20, y + 74, width - 40, 25, 2);
+  box(ctx, x, y, width, 145, "#ffffff", "#e5e5e5");
+  ctx.fillStyle = "#737373"; ctx.font = "700 16px Arial";
+  ctx.fillText(label.toUpperCase(), x + 20, y + 35);
+  ctx.fillStyle = "#171717"; ctx.font = "800 25px Arial";
+  wrap(ctx, value, x + 20, y + 83, width - 40, 30, 2);
 }
 function sectionTitle(ctx: CanvasRenderingContext2D, title: string, y: number) {
   ctx.fillStyle = "#f97316"; ctx.font = "700 12px Arial"; ctx.fillText("FACTORH", M, y);
