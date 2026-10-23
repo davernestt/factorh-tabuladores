@@ -655,9 +655,9 @@ function dimensionTileHeight(
   width: number,
 ) {
   const text = dimensionTileNarrative(item);
-  const firstBaseline = item.band ? 106 : 86;
-  const lines = text ? countLines(ctx, text, width - 32, "14px Arial") : 0;
-  return Math.max(135, firstBaseline + lines * 20 + 22);
+  const firstBaseline = item.band ? 129 : 104;
+  const lines = text ? countLines(ctx, text, width - 36, "19px Arial") : 0;
+  return Math.max(159, firstBaseline + lines * 29 + 30);
 }
 
 function drawDimensionTile(
@@ -672,19 +672,19 @@ function drawDimensionTile(
   box(ctx, x, y, width, height, "#ffffff", "#e5e5e5");
 
   ctx.fillStyle = "#171717";
-  ctx.font = "800 14px Arial";
-  ctx.fillText(clip(ctx, item.name, width - 92), x + 16, y + 27);
+  ctx.font = "800 20px Arial";
+  ctx.fillText(clip(ctx, item.name, width - 115), x + 16, y + 34);
 
   ctx.textAlign = "right";
-  ctx.font = "800 17px Arial";
+  ctx.font = "800 23px Arial";
   ctx.fillText(
     item.displayValue || String(Math.round(item.value)),
     x + width - 16,
-    y + 27,
+    y + 34,
   );
   ctx.textAlign = "left";
 
-  const barY = y + 47;
+  const barY = y + 59;
   ctx.fillStyle = "#f1f5f9";
   ctx.fillRect(x + 16, barY, width - 32, 8);
   ctx.fillStyle = "#f97316";
@@ -692,16 +692,16 @@ function drawDimensionTile(
 
   if (item.band) {
     ctx.fillStyle = "#9a3412";
-    ctx.font = "700 9px Arial";
-    ctx.fillText(item.band.toUpperCase(), x + 16, y + 77);
+    ctx.font = "700 15px Arial";
+    ctx.fillText(item.band.toUpperCase(), x + 16, y + 94);
   }
 
   const text = showNarrative ? dimensionTileNarrative(item) : (item.narrative ?? "");
   if (text) {
     ctx.fillStyle = "#525252";
-    ctx.font = "14px Arial";
-    wrap(ctx, text, x + 16, y + (item.band ? 106 : 86), width - 32,
-      20, Math.max(1, countLines(ctx, text, width - 32, "14px Arial")));
+    ctx.font = "19px Arial";
+    wrap(ctx, text, x + 18, y + (item.band ? 129 : 104), width - 36,
+      29, Math.max(1, countLines(ctx, text, width - 36, "19px Arial")));
   }
 }
 
