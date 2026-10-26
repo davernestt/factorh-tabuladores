@@ -1,13 +1,12 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import NewAssessmentForm from "./new-assessment-form";
+import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 
-const ADMIN_EMAILS = ["david@factorh.com.mx"];
-
-export default function NewAssessmentPage() {
+export default function NewAssessmentPage({searchParams}:{searchParams:Promise<{empresa?:string}>}) {
   return (
     <Suspense
       fallback={
@@ -17,24 +16,16 @@ export default function NewAssessmentPage() {
         </div>
       }
     >
-      <NewAssessmentContent />
+      <NewAssessmentContent searchParams={searchParams}/>
     </Suspense>
   );
 }
 
-async function NewAssessmentContent() {
-  const authClient = await createClient();
-  const { data: authData, error: authError } = await authClient.auth.getClaims();
-  const email = String(authData?.claims?.email ?? "").trim().toLowerCase();
-
-  if (
-    authError ||
-    !authData?.claims ||
-    !ADMIN_EMAILS.includes(email)
-  ) {
-    redirect("/auth/login");
-  }
-
+async function NewAssessmentContent({searchParams}:{searchParams:Promise<{empresa?:string}>}) {
+  const user=await getCurrentAppUser();
+  if(!user)redirect("/auth/login");
+  if(!await hasStaffPermission(user,"pdl","operate"))redirect("/protected/mi-acceso");
+  const {empresa}=await searchParams;
   const db = createAdminClient();
 
   const [
@@ -159,6 +150,7 @@ async function NewAssessmentContent() {
           batteries={pdlBatteries}
           batteryItems={pdlBatteryItems}
           scope="pdl"
+          preselectedOrganizationId={empresa??null}
         />
       </div>
     </div>
