@@ -2,6 +2,7 @@ import {connection} from "next/server";
 import FactoRHLogo from "@/components/factorh-logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 import Link from "next/link";
+import { adaptPdlCopy } from "@/lib/pdl-context-copy";
 import { Suspense } from "react";
 
 type RouteContext = {
@@ -23,6 +24,7 @@ type Template = {
   organization_id: string | null;
   name: string;
   description: string | null;
+  assessment_type: string;
 };
 
 export default function ParticipantPortalPage(props: RouteContext) {
@@ -99,7 +101,7 @@ async function ParticipantPortalContent({ params }: RouteContext) {
     templateIds.length > 0
       ? await db
           .from("assessment_templates")
-          .select("id,organization_id,name,description")
+          .select("id,organization_id,name,description,assessment_type")
           .in("id", templateIds)
       : { data: [], error: null };
 
@@ -143,6 +145,9 @@ async function ParticipantPortalContent({ params }: RouteContext) {
     const sourceName = template.organization_id
       ? sourceNames.get(template.organization_id)
       : null;
+    if (template.assessment_type.startsWith("leadership")) {
+      return adaptPdlCopy(value, targetOrganization.name, sourceName ?? null);
+    }
     if (!sourceName || sourceName === targetOrganization.name) return value;
     return value.split(sourceName).join(targetOrganization.name);
   }
