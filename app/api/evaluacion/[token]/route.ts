@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { adaptPdlCopy } from "@/lib/pdl-context-copy";
 
 type RouteContext = {
   params: Promise<{ token: string }>;
@@ -106,14 +107,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   const targetOrganizationName = organizationResult.data.name;
   const adaptText = (value: string | null) => {
-    if (
-      !value ||
-      !sourceOrganizationName ||
-      sourceOrganizationName === targetOrganizationName
-    ) {
-      return value;
+    if (String(templateResult.data.assessment_type).startsWith("leadership")) {
+      return adaptPdlCopy(value, targetOrganizationName, sourceOrganizationName);
     }
-
+    if (!value || !sourceOrganizationName ||
+      sourceOrganizationName === targetOrganizationName) return value;
     return value.split(sourceOrganizationName).join(targetOrganizationName);
   };
 
