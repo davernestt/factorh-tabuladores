@@ -73,6 +73,30 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Módulo no encontrado." }, { status: 404 });
   }
 
+  // PDL contratado y administrado por FactoRH: su activación es independiente
+  // de la futura modalidad de autogestión del cliente.
+  if (moduleKey === "pdl") {
+    if (status === "trial") {
+      return NextResponse.json({error:"La demo PDL aún es ilustrativa; activa un programa contratado."},{status:400});
+    }
+    const {data: activation, error: activationError} = await db.rpc("admin_configure_pdl", {
+      p_organization_id: id,
+      p_status: status,
+      p_plan_name: String(body.plan_name??"PDL administrado por FactoRH").trim().slice(0,100),
+      p_starts_on: dateOrNull(body.starts_on),
+      p_ends_on: dateOrNull(body.ends_on),
+      p_requested_on: dateOrNull(body.requested_on),
+      p_requested_notes: String(body.requested_notes??"").trim().slice(0,1200),
+      p_reminder_days: Math.min(120,Math.max(1,Number(body.reminder_days??30)||30)),
+      p_client_notice: body.client_notice !== false,
+    });
+    if (activationError) {
+      return NextResponse.json({error:"No se pudo activar PDL: "+activationError.message},{status:400});
+    }
+    await db.rpc("refresh_module_expiry_reminders");
+    return NextResponse.json({ok:true,activation});
+  }
+
   if (
     ["trial", "active"].includes(String(status)) &&
     !module.client_available
