@@ -72,6 +72,7 @@ type Props = {
   batteryItems: BatteryItem[];
   jobProfiles?: JobProfile[];
   scope?: "pdl" | "psychometrics";
+  preselectedOrganizationId?: string | null;
   maxTemplateSelections?: number | null;
   creditNotice?: string | null;
   canConfigureBatteries?: boolean;
@@ -117,11 +118,13 @@ export default function NewAssessmentForm({
   batteryItems,
   jobProfiles = [],
   scope = "pdl",
+  preselectedOrganizationId = null,
   maxTemplateSelections = null,
   creditNotice = null,
   canConfigureBatteries = false,
 }: Props) {
-  const initialOrganizationId = organizations[0]?.id ?? "";
+  const initialOrganizationId = organizations.some(o=>o.id===preselectedOrganizationId)
+    ? (preselectedOrganizationId as string) : (organizations[0]?.id ?? "");
   const isPsychometrics = scope === "psychometrics";
   const panelHref = isPsychometrics ? "/protected/psicometrias" : "/protected";
   const newAssessmentHref = isPsychometrics
