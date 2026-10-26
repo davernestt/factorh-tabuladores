@@ -15,7 +15,7 @@ export function adaptPdlCopy(
   const target = targetOrganizationName.trim();
   if (!target) return value;
 
-  let result = value;
+  let result = value.replace(/\{\{\s*empresa\s*\}\}/gi, target);
   const source = sourceOrganizationName?.trim() ?? "";
   if (source && source.toLocaleLowerCase("es") !== target.toLocaleLowerCase("es")
     && !/^facto\s?rh$/i.test(source)) {
