@@ -224,6 +224,25 @@ export async function POST(request: NextRequest) {
     .map((id) => templateById.get(id))
     .filter((template): template is NonNullable<typeof template> => Boolean(template));
 
+  // Los instrumentos del catálogo maestro PDL solo se asignan a empresas
+  // con contratación activa, fechas vigentes y autorización por instrumento.
+  // Las plantillas históricas siguen sin alterarse para proteger expedientes.
+  if (orderedTemplates.some(template =>
+    template.assessment_type.startsWith("leadership") && template.organization_id === null
+  )) {
+    const {data: pdlSubscription,error: pdlError} = await db
+      .from("organization_module_subscriptions")
+      .select("status,starts_on,ends_on")
+      .eq("organization_id",organizationId).eq("module_key","pdl").maybeSingle();
+    if(pdlError) return NextResponse.json({error:"No se pudo validar la contratación del PDL."},{status:500});
+    const currentDate = new Date().toISOString().slice(0,10);
+    if (!pdlSubscription || pdlSubscription.status !== "active" ||
+      (pdlSubscription.starts_on && pdlSubscription.starts_on > currentDate) ||
+      (pdlSubscription.ends_on && pdlSubscription.ends_on < currentDate)) {
+      return NextResponse.json({error:"El PDL de esta empresa no está activo o ya venció. Actívalo desde Centro de Clientes."},{status:403});
+    }
+  }
+
   const requiresManager = orderedTemplates.some((template) => template.assessment_type === "leadership_direction");
   const requiresInterviewer = orderedTemplates.some((template) => template.assessment_type === "leadership_interview");
   const managerName = clean(body.manager_evaluator_name);
