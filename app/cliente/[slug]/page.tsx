@@ -78,7 +78,10 @@ async function ClientPortalContent({
                 </Link>
               </div>
             </div>
-            <LoginForm />
+            <ClientLoginForm
+              organizationName={organization.name}
+              organizationSlug={organization.slug}
+            />
           </>
         )}
       </div>
