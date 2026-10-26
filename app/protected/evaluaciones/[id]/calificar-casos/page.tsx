@@ -5,6 +5,7 @@ import {getCurrentAppUser} from "@/lib/app-auth";
 import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import CaseRatingForm from "./case-rating-form";
+import {adaptPdlCopy} from "@/lib/pdl-context-copy";
 type Params={params:Promise<{id:string}>};
 export default function GradeLeadershipCases(props:Params){
  return <Suspense fallback={<p className="p-8 text-sm text-neutral-500">Cargando rúbrica…</p>}><GradeContent {...props}/></Suspense>;
@@ -40,7 +41,7 @@ async function GradeContent({params}:Params){
    <p className="mt-2 text-neutral-200">{person.data?.first_name||""} {person.data?.last_name||""} · {org.data?.name||""}</p>
    <p className="mt-2 text-sm text-neutral-300">Las respuestas del participante son independientes de los criterios de valoración del consultor. Las calificaciones anteriores del propio participante no cuentan como evaluación profesional.</p>
   </header>
-  <CaseRatingForm assignmentId={id} sections={d.data??[]} questions={q.data??[]}
+  <CaseRatingForm assignmentId={id} sections={d.data??[]} questions={(q.data??[]).map(question => ({...question, prompt:adaptPdlCopy(question.prompt,org.data?.name??"la empresa")??question.prompt}))}
    answers={r.data??[]} grades={(ratings.data??[]).map(x=>({question_id:x.question_id,score:Number(x.score)}))}
    completed={assignment.status==="completed"}/>
  </main>;
