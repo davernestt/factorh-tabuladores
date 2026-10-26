@@ -143,7 +143,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
       {m.module_key==="feedback360"&&<p className="mt-2 text-xs font-bold text-neutral-700">{cycleCount} ciclos creados{s?.evaluation_limit?" · cupo "+s.evaluation_limit:s?.status==="trial"?" · demo: 1 líder":""}</p>}
       {!m.client_available&&<p className="mt-2 text-xs font-bold text-amber-700">Portal de este módulo aún no habilitado para clientes.</p>}
       <div className="mt-4 flex flex-wrap gap-2">
-       {config&&<Link href={config.previewHref} target="_blank" rel="noopener noreferrer"
+       {config&&<Link href={m.module_key === "pdl" ? `${config.previewHref}?empresa=${encodeURIComponent(organizationId)}` : config.previewHref} target="_blank" rel="noopener noreferrer"
         className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-bold text-orange-700 hover:bg-orange-100">
         Ver demo <span aria-hidden="true">↗</span>
        </Link>}
