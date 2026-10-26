@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { adaptPdlCopy } from "@/lib/pdl-context-copy";
 import CopyAssessmentLink from "../copy-assessment-link";
 import {buildPdlPublicUrl} from "@/lib/pdl-public-url";
 
@@ -888,7 +889,9 @@ export default function NewAssessmentForm({
                       </div>
                       {template.description && (
                         <p className="mt-1 text-xs leading-relaxed text-neutral-500">
-                          {template.description}
+                          {scope === "pdl"
+                            ? adaptPdlCopy(template.description, organizations.find((o) => o.id === organizationId)?.name ?? "la empresa")
+                            : template.description}
                         </p>
                       )}
                     </div>
