@@ -17,7 +17,7 @@ const hint:Record<string,string>={
  psychometrics:"Por ahora, los planes pagados descuentan créditos por instrumento; la demo descuenta una aplicación por candidato.",
  feedback360:"Cada ciclo creado cuenta contra el cupo de líderes; la demo permite un líder.",
  nom035:"Se habilita el acceso al módulo. El cupo de trabajadores todavía no se limita automáticamente.",
- pdl:"Pendiente de acceso autónomo para clientes: sólo puedes registrar la solicitud.",
+ pdl:"PDL operado por FactoRH. Activar habilita los cuatro instrumentos maestros para esta empresa, sin conceder autogestión al cliente.",
  studies:"Pendiente de acceso autónomo para clientes: sólo puedes registrar la solicitud.",
  climate:"Pendiente de acceso autónomo para clientes: sólo puedes registrar la solicitud."
 };
@@ -47,13 +47,14 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
    String(keep&&credit?credit.credits_total:action==="trial"?2:standard?.quantity??50):
    module.module_key==="feedback360"?
    String(keep?(existing?.evaluation_limit??(existing?.status==="trial"?1:15)):action==="trial"?1:standard?.quantity??15):"");
-  setPlanName(keep?existing?.plan_name||"":action==="trial"?"Demo "+(config?.days||14)+" días":action==="active"?(standard?.name||"Plan contratado"):"");
-  setEndsOn(keep?existing?.ends_on||"":action==="trial"?datePlus(config?.days||14):datePlus(365));
+  setPlanName(keep?existing?.plan_name||"":action==="trial"?"Demo "+(config?.days||14)+" días":action==="active"?(module.module_key==="pdl"?"PDL administrado por FactoRH":standard?.name||"Plan contratado"):"");
+  setEndsOn(keep?existing?.ends_on||"":action==="trial"?datePlus(config?.days||14):module.module_key==="pdl"&&existing?.ends_on?existing.ends_on:datePlus(365));
   setNote(keep?existing?.requested_notes||"":"");
   setError("");
  },[selection]);
  const hasPsych=selection?.module.module_key==="psychometrics";
  const has360=selection?.module.module_key==="feedback360";
+ const hasPdl=selection?.module.module_key==="pdl";
  const limitRelevant=Boolean(hasPsych||has360);
  const modalTitle=selection?.action==="trial"?"Activar demo":selection?.action==="active"?"Activar servicio":selection?.action==="paused"?"Suspender servicio":selection?.action==="resume"?"Reactivar servicio":selection?.action==="requested"?"Registrar interés":"Modificar servicio";
  async function submit(){
@@ -61,7 +62,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
   const {module,action}=selection;
   const sub=map.get(module.module_key);
   const isPsych=module.module_key==="psychometrics";
-  let status:ModuleSubscription["status"]=action==="edit"?sub?.status||"requested":action==="paused"?"paused":action==="resume"?(sub?.plan_name?.toLowerCase().includes("prueba")?"trial":"active"):action;
+  let status:ModuleSubscription["status"]=action==="edit"?sub?.status||"requested":action==="paused"?"paused":action==="resume"?(module.module_key==="pdl"?"active":sub?.plan_name?.toLowerCase().includes("prueba")?"trial":"active"):action;
   if(action==="edit"&&!sub&&module.module_key!=="psychometrics"){setError("Primero habilita el servicio.");return;}
   if((action==="active"||action==="edit")&&limitRelevant&&(!Number.isInteger(Number(qty))||Number(qty)<1||Number(qty)>10000)){setError("Indica una cantidad válida.");return;}
   if(action==="edit"&&status==="trial"&&module.module_key==="feedback360"&&Number(qty)>1){setError("La demo 360° permite un líder. Para más, activa un plan.");return;}
@@ -87,7 +88,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
     res=await fetch(`/api/admin/empresas/${organizationId}/modulos`,{
      method:"PATCH",headers:{"Content-Type":"application/json"},
      body:JSON.stringify({module_key:module.module_key,status,plan_name:planName,
-      starts_on:action==="edit"||action==="paused"?sub?.starts_on||today():today(),
+      starts_on:module.module_key==="pdl"?sub?.starts_on||today():action==="edit"||action==="paused"?sub?.starts_on||today():today(),
       ends_on:endsOn||null,requested_on:sub?.requested_on||today(),
       requested_notes:note,reminder_days:30,client_notice:true,
       ...(has360&&action!=="paused"&&action!=="requested"?{evaluation_limit:action==="trial"?1:Number(qty)}:{})
@@ -101,10 +102,11 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
   finally{setBusy(false);}
  }
  const getActions=(m:PlatformModule,s?:ModuleSubscription)=>{
-  if(!m.client_available)return [{action:"requested" as Action,text:s?"Actualizar solicitud":"Registrar interés"}];
+  if(!m.client_available && m.module_key!=="pdl")return [{action:"requested" as Action,text:s?"Actualizar solicitud":"Registrar interés"}];
   const actions:{action:Action;text:string}[]=[];
   if(!s||["requested","cancelled","expired"].includes(s.status)){
-   actions.push({action:"trial",text:"Activar demo"},{action:"active",text:"Activar servicio"});
+   if(m.module_key==="pdl") actions.push({action:"active",text:"Activar PDL"});
+   else actions.push({action:"trial",text:"Activar demo"},{action:"active",text:"Activar servicio"});
   }else if(s.status==="paused"){
    actions.push({action:"resume",text:"Reactivar"});
   }else{
@@ -141,12 +143,13 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
       <p className="mt-1 text-xs text-neutral-500">Inicio: {readable(s?.starts_on)} · Vence: {readable(s?.ends_on)}</p>
       {psych&&credit&&<p className="mt-2 text-xs font-bold text-neutral-700">{remaining} de {credit.credits_total} aplicaciones disponibles</p>}
       {m.module_key==="feedback360"&&<p className="mt-2 text-xs font-bold text-neutral-700">{cycleCount} ciclos creados{s?.evaluation_limit?" · cupo "+s.evaluation_limit:s?.status==="trial"?" · demo: 1 líder":""}</p>}
-      {!m.client_available&&<p className="mt-2 text-xs font-bold text-amber-700">Portal de este módulo aún no habilitado para clientes.</p>}
+      {!m.client_available&&<p className="mt-2 text-xs font-bold text-amber-700">{m.module_key==="pdl"?"Operación a cargo de FactoRH · autogestión de clientes deshabilitada.":"Portal de este módulo aún no habilitado para clientes."}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
        {config&&<Link href={m.module_key === "pdl" ? `${config.previewHref}?empresa=${encodeURIComponent(organizationId)}` : config.previewHref} target="_blank" rel="noopener noreferrer"
         className="rounded-xl border border-orange-300 bg-orange-50 px-4 py-2.5 text-sm font-bold text-orange-700 hover:bg-orange-100">
         Ver demo <span aria-hidden="true">↗</span>
        </Link>}
+       {m.module_key==="pdl"&&currentStatus==="active"&&<Link href={`/protected/nueva-evaluacion?fresh=1&empresa=${encodeURIComponent(organizationId)}`} className="rounded-xl border border-orange-300 px-4 py-2.5 text-sm font-bold text-orange-700">Asignar líderes →</Link>}
        {getActions(m,effective).map(a=><button key={a.action} type="button" onClick={()=>setSelection({module:m,action:a.action})}
         className={`rounded-xl px-4 py-2.5 text-sm font-bold ${a.action==="trial"||a.action==="active"?"bg-orange-600 text-white hover:bg-orange-700":"border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50"}`}>{a.text}</button>)}
       </div>
@@ -171,7 +174,7 @@ export default function CompanyServiceOperations({organizationId,modules,subscri
     </section>}
     <p className="mt-4 rounded-xl bg-neutral-50 p-3 text-sm leading-6 text-neutral-600">{hint[selection.module.module_key]||"Configura vigencia y condiciones de uso."}</p>
     {selection.action!=="paused"&&selection.action!=="resume"&&<div className="mt-4 space-y-4">
-     {selection.action==="active"&&clientServiceDemos[selection.module.module_key]?.plans&&<label className="block text-sm font-bold text-neutral-700">Selecciona el paquete
+     {selection.action==="active"&&!hasPdl&&clientServiceDemos[selection.module.module_key]?.plans&&<label className="block text-sm font-bold text-neutral-700">Selecciona el paquete
       <select className="mt-2 w-full rounded-xl border border-neutral-300 bg-white p-3" value={selectedPreset} onChange={event=>{
        const name=event.target.value;
        const preset=clientServiceDemos[selection.module.module_key].plans.find(p=>p.name===name);
