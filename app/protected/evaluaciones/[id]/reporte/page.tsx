@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
 import {hasStaffPermission} from "@/lib/staff-permissions";
 import { buildLeadershipAnalysis } from "@/lib/leadership-analysis";
+import { adaptPdlCopy } from "@/lib/pdl-context-copy";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -182,7 +183,10 @@ async function LeadershipReportContent({ params }: PageProps) {
   const person = personResult.data;
   const organization = organizationResult.data;
   const dimensions = dimensionsResult.data ?? [];
-  const questions = questionsResult.data ?? [];
+  const questions = (questionsResult.data ?? []).map(question => ({
+    ...question,
+    prompt: adaptPdlCopy(question.prompt, organization.name) ?? question.prompt,
+  }));
   const typeByQuestion=new Map((questionsResult.data??[]).map(q=>[q.id,q.question_type]));
   const responses=template.assessment_type==="leadership_cases"
     ? [
