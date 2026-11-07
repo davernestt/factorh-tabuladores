@@ -11,6 +11,7 @@ type Params={params:Promise<{id:string}>};
 export default function StudyPage({params}:Params){return <Suspense fallback={<p className="rounded-xl bg-white p-6">Cargando expediente...</p>}><StudyContent params={params}/></Suspense>}
 async function StudyContent({params}:Params){
  const u=await getCurrentAppUser();if(!u)redirect("/auth/login");
+ if(u.role==="ese_operator")redirect("/protected/estudios/tareas");
  if(u.role!=="super_admin"&&u.role!=="client"&&!await hasStaffPermission(u,"studies","view"))redirect("/protected/mi-acceso");
  const {id}=await params;if(!/^[0-9a-f-]{36}$/i.test(id))notFound();
  const db=createAdminClient(),{data:c,error}=await db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,client_visible,delivery_status,delivery_released_at,is_demo").eq("id",id).maybeSingle();
