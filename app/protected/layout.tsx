@@ -97,7 +97,9 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     studies:"/protected/estudios",
     candidates:"/protected/candidatos"
   };
-  const staffItems=staffAccess?.activated
+  const staffItems=appUser.role==="ese_operator"
+    ?[{href:"/protected/estudios/tareas",name:"Mis estudios asignados"}]
+    :staffAccess?.activated
     ? [{href:"/protected/mi-acceso",name:"Mi panel"},
        ...staffAccess.grants.filter(g=>g.can_view).map(g=>({href:staffPaths[g.module_key],name:operationLabels[g.module_key]}))]
     :appUser.role==="ese_operator"
