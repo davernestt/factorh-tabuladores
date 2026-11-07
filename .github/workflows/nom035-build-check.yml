@@ -25,6 +25,7 @@ on:
       - 'fix/pdl-*'
       - 'fix/empresa-*'
       - 'fix/psychometric-*'
+      - 'fix/reporte-*'
   workflow_dispatch:
 
 jobs:
@@ -127,5 +128,7 @@ jobs:
           name: factorh-psychometric-docx-qa
           path: /tmp/factorh_psychometric_qa.docx
           retention-days: 1
+      - name: Verify integral report links in grouped evaluations
+        run: npx --yes tsx scripts/psychometric-integral-navigation-smoke.ts
       - name: Build app
         run: npm run build
