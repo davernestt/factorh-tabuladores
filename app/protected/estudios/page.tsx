@@ -22,8 +22,10 @@ async function Content(){
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
  if(user.role==="client"&&user.clientAccessLevel==="collaborator")redirect("/protected/catalogo");
  const db=createAdminClient(), admin=user.role==="super_admin",client=user.role==="client";
+ const staffCanView=!client&&await hasStaffPermission(user,"studies","view");
  const staffCanOperate=!client&&await hasStaffPermission(user,"studies","operate");
- const isInternal=admin||staffCanOperate;
+ const isInternal=admin||staffCanView;
+ const canCreate=admin||staffCanOperate;
  const [casesR,requestsR,orgsR]=await Promise.all([
   (client?db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo").eq("organization_id",user.organizationId!).eq("is_demo",false):
     db.from("ese_cases").select("id,organization_id,case_name,study_type,status,progress,created_at,delivery_status,client_visible,is_demo"))
@@ -73,13 +75,13 @@ async function Content(){
   <div className="grid gap-3 sm:grid-cols-3">
    {([["Estudios",cases.length],["En proceso",cases.length-completed],["Entregados",completed]] as const).map(([title,count])=><div key={title} className="rounded-2xl border border-neutral-200 bg-white p-5"><p className="text-xs font-bold uppercase text-neutral-500">{title}</p><p className="mt-2 text-3xl font-black">{count}</p></div>)}
   </div>
-  {(isInternal||client)&&<section id="servicios" className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
+  {(canCreate||client)&&<section id="servicios" className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black">Catálogo de servicios</h2>
    <p className="mt-2 text-sm leading-6 text-neutral-600">Las solicitudes requieren confirmación del alcance. La verificación crediticia está deshabilitada hasta concluir su revisión legal.</p>
    <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">{services.map(service=><article key={service.key} className="flex flex-col rounded-2xl border border-neutral-200 bg-neutral-50 p-5">
     <h3 className="font-black">{service.name}</h3><p className="mt-2 flex-1 text-sm leading-6 text-neutral-600">{service.desc}</p>
-    {(client||isInternal)&&<RequestForm serviceKey={service.key} serviceName={service.name}
-      isAdmin={isInternal} organizations={orgsR.data||[]} liveEnabled={process.env.FACTORH_ESE_PERSONAL_REQUESTS_ENABLED==="true"}/>} 
+    {(client||canCreate)&&<RequestForm serviceKey={service.key} serviceName={service.name}
+      isAdmin={canCreate} organizations={orgsR.data||[]} liveEnabled={process.env.FACTORH_ESE_PERSONAL_REQUESTS_ENABLED==="true"}/>} 
    </article>)}</div>
    <div className="mt-4 rounded-xl border border-neutral-200 p-4 text-sm text-neutral-500">Consulta de Buró de Crédito — no disponible. Su activación dependerá de revisión jurídica, contratos y autorizaciones específicas.</div>
   </section>}
