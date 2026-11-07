@@ -158,12 +158,24 @@ export function buildPages(
   }
 
   // 1. Portada
+  const coverFieldMetrics: Array<[string, string, number]> = [
+    [data.personName, "800 24px Arial", 30],
+    [[data.jobTitle, data.area].filter(Boolean).join(" · ") || "Sin puesto registrado", "18px Arial", 24],
+    [data.organizationName, "18px Arial", 24],
+    [data.reportDate, "16px Arial", 22],
+  ];
+  const measuredPersonHeight = 80 + coverFieldMetrics.reduce((height, [text, font, leading]) => {
+    ctx.font = font;
+    return height + wrapTextFully(ctx, text, 258).length * leading + 18;
+  }, 0);
+  const coverHeight = Math.max(505, 88 + measuredPersonHeight + 36);
+  const coverOffset = coverHeight - 505;
   ctx.fillStyle = "#4A4A4A";
-  ctx.fillRect(0, 0, W, 505);
+  ctx.fillRect(0, 0, W, coverHeight);
   brand(ctx, 74, 92, brandLogo);
   ctx.fillStyle = "#a3a3a3";
   ctx.font = "700 14px Arial";
-  ctx.fillText("EVALUACIONES PSICOMÉTRICAS", 74, 128);
+  ctx.fillText("EVALUACIONES PSICOMÉTRICAS", 74, 154);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "800 50px Arial";
@@ -184,45 +196,50 @@ export function buildPages(
     3,
   );
 
-  box(ctx, 852, 88, 316, 282, "#555555", "#666666");
+  // Measure every field before positioning the next one; long names and
+  // organization names must never share a baseline with another field.
+  const personFields = [
+    { text: data.personName, font: "800 24px Arial", lineHeight: 30, color: "#ffffff" },
+    { text: [data.jobTitle, data.area].filter(Boolean).join(" · ") || "Sin puesto registrado",
+      font: "18px Arial", lineHeight: 24, color: "#d4d4d4" },
+    { text: data.organizationName, font: "18px Arial", lineHeight: 24, color: "#d4d4d4" },
+    { text: data.reportDate, font: "16px Arial", lineHeight: 22, color: "#a3a3a3" },
+  ].map(field => {
+    ctx.font = field.font;
+    return { ...field, lines: wrapTextFully(ctx, field.text, 258) };
+  });
+  const personBoxHeight = 80 + personFields.reduce(
+    (height, field) => height + field.lines.length * field.lineHeight + 18, 0);
+  box(ctx, 852, 88, 316, personBoxHeight, "#555555", "#666666");
   ctx.fillStyle = "#fb923c";
   ctx.font = "700 16px Arial";
   ctx.fillText("PERSONA EVALUADA", 880, 128);
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 24px Arial";
-  wrap(ctx, data.personName, 880, 168, 258, 29, 3);
-  ctx.fillStyle = "#d4d4d4";
-  ctx.font = "18px Arial";
-  wrap(
-    ctx,
-    [data.jobTitle, data.area].filter(Boolean).join(" · ") ||
-      "Sin puesto registrado",
-    880,
-    245,
-    258,
-    22,
-    3,
-  );
-  ctx.fillText(data.organizationName, 880, 315);
-  ctx.fillStyle = "#a3a3a3";
-  ctx.font = "16px Arial";
-  ctx.fillText(data.reportDate, 880, 347);
+  let personY = 168;
+  for (const field of personFields) {
+    ctx.fillStyle = field.color;
+    ctx.font = field.font;
+    for (const line of field.lines) {
+      ctx.fillText(line, 880, personY);
+      personY += field.lineHeight;
+    }
+    personY += 18;
+  }
 
-  metric(ctx, M, 592, 330, "Pruebas incluidas", String(data.instruments.length));
+  metric(ctx, M, 592 + coverOffset, 330, "Pruebas incluidas", String(data.instruments.length));
   metric(
     ctx,
     M + 350,
-    592,
+    592 + coverOffset,
     430,
     "Proceso",
     data.processName || "Evaluación psicométrica",
   );
-  metric(ctx, M + 800, 592, 312, "Fecha", data.reportDate);
+  metric(ctx, M + 800, 592 + coverOffset, 312, "Fecha", data.reportDate);
 
-  box(ctx, M, 770, CW, 315, "#fff7ed", "#fed7aa");
+  box(ctx, M, 770 + coverOffset, CW, 315, "#fff7ed", "#fed7aa");
   ctx.fillStyle = "#c2410c";
   ctx.font = "700 12px Arial";
-  ctx.fillText(integral ? "REPORTE INTEGRAL" : "LECTURA EJECUTIVA", M + 28, 812);
+  ctx.fillText(integral ? "REPORTE INTEGRAL" : "LECTURA EJECUTIVA", M + 28, 812 + coverOffset);
   ctx.fillStyle = "#171717";
   ctx.font = "800 29px Arial";
   ctx.fillText(
@@ -230,7 +247,7 @@ export function buildPages(
       ? "Lectura ejecutiva + evidencia por instrumento"
       : "Interpretación del instrumento",
     M + 28,
-    864,
+    864 + coverOffset,
   );
   ctx.fillStyle = "#404040";
   ctx.font = "17px Arial";
@@ -238,7 +255,7 @@ export function buildPages(
     ctx,
     data.executiveSummary[0] || "Resumen del proceso psicométrico.",
     M + 28,
-    920,
+    920 + coverOffset,
     CW - 56,
     27,
     6,
@@ -1569,7 +1586,8 @@ function header(
   ctx.fillText(clip(ctx, data.personName, 470), 325, 79);
 
   ctx.textAlign = "right";
-  ctx.fillText(clip(ctx, data.organizationName + " · " + data.reportDate, 330), W - M, 64);
+  ctx.fillText(clip(ctx, data.organizationName, 330), W - M, 48);
+  ctx.fillText(clip(ctx, data.reportDate, 330), W - M, 78);
   ctx.textAlign = "left";
 }
 function footer(ctx: CanvasRenderingContext2D, page: number) {
