@@ -33,8 +33,10 @@ async function SocioeconomicosContent(){
  if(!["super_admin","client","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
  const admin=user.role==="super_admin",client=user.role==="client";
+ const staffCanView=!client&&await hasStaffPermission(user,"studies","view");
  const staffCanOperate=!client&&await hasStaffPermission(user,"studies","operate");
- const internal=admin||staffCanOperate;
+ const internal=admin||staffCanView;
+ const canAssign=admin||staffCanOperate;
  const db=createAdminClient();
  const casesQuery=db.from("ese_cases")
    .select("id,case_name,organization_id,study_type,status,progress,created_at,assigned_to,delivery_status,client_visible,is_demo")
@@ -49,7 +51,7 @@ async function SocioeconomicosContent(){
      internal?requestsQuery:requestsQuery.limit(0),
    internal?db.from("organizations").select("id,name,active").order("name"):
      Promise.resolve({data:[] as Array<{id:string;name:string;active:boolean}>,error:null}),
-   internal?db.from("app_users").select("user_id,display_name,email").eq("role","ese_operator").eq("active",true).order("display_name"):
+   canAssign?db.from("app_users").select("user_id,display_name,email").eq("role","ese_operator").eq("active",true).order("display_name"):
      Promise.resolve({data:[] as Array<{user_id:string;display_name:string|null;email:string}>,error:null})
  ]);
  if(casesR.error||requestsR.error||organizationsR.error||workersR.error)
@@ -108,7 +110,7 @@ async function SocioeconomicosContent(){
        <p className="text-sm text-neutral-700">{types[r.service_key]?.label||r.service_key} · {r.ese_request_subjects?.[0]?.full_name||"Solicitud recibida"}</p>
        <p className="text-xs text-neutral-500">Recibida {new Date(r.created_at).toLocaleDateString("es-MX")} · {r.status==="requested"?"Nueva":"En revisión"}</p>
       </div>
-      <AcceptStudyRequest requestId={r.id} enabled={conversionEnabled}/>
+      {canAssign?<AcceptStudyRequest requestId={r.id} enabled={conversionEnabled}/>:<span className="text-xs text-neutral-500">Solo consulta</span>}
     </article>)}
    </div>}
   </section>}
@@ -155,7 +157,7 @@ async function SocioeconomicosContent(){
           <Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">Descargar informes autorizados →</Link>:
           <span className="text-xs text-neutral-500">Entrega pendiente de autorización</span>}
        </div>
-       {internal&&c.delivery_status!=="released"&&!["cancelled","delivered"].includes(c.status)&&
+       {canAssign&&c.delivery_status!=="released"&&!["cancelled","delivered"].includes(c.status)&&
         <AssignOperator caseId={c.id} current={c.assigned_to} operators={workersR.data||[]}/>}
       </article>)}
     </div>}
