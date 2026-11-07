@@ -4,7 +4,7 @@ import { hasNom035Subscription } from "@/lib/nom035/access";
 import { has360Access } from "@/lib/feedback360-access";
 import {hasClientEseSubscription} from "@/lib/ese/access";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {getCoordinatorAccess,operationLabels} from "@/lib/staff-permissions";
+import {getCoordinatorAccess,operationLabels,hasStaffPermission} from "@/lib/staff-permissions";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -71,9 +71,23 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Persistently visible internal alert count; no personal information in navigation.
+  let pendingEseRequests=0;
+  if(!isClient&&await hasStaffPermission(appUser,"studies","view")){
+    const db=createAdminClient();
+    const {count,error}=await db.from("ese_service_requests")
+      .select("id",{count:"exact",head:true})
+      .in("status",["requested","reviewing"])
+      .in("service_key",["express","esencial","integral","ejecutivo"]);
+    if(!error)pendingEseRequests=count??0;
+  }
+  const studiesMenuName=pendingEseRequests>0
+    ?`Estudios e Investigaciones · ${pendingEseRequests} pendiente(s)`
+    :"Estudios e Investigaciones";
+
   const adminItems = [
     { href: "/protected/evaluaciones", name: "Centro de evaluaciones" },
-    { href: "/protected/estudios", name: "Estudios e Investigaciones" },
+    { href: "/protected/estudios", name: studiesMenuName },
     { href: "/protected/candidatos", name: "Candidatos" },
     { href: "/protected/empresas", name: "Centro de Clientes" },
   ];
@@ -102,7 +116,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
     ?[{href:"/protected/estudios/tareas",name:"Mis estudios asignados"}]
     :staffAccess?.activated
     ? [{href:"/protected/mi-acceso",name:"Mi panel"},
-       ...staffAccess.grants.filter(g=>g.can_view).map(g=>({href:staffPaths[g.module_key],name:operationLabels[g.module_key]}))]
+       ...staffAccess.grants.filter(g=>g.can_view).map(g=>({href:staffPaths[g.module_key],name:g.module_key==="studies"?studiesMenuName:operationLabels[g.module_key]}))]
     :[{href:"/protected/mi-acceso",name:"Mi acceso FactoRH"}];
   const items=appUser.role==="super_admin"?adminItems
     :isClient
