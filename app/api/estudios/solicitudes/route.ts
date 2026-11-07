@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from "next/server";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 
 const allowed=new Set(["express","esencial","integral","ejecutivo","referencias_laborales","investigacion_laboral"]);
@@ -12,7 +13,8 @@ function field(v:unknown,max:number){return typeof v==="string"?v.trim().slice(0
 
 export async function POST(req:NextRequest){
  const user=await getCurrentAppUser();
- if(!user||!["client","super_admin"].includes(user.role))
+ const staffAllowed=user?.role!=="client"&&await hasStaffPermission(user,"studies","operate");
+ if(!user||!(user.role==="client"||staffAllowed))
   return NextResponse.json({error:"No tienes permiso para solicitar estudios."},{status:403});
  const origin=req.headers.get("origin");
  if(origin&&origin!==req.nextUrl.origin)return NextResponse.json({error:"Origen no permitido."},{status:403});
@@ -28,7 +30,7 @@ export async function POST(req:NextRequest){
  const address=field(body.home_address,500);
  const position=field(body.position_name,180);
  const relationship=field(body.person_relationship,20);
- const orgId=user.role==="super_admin"?field(body.organization_id,36):user.organizationId||"";
+ const orgId=user.role==="client"?user.organizationId||"":field(body.organization_id,36);
 
  if(!allowed.has(service))return NextResponse.json({error:"Selecciona un servicio válido."},{status:400});
  if(fullName.length<5||fullName.length>180||!/^[\p{L}\p{M}. '\-]+$/u.test(fullName))
@@ -52,6 +54,19 @@ export async function POST(req:NextRequest){
  const db=createAdminClient();
  const {data:org}=await db.from("organizations").select("id,active").eq("id",orgId).maybeSingle();
  if(!org?.active)return NextResponse.json({error:"La empresa no está activa."},{status:403});
+ // Client requests are accepted only for an active/valid studies module subscription.
+ // Internal FactoRH staff may register external clients without a portal subscription.
+ if(user.role==="client"){
+   if(user.clientAccessLevel!=="administrator")
+     return NextResponse.json({error:"Tu perfil no puede solicitar estudios."},{status:403});
+   const today=new Date().toISOString().slice(0,10);
+   const {data:subscriptions,error:subscriptionError}=await db.from("organization_module_subscriptions")
+     .select("status,starts_on,ends_on").eq("organization_id",orgId).eq("module_key","studies")
+     .in("status",["active","trial"]);
+   if(subscriptionError||!(subscriptions||[]).some(s=>
+       (!s.starts_on||s.starts_on<=today)&&(!s.ends_on||s.ends_on>=today)))
+     return NextResponse.json({error:"El módulo de estudios socioeconómicos no está habilitado para tu empresa."},{status:403});
+ }
 
  const {data:request,error:requestError}=await db.from("ese_service_requests")
    .insert({organization_id:orgId,service_key:service,quantity:1,requested_by:user.userId})
