@@ -6,6 +6,7 @@ import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import PilotCreator from "./pilot-creator";
 import AssignOperator from "./assign-operator";
+import AcceptStudyRequest from "./accept-study-request";
 
 const types:Record<string,{label:string;description:string}>={
  express:{label:"Express",description:"Verificación esencial de información del candidato."},
@@ -39,7 +40,7 @@ async function SocioeconomicosContent(){
    .select("id,case_name,organization_id,study_type,status,progress,created_at,assigned_to,delivery_status,client_visible,is_demo")
    .order("created_at",{ascending:false}).limit(100);
  const requestsQuery=db.from("ese_service_requests")
-   .select("id,organization_id,service_key,quantity,status,created_at")
+   .select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name)")
    .in("service_key",Object.keys(types)).order("created_at",{ascending:false}).limit(100);
  const [casesR,requestsR,organizationsR,workersR]=await Promise.all([
    client?casesQuery.eq("organization_id",user.organizationId!).eq("is_demo",false):
@@ -58,6 +59,8 @@ async function SocioeconomicosContent(){
 
  const cases=casesR.data||[],requests=requestsR.data||[];
  const names=new Map((organizationsR.data||[]).map(o=>[o.id,o.name]));
+ const conversionEnabled=process.env.FACTORH_ESE_PERSONAL_REQUESTS_ENABLED==="true"&&process.env.FACTORH_ESE_REQUEST_CONVERSION_ENABLED==="true";
+ const waitingRequests=requests.filter(r=>r.status==="requested"||r.status==="reviewing");
  const released=cases.filter(c=>c.delivery_status==="released").length;
  const reviewing=cases.filter(c=>["verification","review","report"].includes(c.status)).length;
  return <div className="space-y-7">
@@ -87,6 +90,28 @@ async function SocioeconomicosContent(){
        <p className="mt-2 text-3xl font-black tabular-nums text-neutral-900">{value}</p>
      </div>)}
   </div>
+  {internal&&<section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm" aria-label="Bandeja de solicitudes socioeconómicas">
+   <div className="flex flex-wrap items-center justify-between gap-3">
+    <h2 className="text-xl font-black text-neutral-900">Bandeja de solicitudes recibidas</h2>
+    <span className="rounded-lg bg-orange-100 px-3 py-1 text-xs font-bold text-orange-800">
+      {waitingRequests.length} pendiente(s) de atención
+    </span>
+   </div>
+   <p className="mt-2 text-xs leading-6 text-neutral-500">
+    Avisos internos persistentes para David y el personal FactoRH autorizado. Esta bandeja no envía todavía mensajes externos.
+   </p>
+   {waitingRequests.length===0?<p className="mt-5 text-sm text-neutral-500">No hay solicitudes pendientes de atender.</p>:
+   <div className="mt-5 divide-y divide-neutral-100">
+    {waitingRequests.map(r=><article key={r.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+      <div className="space-y-1">
+       <p className="font-bold text-neutral-900">{names.get(r.organization_id)||"Cliente"}</p>
+       <p className="text-sm text-neutral-700">{types[r.service_key]?.label||r.service_key} · {r.ese_request_subjects?.[0]?.full_name||"Solicitud recibida"}</p>
+       <p className="text-xs text-neutral-500">Recibida {new Date(r.created_at).toLocaleDateString("es-MX")} · {r.status==="requested"?"Nueva":"En revisión"}</p>
+      </div>
+      <AcceptStudyRequest requestId={r.id} enabled={conversionEnabled}/>
+    </article>)}
+   </div>}
+  </section>}
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black text-neutral-900">Nuestros cuatro tipos de estudio</h2>
    <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
