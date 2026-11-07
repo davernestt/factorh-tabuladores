@@ -2,6 +2,7 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import PilotCreator from "./pilot-creator";
 
@@ -27,7 +28,7 @@ export default function SocioeconomicosPage(){
 async function SocioeconomicosContent(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
- if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
+ if(!["super_admin","client","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
  const admin=user.role==="super_admin",client=user.role==="client";
  const db=createAdminClient();
