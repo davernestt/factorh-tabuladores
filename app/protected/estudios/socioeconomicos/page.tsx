@@ -2,8 +2,11 @@ import {Suspense} from "react";
 import Link from "next/link";
 import {redirect} from "next/navigation";
 import {getCurrentAppUser} from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import PilotCreator from "./pilot-creator";
+import AssignOperator from "./assign-operator";
+import AcceptStudyRequest from "./accept-study-request";
 
 const types:Record<string,{label:string;description:string}>={
  express:{label:"Express",description:"Verificación esencial de información del candidato."},
@@ -27,31 +30,39 @@ export default function SocioeconomicosPage(){
 async function SocioeconomicosContent(){
  const user=await getCurrentAppUser();
  if(!user)redirect("/auth/login");
- if(!["super_admin","client","ese_operator"].includes(user.role))redirect("/protected/evaluaciones");
+ if(!["super_admin","client","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
  const admin=user.role==="super_admin",client=user.role==="client";
+ const staffCanView=!client&&await hasStaffPermission(user,"studies","view");
+ const staffCanOperate=!client&&await hasStaffPermission(user,"studies","operate");
+ const internal=admin||staffCanView;
+ const canAssign=admin||staffCanOperate;
  const db=createAdminClient();
  const casesQuery=db.from("ese_cases")
    .select("id,case_name,organization_id,study_type,status,progress,created_at,assigned_to,delivery_status,client_visible,is_demo")
    .order("created_at",{ascending:false}).limit(100);
  const requestsQuery=db.from("ese_service_requests")
-   .select("id,organization_id,service_key,quantity,status,created_at")
+   .select("id,organization_id,service_key,quantity,status,created_at,ese_request_subjects(full_name,position_name)")
    .in("service_key",Object.keys(types)).order("created_at",{ascending:false}).limit(100);
- const [casesR,requestsR,organizationsR]=await Promise.all([
+ const [casesR,requestsR,organizationsR,workersR]=await Promise.all([
    client?casesQuery.eq("organization_id",user.organizationId!).eq("is_demo",false):
-     admin?casesQuery:casesQuery.eq("assigned_to",user.userId),
+     casesQuery,
    client?requestsQuery.eq("organization_id",user.organizationId!):
-     admin?requestsQuery:requestsQuery.limit(0),
-   admin?db.from("organizations").select("id,name,active").order("name"):
-     Promise.resolve({data:[] as Array<{id:string;name:string;active:boolean}>,error:null})
+     internal?requestsQuery:requestsQuery.limit(0),
+   internal?db.from("organizations").select("id,name,active").order("name"):
+     Promise.resolve({data:[] as Array<{id:string;name:string;active:boolean}>,error:null}),
+   canAssign?db.from("app_users").select("user_id,display_name,email").eq("role","ese_operator").eq("active",true).order("display_name"):
+     Promise.resolve({data:[] as Array<{user_id:string;display_name:string|null;email:string}>,error:null})
  ]);
- if(casesR.error||requestsR.error||organizationsR.error)
+ if(casesR.error||requestsR.error||organizationsR.error||workersR.error)
    return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
      No fue posible cargar los estudios. Verifica tus permisos e inténtalo de nuevo.
    </div>;
 
  const cases=casesR.data||[],requests=requestsR.data||[];
  const names=new Map((organizationsR.data||[]).map(o=>[o.id,o.name]));
+ const conversionEnabled=process.env.FACTORH_ESE_PERSONAL_REQUESTS_ENABLED==="true"&&process.env.FACTORH_ESE_REQUEST_CONVERSION_ENABLED==="true";
+ const waitingRequests=requests.filter(r=>r.status==="requested"||r.status==="reviewing");
  const released=cases.filter(c=>c.delivery_status==="released").length;
  const reviewing=cases.filter(c=>["verification","review","report"].includes(c.status)).length;
  return <div className="space-y-7">
@@ -81,6 +92,28 @@ async function SocioeconomicosContent(){
        <p className="mt-2 text-3xl font-black tabular-nums text-neutral-900">{value}</p>
      </div>)}
   </div>
+  {internal&&<section className="rounded-3xl border border-orange-200 bg-white p-6 shadow-sm" aria-label="Bandeja de solicitudes socioeconómicas">
+   <div className="flex flex-wrap items-center justify-between gap-3">
+    <h2 className="text-xl font-black text-neutral-900">Bandeja de solicitudes recibidas</h2>
+    <span className="rounded-lg bg-orange-100 px-3 py-1 text-xs font-bold text-orange-800">
+      {waitingRequests.length} pendiente(s) de atención
+    </span>
+   </div>
+   <p className="mt-2 text-xs leading-6 text-neutral-500">
+    Avisos internos persistentes para David y el personal FactoRH autorizado. Esta bandeja no envía todavía mensajes externos.
+   </p>
+   {waitingRequests.length===0?<p className="mt-5 text-sm text-neutral-500">No hay solicitudes pendientes de atender.</p>:
+   <div className="mt-5 divide-y divide-neutral-100">
+    {waitingRequests.map(r=><article key={r.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+      <div className="space-y-1">
+       <p className="font-bold text-neutral-900">{names.get(r.organization_id)||"Cliente"}</p>
+       <p className="text-sm text-neutral-700">{types[r.service_key]?.label||r.service_key} · {r.ese_request_subjects?.[0]?.full_name||"Solicitud recibida"}</p>
+       <p className="text-xs text-neutral-500">Recibida {new Date(r.created_at).toLocaleDateString("es-MX")} · {r.status==="requested"?"Nueva":"En revisión"}</p>
+      </div>
+      {canAssign?<AcceptStudyRequest requestId={r.id} enabled={conversionEnabled}/>:<span className="text-xs text-neutral-500">Solo consulta</span>}
+    </article>)}
+   </div>}
+  </section>}
   <section className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm">
    <h2 className="text-xl font-black text-neutral-900">Nuestros cuatro tipos de estudio</h2>
    <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -109,7 +142,7 @@ async function SocioeconomicosContent(){
          <p className="font-bold text-neutral-900">{c.case_name}</p>
          <p className="mt-1 text-xs text-neutral-500">
           {types[c.study_type]?.label||c.study_type}{c.is_demo?" · PRUEBA INTERNA":""}
-          {admin?` · ${names.get(c.organization_id)||"Empresa"}`:""}
+          {internal?` · ${names.get(c.organization_id)||"Empresa"}`:""}
          </p>
         </div>
         <span className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-600">
@@ -118,12 +151,14 @@ async function SocioeconomicosContent(){
        </div>
        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-neutral-500">Avance registrado: {c.progress}%</p>
-        {admin?<Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">
+        {internal?<Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">
           {c.is_demo?"Abrir expediente piloto →":"Revisar y autorizar informe →"}
         </Link>:client&&c.delivery_status==="released"&&c.client_visible?
           <Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">Descargar informes autorizados →</Link>:
           <span className="text-xs text-neutral-500">Entrega pendiente de autorización</span>}
        </div>
+       {canAssign&&c.delivery_status!=="released"&&!["cancelled","delivered"].includes(c.status)&&
+        <AssignOperator caseId={c.id} current={c.assigned_to} operators={workersR.data||[]}/>}
       </article>)}
     </div>}
   </section>
