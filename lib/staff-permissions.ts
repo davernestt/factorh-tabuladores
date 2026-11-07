@@ -12,7 +12,8 @@ export const operationLabels:Record<OperationModule,string>={
 };
 export type StaffGrant={module_key:OperationModule;can_view:boolean;can_operate:boolean;can_reports:boolean};
 export type CoordinatorAccess={staged:boolean;activated:boolean;validated:boolean;grants:StaffGrant[]};
-const operationalRoles=new Set(["commercial","recruiter","ese_operator","consultant"]);
+// ESE applicators are deliberately excluded from company-wide staff grants.
+const operationalRoles=new Set(["commercial","recruiter","consultant"]);
 export async function getCoordinatorAccess(user:CurrentAppUser|null):Promise<CoordinatorAccess>{
  const empty={staged:false,activated:false,validated:false,grants:[] as StaffGrant[]};
  if(!user||!user.active||!operationalRoles.has(user.role)||!user.organizationId)return empty;
@@ -30,6 +31,7 @@ export async function getCoordinatorAccess(user:CurrentAppUser|null):Promise<Coo
 }
 export async function hasStaffPermission(user:CurrentAppUser|null,module:OperationModule,action:OperationPermission){
  if(user?.role==="super_admin")return true;
+ if(user?.role==="ese_operator")return false;
  const access=await getCoordinatorAccess(user);
  if(!access.activated)return false;
  const item=access.grants.find(g=>g.module_key===module);
