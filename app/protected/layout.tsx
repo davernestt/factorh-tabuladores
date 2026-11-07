@@ -2,6 +2,7 @@ import { AuthButton } from "@/components/auth-button";
 import { getCurrentAppUser } from "@/lib/app-auth";
 import { hasNom035Subscription } from "@/lib/nom035/access";
 import { has360Access } from "@/lib/feedback360-access";
+import {hasClientEseSubscription} from "@/lib/ese/access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {getCoordinatorAccess,operationLabels} from "@/lib/staff-permissions";
 import Link from "next/link";
@@ -36,7 +37,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   if (!appUser) redirect("/auth/login");
 
   const isClient = appUser.role === "client";
-  const [nom035Enabled, feedback360Enabled] = isClient ? await Promise.all([hasNom035Subscription(appUser),has360Access(appUser)]) : [true,true];
+  const [nom035Enabled, feedback360Enabled, studiesEnabled] = isClient ? await Promise.all([hasNom035Subscription(appUser),has360Access(appUser),hasClientEseSubscription(appUser)]) : [true,true,true];
 
   let expiryNotices: Array<{
     module_key: string;
@@ -80,7 +81,7 @@ async function ProtectedShell({ children }: { children: React.ReactNode }) {
   const clientItems = [
     { href: "/protected/catalogo", name: "Explorar catálogo" },
     { href: "/protected/solicitar-usuarios", name: "Solicitar usuarios" },
-    { href: "/protected/estudios", name: "Estudios e Investigaciones" },
+    ...(studiesEnabled ? [{ href: "/protected/estudios", name: "Estudios e Investigaciones" }] : []),
     { href: "/protected/psicometrias", name: "Mis psicometrías" },
     { href: "/protected/psicometrias/nueva?fresh=1", name: "Asignar" },
     ...(feedback360Enabled ? [{ href: "/protected/360", name: "Mi 360°" }] : []),
