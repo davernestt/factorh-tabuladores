@@ -1,0 +1,18 @@
+import {strict as assert} from "node:assert";
+import {readFileSync} from "node:fs";
+const source=(p:string)=>readFileSync(p,"utf8");
+const board=source("app/protected/page.tsx");
+const report=source("app/protected/psicometrias/integral/[processId]/page.tsx");
+const psych=source("app/protected/psicometrias/page.tsx");
+assert.match(board,/const psychometricProcesses=new Map/,"El tablero debe agrupar por proceso psicométrico.");
+assert.match(board,/view\.template\?\.assessment_type\?\.startsWith\("psychometric_"\)/,"Distinguir psicometrías de PDL.");
+assert.match(board,/\{battery\.completed\} de \{battery\.total\} psicometrías finalizadas/);
+assert.match(board,/\/protected\/psicometrias\/integral\/\$\{battery\.processId\}/,"El enlace debe usar el proceso original.");
+assert.match(board,/battery\.completed===battery\.total\?"Ver reporte integral":"Ver avance y reportes guardados"/);
+assert.match(board,/canReviewPsychometrics/,"Sólo roles con reportes psicométricos deben ver acceso.");
+assert.match(board,/view\.canDelete&&<DeleteAssessmentButton/,"No mostrar botón Eliminar a la coordinación.");
+assert.match(report,/hasStaffPermission\(currentUser,"psychometrics","reports"\)/);
+assert.match(report,/const allCompleted = completedCount === psychometricAssignments.length/);
+assert.match(report,/Ver reporte guardado/,"Conservar acceso a reportes individuales si faltan pruebas.");
+assert.match(psych,/Ver reporte integral/,"Conservar informe integral en módulo de Psicometrías.");
+console.log("PSICOMETRIC_INTEGRAL_ACCESS_OK: cada batería muestra reporte o avance sin crear asignaciones.");

@@ -73,6 +73,7 @@ type ResultRow = {
 };
 
 type ParticipantAssignmentView = {
+  canDelete: boolean;
   assignment: Assignment;
   process: ProcessRow | undefined;
   person: Person | undefined;
@@ -127,7 +128,10 @@ async function AdminDashboardContent({
 }) {
   const appUser = await getCurrentAppUser();
   if (!appUser) redirect("/auth/login");
-  if (appUser.role !== "super_admin" && !await hasStaffPermission(appUser,"pdl","view")) redirect(appUser.role==="client"?"/protected/catalogo":"/protected/mi-acceso");
+  const canReviewPdl=appUser.role==="super_admin"||await hasStaffPermission(appUser,"pdl","view");
+  const canReviewPsychometrics=appUser.role==="super_admin"||await hasStaffPermission(appUser,"psychometrics","reports");
+  if(!canReviewPdl&&!canReviewPsychometrics)
+    redirect(appUser.role==="client"?"/protected/catalogo":"/protected/mi-acceso");
 
   const params = await searchParams;
   const query = normalizeSearch(paramValue(params.q));
@@ -311,6 +315,7 @@ async function AdminDashboardContent({
       : null;
 
     return {
+      canDelete:appUser.role==="super_admin",
       assignment,
       process,
       person,
@@ -712,6 +717,22 @@ async function AdminDashboardContent({
                 (view) =>
                   !["pending", "in_progress"].includes(view.assignment.status),
               );
+              // El informe integral pertenece al proceso/batería, no a la
+              // evaluación individual. Mantener visible también si falta una
+              // prueba: la pantalla integral mostrará las respuestas ya guardadas.
+              const psychometricProcesses=new Map<string,{
+                processId:string;name:string;total:number;completed:number
+              }>();
+              for(const view of group.assignments){
+                if(!view.template?.assessment_type?.startsWith("psychometric_")||!view.process)continue;
+                const key=view.process.id;
+                const current=psychometricProcesses.get(key)??{
+                  processId:key,name:view.process.name,total:0,completed:0
+                };
+                current.total++;
+                if(view.assignment.status==="completed")current.completed++;
+                psychometricProcesses.set(key,current);
+              }
 
               return (
                 <details key={group.personId} className="group">
@@ -782,6 +803,33 @@ async function AdminDashboardContent({
                   </summary>
 
                   <div className="border-t border-neutral-100 bg-neutral-50/70 px-6 py-6">
+                    {canReviewPsychometrics&&psychometricProcesses.size>0&&
+                     <section className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
+                       <div className="mb-3">
+                         <p className="text-xs font-black uppercase tracking-widest text-orange-700">Baterías psicométricas</p>
+                         <h3 className="mt-1 text-lg font-black text-neutral-900">Reportes integrales de {personName}</h3>
+                         <p className="mt-1 text-xs leading-6 text-neutral-600">
+                           Cada proceso conserva sus resultados. Puedes consultar el avance sin generar ni consumir evaluaciones.
+                         </p>
+                       </div>
+                       <div className="space-y-3">
+                         {[...psychometricProcesses.values()].map(battery=>(
+                           <div key={battery.processId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-100 bg-white p-4">
+                             <div>
+                               <p className="font-bold text-neutral-900">{battery.name}</p>
+                               <p className="mt-1 text-xs text-neutral-600">
+                                 {battery.completed} de {battery.total} psicometrías finalizadas
+                                 {battery.completed<battery.total?" · No reiniciar las pruebas":" · Batería terminada"}
+                               </p>
+                             </div>
+                             <Link href={`/protected/psicometrias/integral/${battery.processId}`}
+                               className="inline-flex rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white hover:bg-orange-700">
+                               {battery.completed===battery.total?"Ver reporte integral":"Ver avance y reportes guardados"} →
+                             </Link>
+                           </div>
+                         ))}
+                       </div>
+                     </section>}
                     {activeAssignments.length > 0 && (
                       <div>
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -991,11 +1039,11 @@ function AssessmentCard({
                  </a>
                </>
              )}
-          <DeleteAssessmentButton
+          {view.canDelete&&<DeleteAssessmentButton
             assignmentId={assignment.id}
             participantName={personName}
             templateName={template?.name ?? "Evaluación"}
-          />
+          />}
         </div>
       </div>
     </div>
