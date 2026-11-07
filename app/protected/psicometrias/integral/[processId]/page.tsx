@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentAppUser } from "@/lib/app-auth";
+import {hasStaffPermission} from "@/lib/staff-permissions";
 import {
   analyzeIntegralPsychometrics,
   type IntegralInstrument,
@@ -70,6 +71,10 @@ export default function IntegralPsychometricReportPage(props: PageProps) {
 async function IntegralReportContent({ params }: PageProps) {
   const currentUser = await getCurrentAppUser();
   if (!currentUser) redirect("/auth/login");
+  if(currentUser.role!=="super_admin"&&currentUser.role!=="client"&&
+    !await hasStaffPermission(currentUser,"psychometrics","reports")){
+    redirect("/protected/mi-acceso");
+  }
 
   const { processId } = await params;
   const db = createAdminClient();
