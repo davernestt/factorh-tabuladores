@@ -5,6 +5,7 @@ import {getCurrentAppUser} from "@/lib/app-auth";
 import {hasStaffPermission} from "@/lib/staff-permissions";
 import {createAdminClient} from "@/lib/supabase/admin";
 import PilotCreator from "./pilot-creator";
+import AssignOperator from "./assign-operator";
 
 const types:Record<string,{label:string;description:string}>={
  express:{label:"Express",description:"Verificación esencial de información del candidato."},
@@ -31,6 +32,8 @@ async function SocioeconomicosContent(){
  if(!["super_admin","client","ese_operator"].includes(user.role)&&!await hasStaffPermission(user,"studies","view"))redirect("/protected/mi-acceso");
  if(user.role==="ese_operator")redirect("/protected/estudios/tareas");
  const admin=user.role==="super_admin",client=user.role==="client";
+ const staffCanOperate=!client&&await hasStaffPermission(user,"studies","operate");
+ const internal=admin||staffCanOperate;
  const db=createAdminClient();
  const casesQuery=db.from("ese_cases")
    .select("id,case_name,organization_id,study_type,status,progress,created_at,assigned_to,delivery_status,client_visible,is_demo")
@@ -38,15 +41,17 @@ async function SocioeconomicosContent(){
  const requestsQuery=db.from("ese_service_requests")
    .select("id,organization_id,service_key,quantity,status,created_at")
    .in("service_key",Object.keys(types)).order("created_at",{ascending:false}).limit(100);
- const [casesR,requestsR,organizationsR]=await Promise.all([
+ const [casesR,requestsR,organizationsR,workersR]=await Promise.all([
    client?casesQuery.eq("organization_id",user.organizationId!).eq("is_demo",false):
-     admin?casesQuery:casesQuery.eq("assigned_to",user.userId),
+     casesQuery,
    client?requestsQuery.eq("organization_id",user.organizationId!):
-     admin?requestsQuery:requestsQuery.limit(0),
-   admin?db.from("organizations").select("id,name,active").order("name"):
-     Promise.resolve({data:[] as Array<{id:string;name:string;active:boolean}>,error:null})
+     internal?requestsQuery:requestsQuery.limit(0),
+   internal?db.from("organizations").select("id,name,active").order("name"):
+     Promise.resolve({data:[] as Array<{id:string;name:string;active:boolean}>,error:null}),
+   internal?db.from("app_users").select("user_id,display_name,email").eq("role","ese_operator").eq("active",true).order("display_name"):
+     Promise.resolve({data:[] as Array<{user_id:string;display_name:string|null;email:string}>,error:null})
  ]);
- if(casesR.error||requestsR.error||organizationsR.error)
+ if(casesR.error||requestsR.error||organizationsR.error||workersR.error)
    return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
      No fue posible cargar los estudios. Verifica tus permisos e inténtalo de nuevo.
    </div>;
@@ -110,7 +115,7 @@ async function SocioeconomicosContent(){
          <p className="font-bold text-neutral-900">{c.case_name}</p>
          <p className="mt-1 text-xs text-neutral-500">
           {types[c.study_type]?.label||c.study_type}{c.is_demo?" · PRUEBA INTERNA":""}
-          {admin?` · ${names.get(c.organization_id)||"Empresa"}`:""}
+          {internal?` · ${names.get(c.organization_id)||"Empresa"}`:""}
          </p>
         </div>
         <span className="rounded-lg bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-600">
@@ -119,12 +124,14 @@ async function SocioeconomicosContent(){
        </div>
        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-neutral-500">Avance registrado: {c.progress}%</p>
-        {admin?<Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">
+        {internal?<Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">
           {c.is_demo?"Abrir expediente piloto →":"Revisar y autorizar informe →"}
         </Link>:client&&c.delivery_status==="released"&&c.client_visible?
           <Link href={`/protected/estudios/${c.id}`} className="text-sm font-bold text-orange-700 hover:underline">Descargar informes autorizados →</Link>:
           <span className="text-xs text-neutral-500">Entrega pendiente de autorización</span>}
        </div>
+       {internal&&c.delivery_status!=="released"&&!["cancelled","delivered"].includes(c.status)&&
+        <AssignOperator caseId={c.id} current={c.assigned_to} operators={workersR.data||[]}/>}
       </article>)}
     </div>}
   </section>
