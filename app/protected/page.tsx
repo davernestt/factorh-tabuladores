@@ -543,6 +543,7 @@ async function AdminDashboardContent({
             + Nueva evaluación
           </a>
           <Link href="/protected/departamentos" className="rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-bold text-neutral-700">Departamentos</Link>
+          <Link href="/protected/pdl/plan" className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-bold text-orange-700">Plan de capacitación PDL</Link>
         </div>
       </div>
 
