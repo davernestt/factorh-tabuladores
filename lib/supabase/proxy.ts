@@ -7,6 +7,8 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const isPublicAssessment =
+    pathname.startsWith("/pdl-quiz/") ||
+    pathname.startsWith("/api/pdl-quizzes/") ||
     pathname.startsWith("/e/") ||
     pathname.startsWith("/p/") ||
     pathname.startsWith("/360/") ||
@@ -83,7 +85,7 @@ export async function updateSession(request: NextRequest) {
         url.pathname = "/protected/psicometrias";
         return NextResponse.redirect(url);
       }
-    } else if (appUser.role !== "super_admin") {
+    } else if (appUser.role !== "super_admin" && !pathname.startsWith("/protected/pdl/quizzes")) {
       const url = request.nextUrl.clone();
       url.pathname = "/auth/login";
       url.searchParams.set("error", "unauthorized");
