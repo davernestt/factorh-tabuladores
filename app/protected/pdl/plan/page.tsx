@@ -34,6 +34,7 @@ export default async function PdlTrainingPlanPage() {
       <header>
         <p className="text-sm font-bold uppercase tracking-widest text-orange-600">Referencia interna FactoRH</p>
         <h1 className="mt-2 text-3xl font-black text-neutral-900">Plan de capacitación PDL</h1>
+        <Link href="/protected/pdl/quizzes" className="mt-4 inline-block rounded-xl bg-orange-600 px-5 py-3 font-bold text-white">Quizzes de aprendizaje</Link>
         <p className="mt-3 max-w-3xl text-neutral-600">Guía informativa para diseñar programas por empresa. El diagnóstico orienta el desarrollo, el tronco común establece herramientas compartidas y las rutas atienden competencias específicas.</p>
         <p className="mt-3 rounded-xl bg-orange-50 p-4 text-sm text-orange-900">El alcance, los participantes, las horas y el calendario se acuerdan en cada contratación. Este catálogo sirve para consultar y recordar el modelo del programa.</p>
       </header>
