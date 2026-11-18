@@ -1,9 +1,14 @@
 import { createHash } from "node:crypto";
+import { Suspense } from "react";
 import { connection } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import QuizForm from "./quiz-form";
 
-export default async function QuizPage({params}:{params:Promise<{token:string}>}){
+export default function QuizPage(props:{params:Promise<{token:string}>}){
+  return <Suspense fallback={<main className="min-h-screen bg-neutral-100 p-10 text-center"><p className="text-neutral-600">Cargando cuestionario...</p></main>}><QuizPageContent {...props}/></Suspense>;
+}
+
+async function QuizPageContent({params}:{params:Promise<{token:string}>}){
   await connection();
   const {token}=await params;
   if(!/^[a-f0-9]{64}$/.test(token))return <ErrorPage />;
