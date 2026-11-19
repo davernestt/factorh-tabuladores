@@ -13,6 +13,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/c3/") ||
     pathname.startsWith("/api/c3/submit") ||
     pathname.startsWith("/api/evaluacion/") ||
+    pathname.startsWith("/pdl/quiz/") ||
+    pathname === "/api/pdl/quiz" ||
     pathname.startsWith("/api/360/") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/cliente/");
