@@ -52,6 +52,9 @@ export async function POST(request:NextRequest){
     created_by:user.userId,active:true
   });
   if(error)return bad("No fue posible crear la invitación",500);
-  const origin=new URL(request.url).origin;
-  return NextResponse.json({url:`${origin}/pdl/quiz/${token}`},{status:201,headers:{"Cache-Control":"no-store"}});
+  // Always issue invitations using the stable operational branch alias, never
+  // a per-commit Preview deployment URL. A future domain can override this
+  // through PDL_PUBLIC_ORIGIN after validating redirects for existing links.
+  const canonicalOrigin=process.env.PDL_PUBLIC_ORIGIN||"https://factorh-evaluaciones-git-nom035-v1-davidcarrillorh-5996.vercel.app";
+  return NextResponse.json({url:`${canonicalOrigin}/pdl/quiz/${token}`},{status:201,headers:{"Cache-Control":"no-store"}});
 }
