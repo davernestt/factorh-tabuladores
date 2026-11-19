@@ -1,9 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Question={position:number;question:string;options:{value:string;label:string}[]};
 export default function QuizForm({token,questions}:{token:string;questions:Question[]}){
   const [answers,setAnswers]=useState<Record<string,string>>({});
+  // Keep the same submission ID when retrying after a network failure.
+  // The server returns the saved attempt instead of charging a second attempt.
+  const requestId=useRef<string | null>(null);
   const [saving,setSaving]=useState(false);
   const [result,setResult]=useState<{score:number;passed:boolean;attempt_number:number}|null>(null);
   const [error,setError]=useState("");
@@ -11,7 +14,8 @@ export default function QuizForm({token,questions}:{token:string;questions:Quest
     e.preventDefault();
     if(Object.keys(answers).length!==questions.length){setError("Contesta todas las preguntas");return;}
     setSaving(true);setError("");
-    const request_id=crypto.randomUUID();
+    if (!requestId.current) requestId.current=crypto.randomUUID();
+    const request_id=requestId.current;
     try{
       const r=await fetch("/api/pdl/quiz",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,answers,request_id})});
       const data=await r.json();
