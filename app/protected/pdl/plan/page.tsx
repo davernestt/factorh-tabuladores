@@ -37,6 +37,11 @@ export default async function PdlTrainingPlanPage() {
         <p className="mt-3 max-w-3xl text-neutral-600">Guía informativa para diseñar programas por empresa. El diagnóstico orienta el desarrollo, el tronco común establece herramientas compartidas y las rutas atienden competencias específicas.</p>
         <p className="mt-3 rounded-xl bg-orange-50 p-4 text-sm text-orange-900">El alcance, los participantes, las horas y el calendario se acuerdan en cada contratación. Este catálogo sirve para consultar y recordar el modelo del programa.</p>
       </header>
+      <section className="rounded-2xl border border-orange-200 bg-orange-50 p-6">
+        <h2 className="text-xl font-bold text-neutral-900">Evaluaciones y quizzes del PDL</h2>
+        <p className="mt-2 text-sm text-neutral-700">Cuestionarios por tema, invitaciones individuales, calificaciones y seguimiento por empresa.</p>
+        <Link href="/protected/pdl/quizzes" className="mt-4 inline-flex rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Administrar quizzes →</Link>
+      </section>
       <section className="rounded-2xl border border-neutral-200 bg-white p-6">
         <h2 className="text-xl font-bold">Etapas del programa</h2>
         <ol className="mt-4 list-decimal space-y-3 pl-5 text-neutral-700">
