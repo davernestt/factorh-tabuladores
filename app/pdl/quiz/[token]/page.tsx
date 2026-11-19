@@ -29,7 +29,7 @@ async function QuizPageContent({params}:{params:Promise<{token:string}>}){
     <h1 className="mt-6 text-3xl font-black text-neutral-900">{catalog.data.title}</h1>
     <p className="mt-2 text-neutral-600">Participante: <strong>{invite.participant_name}</strong></p>
     <p className="mt-2 text-sm text-neutral-500">Nivel intermedio · Aprobación {catalog.data.passing_score}/100 · Intentos disponibles: {remaining}</p>
-    {remaining>0?<QuizForm token={token} questions={questions}/>:<p className="mt-8 rounded-xl bg-neutral-100 p-5">Ya utilizaste todos tus intentos. Contacta a Recursos Humanos para consultar tus resultados.</p>}
+    {remaining>0?<QuizForm token={token} questions={questions} maxAttempts={invite.max_attempts} completedAttempts={(attempts.data??[]).length}/>:<p className="mt-8 rounded-xl bg-neutral-100 p-5">Ya utilizaste todos tus intentos. Contacta a Recursos Humanos para consultar tus resultados.</p>}
   </div></main>;
 }
 function ErrorPage(){return <main className="min-h-screen bg-neutral-100 p-10 text-center"><h1 className="text-xl font-bold">Evaluación no disponible</h1><p className="mt-3">La invitación no existe, venció o el cuestionario todavía no está publicado.</p></main>;}
