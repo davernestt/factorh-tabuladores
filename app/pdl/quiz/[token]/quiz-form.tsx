@@ -8,6 +8,7 @@ export default function QuizForm({token,questions,maxAttempts,completedAttempts}
   // The server returns the saved attempt instead of charging a second attempt.
   const requestId=useRef<string | null>(null);
   const [saving,setSaving]=useState(false);
+  const [attemptsDone,setAttemptsDone]=useState(completedAttempts);
   const [result,setResult]=useState<{score:number;passed:boolean;attempt_number:number}|null>(null);
   const [error,setError]=useState("");
   async function submit(e:React.FormEvent<HTMLFormElement>){
@@ -21,6 +22,7 @@ export default function QuizForm({token,questions,maxAttempts,completedAttempts}
       const data=await r.json();
       if(!r.ok)throw new Error(data.error||"No se pudo registrar");
       setResult(data);
+      setAttemptsDone(data.attempt_number);
     }catch(e){setError(e instanceof Error?e.message:"No se pudo guardar");}
     finally{setSaving(false);}
   }
@@ -31,7 +33,7 @@ export default function QuizForm({token,questions,maxAttempts,completedAttempts}
     <p className="mt-3 text-sm">Tu resultado se guardó correctamente. Recursos Humanos podrá consultarlo.</p>
     {!result.passed && result.attempt_number<maxAttempts && <button type="button" className="mt-5 rounded-xl bg-orange-600 px-5 py-3 font-semibold text-white" onClick={()=>{requestId.current=null;setAnswers({});setResult(null);setError("");}}>Realizar segundo intento</button>}
     </section>;
-  return <form className="mt-7 space-y-6" onSubmit={submit}><p className="text-sm text-neutral-500">Intento {completedAttempts+1} de {maxAttempts}. Selecciona una respuesta por pregunta.</p>
+  return <form className="mt-7 space-y-6" onSubmit={submit}><p className="text-sm text-neutral-500">Intento {attemptsDone+1} de {maxAttempts}. Selecciona una respuesta por pregunta.</p>
     {questions.map((q,i)=><fieldset key={q.position} className="rounded-xl border border-neutral-200 p-5">
       <legend className="px-2 font-bold">{i+1}. {q.question}</legend>
       <div className="mt-3 space-y-3">{q.options.map(o=><label key={o.value} className="flex cursor-pointer items-start gap-3 text-sm"><input type="radio" className="mt-1 accent-orange-600" name={"q"+q.position} value={o.value} checked={answers[String(q.position)]===o.value} onChange={()=>setAnswers(prev=>({...prev,[q.position]:o.value}))} required/>{o.label}</label>)}</div>
