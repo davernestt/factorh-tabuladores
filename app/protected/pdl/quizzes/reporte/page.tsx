@@ -62,8 +62,8 @@ async function ReportContent({searchParams}:{searchParams:Promise<Filters>}) {
   const passed=answered.filter(i=>(attemptMap.get(i.id)??[]).some(a=>safeResult(a.result).passed));
   const bestScores=answered.map(i=>Math.max(...(attemptMap.get(i.id)??[]).map(a=>safeResult(a.result).score)));
   const average=bestScores.length?Math.round(bestScores.reduce((a,b)=>a+b,0)/bestScores.length):0;
-  const companyLabel=organizationId?orgMap.get(organizationId)??"Empresa":"Todas las empresas";
-  const quizLabel=quizId?(quizzes.data??[]).find(q=>q.quiz_id===quizId)?.title??quizId:"Todos los cuestionarios";
+  const companyLabel=inviteId&&invites[0]?orgMap.get(invites[0].organization_id)??"Empresa":organizationId?orgMap.get(organizationId)??"Empresa":"Todas las empresas";
+  const quizLabel=inviteId&&invites[0]?quizMap.get(invites[0].quiz_id+"_"+invites[0].quiz_version)?.title??invites[0].quiz_id:quizId?(quizzes.data??[]).find(q=>q.quiz_id===quizId)?.title??quizId:"Todos los cuestionarios";
   let itemOptions=new Map<string,Record<string,string>>();
   if(inviteId&&invites.length){
     const inv=invites[0];
@@ -78,6 +78,7 @@ async function ReportContent({searchParams}:{searchParams:Promise<Filters>}) {
       <Link href={backUrl} className="font-semibold text-orange-700">← Regresar a quizzes</Link>
       <PrintButton/>
     </div>
+    <div className={inviteId?"print:break-after-page print:page-break-after-always space-y-6":"space-y-6"}>
     <header className="border-b-2 border-orange-500 pb-5">
       <div className="flex items-baseline justify-between gap-3">
         <div className="text-2xl font-black text-neutral-700">Facto<span className="text-orange-600">RH</span> <span className="text-sm font-medium text-neutral-500">Evaluaciones</span></div>
@@ -120,6 +121,7 @@ async function ReportContent({searchParams}:{searchParams:Promise<Filters>}) {
       </table>
       {!invites.length&&<p className="p-4 text-sm">No hay invitaciones para los filtros seleccionados.</p>}
     </section>
+    </div>
     {!inviteId&&<section className="break-inside-avoid">
       <h2 className="mb-3 text-xl font-bold">Resultados por cuestionario</h2>
       <table className="w-full border-collapse text-left text-sm"><thead><tr className="border-b bg-neutral-100"><th className="p-2">Tema</th><th className="p-2">Asignados</th><th className="p-2">Respondieron</th><th className="p-2">Aprobaron</th><th className="p-2">Promedio</th></tr></thead>
@@ -130,28 +132,39 @@ async function ReportContent({searchParams}:{searchParams:Promise<Filters>}) {
         return <tr key={qid} className="border-b"><td className="p-2">{quizMap.get(qid+"_1")?.title??qid}</td><td className="p-2">{rows.length}</td><td className="p-2">{done.length}</td><td className="p-2">{ok.length}</td><td className="p-2">{done.length?avg+"/100":"—"}</td></tr>;
       })}</tbody></table>
     </section>}
-    {inviteId&&invites.map(inv=><section key={inv.id} className="space-y-5">
-      <h2 className="text-xl font-bold">Detalle de respuestas · {inv.participant_name}</h2>
+    {inviteId&&invites.map(inv=><section key={inv.id} className="space-y-6">
       {(attemptMap.get(inv.id)??[]).map(att=>{
         const result=safeResult(att.result);
-        return <article key={att.attempt_number} className="break-before-page space-y-3 print:break-before-page">
-          <div className="flex flex-wrap justify-between border-b pb-3"><strong>Intento {att.attempt_number} · {result.score}/100 · {result.passed?"Aprobado":"No aprobado"}</strong><span className="text-sm text-neutral-600">{fmt(att.submitted_at)}</span></div>
-          {result.feedback.map((f,index)=>{
-            const position=String(index+1);
+        const pages=[result.feedback.slice(0,5),result.feedback.slice(5,10)];
+        return pages.map((questions,pageNumber)=><article key={att.attempt_number+"-"+pageNumber} className="space-y-4 print:break-before-page print:page-break-before-always print:break-inside-auto">
+          <div className="border-b-2 border-orange-500 pb-3 print:break-after-avoid">
+            <div className="flex items-center justify-between">
+              <strong className="text-lg text-neutral-800">Facto<span className="text-orange-600">RH</span> · Detalle de respuestas</strong>
+              <span className="text-xs text-neutral-500">CONFIDENCIAL · PDL</span>
+            </div>
+            <h2 className="mt-3 text-xl font-bold">{inv.participant_name}</h2>
+            <p className="mt-1 text-sm">{orgMap.get(inv.organization_id)??"Empresa"} · {quizMap.get(inv.quiz_id+"_"+inv.quiz_version)?.title??inv.quiz_id}</p>
+            <p className="mt-2 text-sm"><strong>Intento {att.attempt_number} · {result.score}/100 · {result.passed?"Aprobado":"No aprobado"}</strong> · {fmt(att.submitted_at)}</p>
+            <p className="mt-1 text-xs text-neutral-500">Preguntas {pageNumber*5+1}–{pageNumber*5+questions.length} de {result.feedback.length} · Página {pageNumber+1} de 2 del intento</p>
+          </div>
+          <div className="space-y-2">
+          {questions.map((f,index)=>{
+            const position=String(pageNumber*5+index+1);
             const options=itemOptions.get(position)??{};
-            return <div key={f.id??index} className="break-inside-avoid border-b border-neutral-200 py-3 text-sm">
-              <p className="font-semibold">{index+1}. {f.prompt??"Pregunta"}</p>
-              <p className="mt-1">Respuesta: {options[f.selected??""]??f.selected??"—"} <span className={f.isCorrect?"font-semibold text-emerald-700":"font-semibold text-red-700"}>({f.isCorrect?"Correcta":"Incorrecta"})</span></p>
-              {!f.isCorrect&&<p>Respuesta correcta: {options[f.correct??""]??f.correct??"—"}</p>}
-              {f.explanation&&<p className="mt-1 text-xs text-neutral-600">{f.explanation}</p>}
+            return <div key={f.id??position} className="break-inside-avoid rounded-lg border border-neutral-200 p-3 text-sm print:break-inside-avoid print:page-break-inside-avoid">
+              <p className="font-semibold">{position}. {f.prompt??"Pregunta"}</p>
+              <p className="mt-1">Respuesta del participante: {options[f.selected??""]??f.selected??"—"} <span className={f.isCorrect?"font-semibold text-emerald-700":"font-semibold text-red-700"}>({f.isCorrect?"Correcta":"Incorrecta"})</span></p>
+              {!f.isCorrect&&<p className="mt-1">Respuesta correcta: {options[f.correct??""]??f.correct??"—"}</p>}
+              {f.explanation&&<p className="mt-1 text-xs text-neutral-600">Explicación: {f.explanation}</p>}
             </div>;
           })}
-        </article>;
+          </div>
+        </article>);
       })}
     </section>)}
     <footer className="mt-8 border-t pt-3 text-xs text-neutral-500">
       Documento generado desde FactoRH Evaluaciones. Los promedios se calculan utilizando la mejor calificación registrada por invitación. El estado «Aprobado» indica que al menos un intento superó el umbral configurado. Uso interno y confidencial.
     </footer>
-    <style>{`@page { size: A4 landscape; margin: 13mm; } @media print { body { background: white !important; } thead { display: table-header-group; } tr, article { break-inside: avoid; } }`}</style>
+    <style>{`@page { size: A4 portrait; margin: 15mm; } @media print { html,body { background: white !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; } main { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; } section, article { max-width: 100%; } table { table-layout: auto; width: 100%; } th,td { overflow-wrap: anywhere; } thead { display: table-header-group; } tr { break-inside: avoid; page-break-inside: avoid; } .print\\:break-after-page { break-after: page !important; page-break-after: always !important; } .print\\:break-before-page { break-before: page !important; page-break-before: always !important; } }`}</style>
   </main>;
 }
