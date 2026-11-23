@@ -135,8 +135,8 @@ async function ReportContent({searchParams}:{searchParams:Promise<Filters>}) {
     {inviteId&&invites.map(inv=><section key={inv.id} className="space-y-6">
       {(attemptMap.get(inv.id)??[]).map(att=>{
         const result=safeResult(att.result);
-        const pages=[result.feedback.slice(0,5),result.feedback.slice(5,10)];
-        return pages.map((questions,pageNumber)=><article key={att.attempt_number+"-"+pageNumber} className="space-y-4 print:break-before-page print:page-break-before-always print:break-inside-auto">
+        const pages=[result.feedback.slice(0,4),result.feedback.slice(4,8),result.feedback.slice(8,10)].filter(p=>p.length>0);
+        return pages.map((questions,pageNumber)=><article key={att.attempt_number+"-"+pageNumber} className={"space-y-4 print:break-inside-auto "+(pageNumber===0&&att.attempt_number===1?"":"print:break-before-page print:page-break-before-always")}>
           <div className="border-b-2 border-orange-500 pb-3 print:break-after-avoid">
             <div className="flex items-center justify-between">
               <strong className="text-lg text-neutral-800">Facto<span className="text-orange-600">RH</span> · Detalle de respuestas</strong>
@@ -145,11 +145,11 @@ async function ReportContent({searchParams}:{searchParams:Promise<Filters>}) {
             <h2 className="mt-3 text-xl font-bold">{inv.participant_name}</h2>
             <p className="mt-1 text-sm">{orgMap.get(inv.organization_id)??"Empresa"} · {quizMap.get(inv.quiz_id+"_"+inv.quiz_version)?.title??inv.quiz_id}</p>
             <p className="mt-2 text-sm"><strong>Intento {att.attempt_number} · {result.score}/100 · {result.passed?"Aprobado":"No aprobado"}</strong> · {fmt(att.submitted_at)}</p>
-            <p className="mt-1 text-xs text-neutral-500">Preguntas {pageNumber*5+1}–{pageNumber*5+questions.length} de {result.feedback.length} · Página {pageNumber+1} de 2 del intento</p>
+            <p className="mt-1 text-xs text-neutral-500">Preguntas {pageNumber*4+1}–{pageNumber*4+questions.length} de {result.feedback.length} · Página {pageNumber+1} de {pages.length} del intento</p>
           </div>
           <div className="space-y-2">
           {questions.map((f,index)=>{
-            const position=String(pageNumber*5+index+1);
+            const position=String(pageNumber*4+index+1);
             const options=itemOptions.get(position)??{};
             return <div key={f.id??position} className="break-inside-avoid rounded-lg border border-neutral-200 p-3 text-sm print:break-inside-avoid print:page-break-inside-avoid">
               <p className="font-semibold">{position}. {f.prompt??"Pregunta"}</p>
