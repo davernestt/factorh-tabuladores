@@ -9,6 +9,7 @@ const initial:Data={quizzes:[],organizations:[],invites:[],results:[]};
 export default function QuizAdmin({canOperate}:{canOperate:boolean}){
  const [data,setData]=useState<Data>(initial),[busy,setBusy]=useState(true),[error,setError]=useState(""),[url,setUrl]=useState(""),[linkRecipient,setLinkRecipient]=useState("");
  const [organization_id,setOrganization]=useState(""),[quiz_id,setQuiz]=useState("cultura"),[participant_name,setName]=useState(""),[participant_email,setEmail]=useState("");
+ const [reportOrg,setReportOrg]=useState(""),[reportQuiz,setReportQuiz]=useState("");
  async function reload(){
    setBusy(true);try{const r=await fetch("/api/pdl/quizzes",{cache:"no-store"});const d=await r.json();if(!r.ok)throw new Error(d.error||"No fue posible consultar");setData(d);setOrganization(prev=>prev||d.organizations[0]?.id||"");}catch(e){setError(e instanceof Error?e.message:"Error de consulta");}finally{setBusy(false);}
  }
@@ -59,18 +60,18 @@ export default function QuizAdmin({canOperate}:{canOperate:boolean}){
     <p className="mt-2 text-sm text-neutral-600">Imprime el resumen del programa por empresa, con promedio, aprobación y participantes pendientes; o abre el reporte individual de cada persona.</p>
     <div className="mt-4 flex flex-wrap items-end gap-3">
       <label className="text-sm font-semibold">Empresa
-        <select className="mt-1 block rounded-lg border bg-white p-3" value={organization_id} onChange={e=>setOrganization(e.target.value)}>
+        <select className="mt-1 block rounded-lg border bg-white p-3" value={reportOrg} onChange={e=>setReportOrg(e.target.value)}>
           <option value="">Todas las empresas</option>
           {data.organizations.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </label>
       <label className="text-sm font-semibold">Cuestionario
-        <select className="mt-1 block rounded-lg border bg-white p-3" value={quiz_id} onChange={e=>setQuiz(e.target.value)}>
+        <select className="mt-1 block rounded-lg border bg-white p-3" value={reportQuiz} onChange={e=>setReportQuiz(e.target.value)}>
           <option value="">Todos los cuestionarios</option>
           {data.quizzes.map(q=><option key={q.quiz_id} value={q.quiz_id}>{q.title}</option>)}
         </select>
       </label>
-      <a target="_blank" rel="noreferrer" href={`/protected/pdl/quizzes/reporte?${new URLSearchParams({...(organization_id?{empresa:organization_id}:{}),...(quiz_id?{quiz:quiz_id}:{})}).toString()}`} className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white">Abrir reporte imprimible</a>
+      <a target="_blank" rel="noreferrer" href={`/protected/pdl/quizzes/reporte?${new URLSearchParams({...(reportOrg?{empresa:reportOrg}:{}),...(reportQuiz?{quiz:reportQuiz}:{})}).toString()}`} className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white">Abrir reporte imprimible</a>
     </div>
   </section>
   <section className="overflow-x-auto rounded-2xl border bg-white p-5"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">Seguimiento de participantes</h2><button className="rounded-lg border px-3 py-2 text-sm" onClick={()=>void reload()} disabled={busy}>Actualizar</button></div>
