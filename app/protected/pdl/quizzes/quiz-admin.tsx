@@ -54,13 +54,33 @@ export default function QuizAdmin({canOperate}:{canOperate:boolean}){
     </div>
   </section>}
   {error&&<p className="rounded-xl bg-red-50 p-4 text-red-700" role="alert">{error}</p>}
+  <section className="rounded-2xl border border-orange-200 bg-white p-5">
+    <h2 className="text-xl font-bold text-neutral-900">Reportes de resultados para Dirección</h2>
+    <p className="mt-2 text-sm text-neutral-600">Imprime el resumen del programa por empresa, con promedio, aprobación y participantes pendientes; o abre el reporte individual de cada persona.</p>
+    <div className="mt-4 flex flex-wrap items-end gap-3">
+      <label className="text-sm font-semibold">Empresa
+        <select className="mt-1 block rounded-lg border bg-white p-3" value={organization_id} onChange={e=>setOrganization(e.target.value)}>
+          <option value="">Todas las empresas</option>
+          {data.organizations.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}
+        </select>
+      </label>
+      <label className="text-sm font-semibold">Cuestionario
+        <select className="mt-1 block rounded-lg border bg-white p-3" value={quiz_id} onChange={e=>setQuiz(e.target.value)}>
+          <option value="">Todos los cuestionarios</option>
+          {data.quizzes.map(q=><option key={q.quiz_id} value={q.quiz_id}>{q.title}</option>)}
+        </select>
+      </label>
+      <a target="_blank" rel="noreferrer" href={`/protected/pdl/quizzes/reporte?${new URLSearchParams({...(organization_id?{empresa:organization_id}:{}),...(quiz_id?{quiz:quiz_id}:{})}).toString()}`} className="rounded-xl bg-neutral-900 px-5 py-3 text-sm font-bold text-white">Abrir reporte imprimible</a>
+    </div>
+  </section>
   <section className="overflow-x-auto rounded-2xl border bg-white p-5"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-bold">Seguimiento de participantes</h2><button className="rounded-lg border px-3 py-2 text-sm" onClick={()=>void reload()} disabled={busy}>Actualizar</button></div>
-  <table className="w-full text-left text-sm"><thead><tr className="border-b text-neutral-500"><th className="p-2">Empresa</th><th className="p-2">Participante</th><th className="p-2">Cuestionario</th><th className="p-2">Intentos</th><th className="p-2">Última calificación</th><th className="p-2">Acceso</th></tr></thead><tbody>
+  <table className="w-full text-left text-sm"><thead><tr className="border-b text-neutral-500"><th className="p-2">Empresa</th><th className="p-2">Participante</th><th className="p-2">Cuestionario</th><th className="p-2">Intentos</th><th className="p-2">Última calificación</th><th className="p-2">Acceso</th><th className="p-2">Reporte</th></tr></thead><tbody>
   {data.invites.map(i=>{const scores=data.results.filter(r=>r.invite_id===i.id).sort((a,b)=>b.attempt_number-a.attempt_number);const last=scores[0];return <tr key={i.id} className="border-b"><td className="p-2">{data.organizations.find(o=>o.id===i.organization_id)?.name||"Empresa"}</td><td className="p-2">{i.participant_name}</td><td className="p-2">{data.quizzes.find(q=>q.quiz_id===i.quiz_id)?.title||i.quiz_id}</td><td className="p-2">{scores.length}/2</td><td className="p-2">{last?String(last.score)+"/100 "+(last.passed?"· Aprobado":"· No aprobado"):"Pendiente"}</td>
   <td className="p-2">{canOperate&&i.active&&new Date(i.expires_at).getTime()>Date.now()&&scores.length<2?
     <button type="button" disabled={busy} onClick={()=>void reissue(i)} className="whitespace-nowrap rounded-lg border border-orange-500 px-3 py-2 text-xs font-bold text-orange-700 disabled:opacity-50">Reenviar liga</button>:
-    <span className="text-xs text-neutral-400">No disponible</span>}</td></tr>})}
-  {!data.invites.length&&<tr><td colSpan={6} className="p-5 text-center text-neutral-500">Aún no hay invitaciones para mostrar.</td></tr>}
+    <span className="text-xs text-neutral-400">No disponible</span>}</td>
+  <td className="p-2">{scores.length>0?<a className="whitespace-nowrap rounded-lg border border-neutral-400 px-3 py-2 text-xs font-bold text-neutral-800" href={`/protected/pdl/quizzes/reporte?invitacion=${i.id}`} target="_blank" rel="noreferrer">Imprimir resultado</a>:<span className="text-xs text-neutral-400">Sin respuestas</span>}</td></tr>})}
+  {!data.invites.length&&<tr><td colSpan={7} className="p-5 text-center text-neutral-500">Aún no hay invitaciones para mostrar.</td></tr>}
   </tbody></table></section>
  </div>;
 }
