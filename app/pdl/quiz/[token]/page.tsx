@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolvePdlQuizInvite } from "@/lib/pdl/resolve-quiz-invite";
 import QuizForm from "./quiz-form";
 
 export default function QuizPage(props:{params:Promise<{token:string}>}){
@@ -13,8 +13,7 @@ async function QuizPageContent({params}:{params:Promise<{token:string}>}){
   const {token}=await params;
   if(!/^[a-f0-9]{64}$/.test(token))return <ErrorPage />;
   const db=createAdminClient();
-  const token_hash=createHash("sha256").update(token).digest("hex");
-  const {data:invite}=await db.from("pdl_quiz_invites").select("id,quiz_id,quiz_version,participant_name,max_attempts,active,expires_at").eq("token_hash",token_hash).maybeSingle();
+  const invite=await resolvePdlQuizInvite(token);
   if(!invite||!invite.active||new Date(invite.expires_at).getTime()<=Date.now())return <ErrorPage />;
   const [catalog,items,attempts]=await Promise.all([
     db.from("pdl_quiz_catalog").select("title,published,passing_score").eq("quiz_id",invite.quiz_id).eq("version",invite.quiz_version).maybeSingle(),
