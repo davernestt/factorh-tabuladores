@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ClimateDemoShare from "./climate-demo-share";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentAppUser } from "@/lib/app-auth";
@@ -87,6 +88,7 @@ async function ClimaLandingContent(){
         <span className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-2">Seguimiento continuo</span>
       </div>
     </section>
+    <ClimateDemoShare/>
     <section>
       <div className="mb-5"><h2 className="text-2xl font-black text-neutral-800">Instrumentos de Clima Laboral</h2>
       <p className="mt-1 text-sm text-neutral-500">Cada uno tendrá su propio cuestionario, método de evaluación y reporte.</p></div>
