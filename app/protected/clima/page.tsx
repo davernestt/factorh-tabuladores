@@ -89,6 +89,16 @@ async function ClimaLandingContent(){
       </div>
     </section>
     <ClimateDemoShare/>
+    <section className="rounded-3xl border-2 border-orange-300 bg-white p-6 shadow-sm sm:p-8">
+      <p className="text-xs font-black uppercase tracking-[.17em] text-orange-600">Servicio especial</p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-black text-neutral-800">Encuestas a la medida</h2>
+          <p className="mt-2 text-sm leading-6 text-neutral-600">Para clientes que ya tienen sus propias preguntas. Revisamos el cuestionario y lo preparamos sin modificar C3 PRO. Aquí encontrarás el borrador de Arrendamás.</p>
+        </div>
+        <Link href="/protected/clima/especiales" className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white hover:bg-orange-700">Abrir servicios especiales <ArrowRight className="h-4 w-4"/></Link>
+      </div>
+    </section>
     <section>
       <div className="mb-5"><h2 className="text-2xl font-black text-neutral-800">Instrumentos de Clima Laboral</h2>
       <p className="mt-1 text-sm text-neutral-500">Cada uno tendrá su propio cuestionario, método de evaluación y reporte.</p></div>
